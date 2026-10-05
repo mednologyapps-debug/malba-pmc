@@ -1,19 +1,4 @@
 /* Estas secciones se mantienen separadas de styles.css para respetar ajustes locales del banner. */
-:root {
-  --banner-tint: 0.84;
-  --banner-tint-hover: 0.88;
-}
-.hero::after {
-  background: rgba(7, 63, 124, var(--banner-tint));
-}
-@media (hover: hover) and (pointer: fine) {
-  .hero:hover::after {
-    background: rgba(7, 63, 124, var(--banner-tint-hover));
-  }
-}
-.hero:focus-within::after {
-  background: rgba(7, 63, 124, var(--banner-tint-hover));
-}
 .hero-slider {
   position: relative;
   background: var(--blue);
@@ -102,11 +87,27 @@
   border: 0;
 }
 .book-slide {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   background: var(--blue);
   color: var(--white);
   min-height: 590px;
 }
+/* Fondo fotográfico discreto, sin degradados ni recursos nuevos. */
+.book-slide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url("assets/banner-transmision-1672.webp") center 62% / cover
+    no-repeat;
+  opacity: 0.23;
+  pointer-events: none;
+}
 .book-slide-inner {
+  position: relative;
+  z-index: 1;
   max-width: var(--max);
   margin: auto;
   display: grid;
@@ -143,20 +144,82 @@
   outline-color: var(--white);
 }
 .book-visual {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
 }
 .book-visual img {
-  width: 460px;
-  height: 460px;
+  width: 540px;
+  height: 480px;
   object-fit: contain;
+  filter: drop-shadow(0 20px 24px rgba(7, 63, 124, 0.55));
   transition: transform 0.25s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .book-visual:hover img {
     transform: translateY(-5px) rotate(-1deg);
+  }
+}
+.book-visual::before,
+.book-visual::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+}
+.book-visual::before {
+  width: min(78%, 410px);
+  background: rgba(84, 69, 149, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.book-visual::after {
+  width: min(92%, 490px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+.book-slide[aria-hidden="false"] .book-visual img {
+  animation: book-presentation 4.5s ease-in-out backwards;
+}
+.book-slide[aria-hidden="false"] .book-copy {
+  animation: book-copy-arrive 0.65s ease-out both;
+}
+@keyframes book-presentation {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) rotate(-3deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+  46% {
+    opacity: 1;
+    transform: translateY(-10px) rotate(-1deg);
+  }
+  74% {
+    opacity: 1;
+    transform: translateY(3px) rotate(0.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+@keyframes book-copy-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 .section-container {
@@ -474,5 +537,12 @@
   }
   .book-visual img {
     transition: none;
+  }
+  .book-slide[aria-hidden="false"] .book-visual img,
+  .book-slide[aria-hidden="false"] .book-copy {
+    animation: none;
+  }
+  .book-visual:hover img {
+    transform: none;
   }
 }

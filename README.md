@@ -60,10 +60,15 @@ Orden actual: banner con dos vistas (presentación de MALBA y libro), Nuestro ec
 
 El ecosistema contiene Consultoría, Academy, Soluciones digitales y Publicaciones. Los tres programas son Dirección de Proyectos de Transmisión Eléctrica, Gestión de Riesgos en Proyectos de Transmisión Eléctrica y Diseño, Implementación y Mejora de PMO. Enlaces de programas, libro y compra llevan al sitio actual; no se creó un checkout nuevo. No se publicaron precios ni fechas de cohortes.
 
-`home-sections.css` y `home-sections.js` contienen estas nuevas secciones. `styles.css` no se modifica en esta entrega para respetar los ajustes locales hechos por el propietario. La opacidad acordada (.84/.88) se mantiene en las variables `--banner-tint` y `--banner-tint-hover` de `home-sections.css`.
+`home-sections.css` y `home-sections.js` contienen estas nuevas secciones. `styles.css` no se modifica en esta entrega para respetar los ajustes locales hechos por el propietario. La opacidad del primer banner se controla directamente en `styles.css`; se retiraron las reglas de `home-sections.css` que anulaban el ajuste manual del propietario (0.54).
 
 La imagen de libro que publica hoy el sitio dice MOCKUP. Por eso la nueva imagen 3D es una **propuesta de portada**, no la cubierta oficial de una edición. Debe sustituirse por la cubierta aprobada antes del lanzamiento. Título y autor contrastados en https://malba-pmc.com/libro/. Compra: https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/. Fuentes de los programas: páginas actuales del sitio enlazadas en cada tarjeta.
 
 Mockup creado con la herramienta integrada de imágenes a partir del logo suministrado. Prompt: libro de tapa dura aislado con transparencia, vista en tres cuartos mostrando portada y borde de páginas, azul #073F7C, lomo morado #544595, texto blanco, título GESTIÓN DE PROYECTOS DE TRANSMISIÓN, subtítulo FACTORES CLAVE, autor MIGUEL ALBA, detalle de torres en azul, sin etiquetas ni degradados impresos. Original generado: 1374×1145; archivos de proyecto `assets/book/libro-3d-600.webp` y `assets/book/libro-3d-960.webp`, conservando transparencia y proporción.
 
 Referencia adicional revisada: https://lilianabuchtik.com/, especialmente la presentación de servicios y libros en distintas vistas del banner. Se mantiene el branding propio de MALBA.
+
+
+## Presentación visual del libro
+
+La segunda vista añade un fondo de infraestructura eléctrica con opacidad 0.23, un círculo morado y un aro fino detrás del libro, y un mockup más grande. No hay degradados ni nuevos recursos externos. El libro entra con una oscilación suave de 4.5 segundos, una sola vez por entrada a esa vista; el texto aparece en 0.65 segundos. No hay movimiento continuo. Todo el movimiento se desactiva con `prefers-reduced-motion`.

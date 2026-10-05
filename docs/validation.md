@@ -23,3 +23,10 @@ Repetidas las comprobaciones en los mismos cinco anchos: título exactamente de 
 Comprobado en Chromium a 320, 390, 768, 1280 y 1440 px. Las dos vistas mantienen sus títulos en tres líneas; no hay desbordamiento horizontal ni recorte de contenido del libro. Flechas, puntos, flechas de teclado, Home, estado activo, inert de la vista oculta, movimiento reducido y conservación de la segunda vista al cambiar a móvil comprobados. Se confirma el orden banner → ecosistema (cuatro áreas) → programas (tres). Recursos decodificados antes de capturar; sin errores JavaScript ni respuestas 4xx/5xx locales. Capturas de portada completas y banner del libro en desktop/mobile disponibles en esta carpeta.
 
 No se ejecutó una compra ni se alteró ningún dato o sitio de producción. El mockup del libro es una propuesta y no se verificó una portada definitiva. Swipe real en dispositivo físico no probado; el contenedor utiliza scroll-snap horizontal nativo del navegador.
+
+
+## Presentación visual del libro
+
+Comprobada en 320, 390, 768, 1440 y 1920 px: foto de fondo presente, aro y círculo discretos, título en tres líneas, sin overflow horizontal ni recorte del contenido. Animación del libro de 4500 ms y una iteración; el libro queda visible al terminar. Movimiento reducido elimina la animación. Sin errores JavaScript ni recursos HTTP fallidos. Capturas actualizadas de la segunda vista en desktop, mobile y wide.
+
+Se conserva el commit del propietario 323855f (ajuste de styles.css). Se eliminó de home-sections.css la regla que anulaba su transparencia 0.54 en la primera vista.
