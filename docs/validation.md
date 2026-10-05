@@ -56,3 +56,9 @@ Sección nueva después del ciclo de conocimiento. Tres videos del canal oficial
 Chromium en 320, 390, 768, 1024, 1440 y 1920 px, más 844×390 en horizontal: sin desbordamiento de página ni errores JavaScript o recursos locales 4xx/5xx. Se comprobó el scroll del carrusel con flechas y teclado, popup centrado, ausencia de iframe inicial, carga de la URL del video seleccionado al abrir, bloqueo del scroll de fondo, cierre por botón/Escape/fondo, eliminación del iframe y retorno de foco. Las pruebas de estos controles usaron una respuesta de iframe de prueba para aislar la interfaz de la entrega externa. Movimiento reducido comprobado en navegación de tarjetas. node --check y git diff --check pasan.
 
 La reproducción audiovisual real no se pudo confirmar en el navegador de este entorno: el iframe de YouTube no terminó de cargar en la comprobación externa. El usuario debe validar esa reproducción al hacer pull en su navegador. El popup incluye un enlace directo al mismo video en YouTube.
+
+## Cierre del home: tarjetas, orden y footer
+
+Chromium en 320, 390, 768, 1024, 1440 y 1920 px. Aprende con MALBA sigue inmediatamente a Programas destacados y sus tres tarjetas usan fondo blanco. Footer semántico único, año actual, enlaces a secciones, contacto por diálogo y retorno de foco comprobados. Banner de dos vistas, menú móvil y popup de video mantienen su funcionamiento. La prueba del iframe de video aisló la interfaz con una respuesta simulada; permanece la limitación de reproducción externa descrita arriba.
+
+Sin desbordamiento horizontal, imágenes faltantes, excepciones JavaScript ni respuestas locales 4xx/5xx. node --check y git diff --check pasan. Capturas completas home-desktop/mobile, footer-desktop/mobile y learn-desktop/mobile actualizadas. La hoja styles.css sigue intacta.

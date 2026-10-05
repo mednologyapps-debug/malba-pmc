@@ -174,3 +174,6 @@ document.querySelectorAll('[data-youtube-id]').forEach((button) => {
   });
 });
 youtubeDialog.addEventListener('close', () => youtubePlayer.replaceChildren());
+
+// Año del pie de página, sin dependencias ni llamadas externas.
+document.querySelector("#footer-year").textContent = new Date().getFullYear();

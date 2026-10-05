@@ -109,3 +109,11 @@ Autor y títulos verificados en el oEmbed oficial de YouTube. Enlaces localizado
 Al pulsar una portada o Ver video se abre un diálogo centrado con iframe `youtube-nocookie.com`. No se carga ningún reproductor al abrir la página. Cerrar con el botón, Escape o el fondo elimina el iframe y detiene el video, devolviendo el foco al control que lo abrió. Se bloquea el scroll del fondo mientras está abierto. El diálogo incluye un enlace directo a YouTube y permite pantalla completa. No hay reproducción automática.
 
 Para cambiar videos, editar `data-youtube-id`, `data-video-title`, el título y la portada de cada tarjeta en `index.html`; los IDs deben tener 11 caracteres válidos. Conservar `data-dialog="video-dialog"` para compartir el comportamiento de los popups existentes. No requiere una API ni clave de YouTube.
+
+## Home final: tarjetas y footer
+
+Orden actual: banner, Nuestro ecosistema, Programas destacados, Aprende con MALBA, presentación de Miguel Alba, ciclo de conocimiento y footer. Aprende con MALBA queda inmediatamente debajo de Programas destacados. Las tarjetas de video tienen fondo blanco, portada superior, título azul y acceso morado; mantienen el scroll horizontal y el popup.
+
+Footer en todo el ancho con logotipo, descripción, LinkedIn y YouTube oficiales, accesos a ecosistema, academia, soluciones, publicaciones, nosotros y aula virtual. Solicitar información abre el diálogo existente. El cierre incluye derechos reservados con año actualizado automáticamente y Volver al inicio. No se publican datos de contacto o enlaces legales de ejemplo. Las columnas se reorganizan en móvil y los enlaces conservan áreas táctiles cómodas.
+
+Capturas completas actuales: `docs/home-desktop.png` y `docs/home-mobile.png`. Footer: `docs/footer-desktop.png` y `docs/footer-mobile.png`. Las capturas de Aprende se actualizaron con las tarjetas blancas.
