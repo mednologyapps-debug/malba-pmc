@@ -93,3 +93,19 @@ La sección situada después de Programas destacados ahora sigue la composición
 La biografía y las credenciales provienen de la ficha docente oficial del programa PMO: `https://malba-pmc.com/diseno-implementacion-y-mejora-de-pmo/`. La fotografía original es `https://malba-pmc.com/wp-content/uploads/2026/05/MiguelAlba-png.png`, guardada como `assets/people/miguel-alba.webp`. No se generó ni se alteró la identidad de Miguel. El archivo original tiene 264×396 px; se respeta su resolución nativa y la vista nunca lo amplía por encima de 264 px. Para una foto de mayor tamaño será necesario sustituirlo por un original de alta resolución.
 
 Fondo de palabras con opacidad tenue, azul y morado MALBA, sin degradados. En móvil el retrato acompaña al nombre y las opciones se presentan en filas compactas. Se mantiene el resto de la portada y la opacidad del banner.
+
+## Aprende con MALBA
+
+Se añade después del ciclo de conocimiento: presentación a la izquierda y colección horizontal de videos a la derecha, con flechas, teclado y deslizamiento táctil. Fondo azul MALBA, texto blanco y acento morado, sin degradados. En móvil se muestra una tarjeta principal y parte de la siguiente, evitando apilar todos los videos.
+
+Se usan tres videos reales del canal `https://www.youtube.com/@malbapmc2563`:
+
+- `WPikCuHg2q8`: ¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?
+- `RRj4MDh8rNQ`: Errores críticos en proyectos de transmisión eléctrica.
+- `NrEJvAJ7NGo`: Contratación de ingeniería sin recopilación de requerimientos de interesados.
+
+Autor y títulos verificados en el oEmbed oficial de YouTube. Enlaces localizados en publicaciones públicas de MALBA y Miguel Alba. Las portadas originales de `https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg` se descargaron y optimizaron a WebP de 960×540, disponibles en `assets/videos/`. No son portadas generadas ni videos de ejemplo.
+
+Al pulsar una portada o Ver video se abre un diálogo centrado con iframe `youtube-nocookie.com`. No se carga ningún reproductor al abrir la página. Cerrar con el botón, Escape o el fondo elimina el iframe y detiene el video, devolviendo el foco al control que lo abrió. Se bloquea el scroll del fondo mientras está abierto. El diálogo incluye un enlace directo a YouTube y permite pantalla completa. No hay reproducción automática.
+
+Para cambiar videos, editar `data-youtube-id`, `data-video-title`, el título y la portada de cada tarjeta en `index.html`; los IDs deben tener 11 caracteres válidos. Conservar `data-dialog="video-dialog"` para compartir el comportamiento de los popups existentes. No requiere una API ni clave de YouTube.

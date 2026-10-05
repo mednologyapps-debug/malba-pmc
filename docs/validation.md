@@ -48,3 +48,11 @@ Se conserva el commit del propietario 323855f (ajuste de styles.css). Se elimin�
 Sustituye la sección de ejemplos de soluciones por texto de Miguel, foto real y tres accesos: Nuestra academia, Soluciones que ofrecemos y Publicaciones. Capturas actuales: miguel-desktop.png y miguel-mobile.png; las capturas solutions anteriores documentan una versión reemplazada.
 
 Chromium en 320, 390, 600, 768, 900, 1024, 1440 y 1920 px: sin desbordamiento horizontal, imágenes faltantes o errores JavaScript. Foto comprobada: ancho mostrado nunca superior al ancho nativo de 264 px. Catálogo de cuatro soluciones, Escape, retorno de foco y continuidad del ciclo de conocimiento comprobados. styles.css permanece intacto; opacidad 0.54 conservada. node --check y git diff --check pasan.
+
+## Aprende con MALBA
+
+Sección nueva después del ciclo de conocimiento. Tres videos del canal oficial, títulos y autor verificados mediante oEmbed de YouTube. Portadas originales descargadas en alta resolución y guardadas como WebP locales. Capturas: learn-desktop.png y learn-mobile.png.
+
+Chromium en 320, 390, 768, 1024, 1440 y 1920 px, más 844×390 en horizontal: sin desbordamiento de página ni errores JavaScript o recursos locales 4xx/5xx. Se comprobó el scroll del carrusel con flechas y teclado, popup centrado, ausencia de iframe inicial, carga de la URL del video seleccionado al abrir, bloqueo del scroll de fondo, cierre por botón/Escape/fondo, eliminación del iframe y retorno de foco. Las pruebas de estos controles usaron una respuesta de iframe de prueba para aislar la interfaz de la entrega externa. Movimiento reducido comprobado en navegación de tarjetas. node --check y git diff --check pasan.
+
+La reproducción audiovisual real no se pudo confirmar en el navegador de este entorno: el iframe de YouTube no terminó de cargar en la comprobación externa. El usuario debe validar esa reproducción al hacer pull en su navegador. El popup incluye un enlace directo al mismo video en YouTube.

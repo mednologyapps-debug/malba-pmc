@@ -537,8 +537,47 @@
           <p class="knowledge-closing">Cada resultado alimenta una nueva experiencia. El conocimiento sigue creciendo.</p>
         </div>
       </section>
+      <section class="learn-section" id="aprende" aria-labelledby="learn-title">
+        <div class="learn-layout section-container">
+          <div class="learn-intro"><h2 id="learn-title">Aprende con <span>MALBA</span></h2><p>Casos, ideas y herramientas para tomar mejores decisiones en tus proyectos.</p><a class="button button-white" href="https://www.youtube.com/@malbapmc2563/videos" target="_blank" rel="noopener noreferrer">Ver canal de YouTube <span aria-hidden="true">↗</span></a></div>
+          <div class="learn-collection">
+            <div class="learn-video-track" id="learn-video-list" tabindex="0" aria-label="Videos de MALBA: desliza o usa las flechas para explorar">
+              <article class="learn-video-card">
+                <button class="learn-video-cover" type="button" data-dialog="video-dialog" data-youtube-id="WPikCuHg2q8" data-video-title="¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?" aria-label="Ver video: ¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?" aria-haspopup="dialog">
+                  <img src="assets/videos/WPikCuHg2q8.webp" width="960" height="540" alt="Portada del video ¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?" loading="lazy" decoding="async" />
+                  <span class="learn-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 5 11 7-11 7V5Z"/></svg></span>
+                </button>
+                <h3>¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?</h3>
+                <button class="learn-video-link" type="button" data-dialog="video-dialog" data-youtube-id="WPikCuHg2q8" data-video-title="¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?" aria-haspopup="dialog">Ver video <span aria-hidden="true">→</span><span class="sr-only">: ¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?</span></button>
+              </article>
+              <article class="learn-video-card">
+                <button class="learn-video-cover" type="button" data-dialog="video-dialog" data-youtube-id="RRj4MDh8rNQ" data-video-title="Errores críticos en proyectos de transmisión eléctrica" aria-label="Ver video: Errores críticos en proyectos de transmisión eléctrica" aria-haspopup="dialog">
+                  <img src="assets/videos/RRj4MDh8rNQ.webp" width="960" height="540" alt="Portada del video Errores críticos en proyectos de transmisión eléctrica" loading="lazy" decoding="async" />
+                  <span class="learn-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 5 11 7-11 7V5Z"/></svg></span>
+                </button>
+                <h3>Errores críticos en proyectos de transmisión eléctrica</h3>
+                <button class="learn-video-link" type="button" data-dialog="video-dialog" data-youtube-id="RRj4MDh8rNQ" data-video-title="Errores críticos en proyectos de transmisión eléctrica" aria-haspopup="dialog">Ver video <span aria-hidden="true">→</span><span class="sr-only">: Errores críticos en proyectos de transmisión eléctrica</span></button>
+              </article>
+              <article class="learn-video-card">
+                <button class="learn-video-cover" type="button" data-dialog="video-dialog" data-youtube-id="NrEJvAJ7NGo" data-video-title="Contratación de ingeniería sin recopilación de requerimientos de interesados" aria-label="Ver video: Contratación de ingeniería sin recopilación de requerimientos de interesados" aria-haspopup="dialog">
+                  <img src="assets/videos/NrEJvAJ7NGo.webp" width="960" height="540" alt="Portada del video Contratación de ingeniería sin recopilación de requerimientos de interesados" loading="lazy" decoding="async" />
+                  <span class="learn-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 5 11 7-11 7V5Z"/></svg></span>
+                </button>
+                <h3>Contratación de ingeniería sin recopilación de requerimientos de interesados</h3>
+                <button class="learn-video-link" type="button" data-dialog="video-dialog" data-youtube-id="NrEJvAJ7NGo" data-video-title="Contratación de ingeniería sin recopilación de requerimientos de interesados" aria-haspopup="dialog">Ver video <span aria-hidden="true">→</span><span class="sr-only">: Contratación de ingeniería sin recopilación de requerimientos de interesados</span></button>
+              </article>
+            </div>
+            <div class="collection-controls" data-collection="learn-video-list" aria-label="Recorrer videos"><span>Conocimiento para llevar a la práctica</span><div><button type="button" data-collection-step="-1" aria-label="Video anterior">←</button><button type="button" data-collection-step="1" aria-label="Video siguiente">→</button></div></div>
+          </div>
+        </div>
+      </section>
     </main>
 
+    <dialog id="video-dialog" class="youtube-dialog" aria-labelledby="video-dialog-title">
+      <div class="dialog-heading"><h2 id="video-dialog-title">Aprende con MALBA</h2><button type="button" class="dialog-close" aria-label="Cerrar video">×</button></div>
+      <div class="youtube-player" id="youtube-player"></div>
+      <p class="youtube-fallback"><a class="text-link" id="youtube-direct-link" href="https://www.youtube.com/@malbapmc2563" target="_blank" rel="noopener noreferrer">Ver en YouTube <span aria-hidden="true">↗</span></a></p>
+    </dialog>
     <dialog id="all-solutions-dialog" class="solutions-dialog" aria-labelledby="all-solutions-title">
       <div class="dialog-heading"><h2 id="all-solutions-title">Todas nuestras soluciones</h2><button type="button" class="dialog-close" aria-label="Cerrar">×</button></div>
       <div class="solution-catalog">

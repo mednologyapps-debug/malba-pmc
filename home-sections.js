@@ -153,3 +153,24 @@ const knowledgeObserver = new IntersectionObserver((entries) => {
   }
 }, {threshold: .35});
 knowledgeObserver.observe(knowledgeList);
+
+// El diálogo comparte cierre, Escape y retorno de foco con los demás popups.
+const youtubeDialog = document.querySelector('#video-dialog');
+const youtubePlayer = document.querySelector('#youtube-player');
+document.querySelectorAll('[data-youtube-id]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const id = button.dataset.youtubeId;
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) return;
+    const title = button.dataset.videoTitle;
+    document.querySelector('#video-dialog-title').textContent = title;
+    document.querySelector('#youtube-direct-link').href = `https://www.youtube.com/watch?v=${id}`;
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`;
+    iframe.title = title;
+    iframe.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    youtubePlayer.replaceChildren(iframe);
+  });
+});
+youtubeDialog.addEventListener('close', () => youtubePlayer.replaceChildren());
