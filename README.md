@@ -117,3 +117,7 @@ Orden actual: banner, Nuestro ecosistema, Programas destacados, Aprende con MALB
 Footer en todo el ancho con logotipo, descripción, LinkedIn y YouTube oficiales, accesos a ecosistema, academia, soluciones, publicaciones, nosotros y aula virtual. Solicitar información abre el diálogo existente. El cierre incluye derechos reservados con año actualizado automáticamente y Volver al inicio. No se publican datos de contacto o enlaces legales de ejemplo. Las columnas se reorganizan en móvil y los enlaces conservan áreas táctiles cómodas.
 
 Capturas completas actuales: `docs/home-desktop.png` y `docs/home-mobile.png`. Footer: `docs/footer-desktop.png` y `docs/footer-mobile.png`. Las capturas de Aprende se actualizaron con las tarjetas blancas.
+
+### Ajuste visual: redes y Aprende con MALBA
+
+Iconos blancos originales descargados de [LinkedIn](https://brand.linkedin.com/downloads) y [YouTube](https://brand.youtube/youtube-icon/), sin modificar sus formas. Se sirven localmente en `assets/social/`. La sección de videos reutiliza la fotografía de infraestructura, con una capa azul uniforme al 90 % en `.learn-section::before`, sin degradados. En celular carga la variante de 960 px.

@@ -773,7 +773,10 @@ button.text-link { border: 0; background: transparent; text-align: left; }
 }
 
 /* Aprende con MALBA: portadas locales, reproductor sólo bajo demanda. */
-.learn-section { background: var(--blue); color: var(--white); padding: 62px 0; scroll-margin-top: 100px; }
+.learn-section { position: relative; isolation: isolate; background: var(--blue); color: var(--white); padding: 62px 0; scroll-margin-top: 100px; }
+.learn-background { position: absolute; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.learn-background img { width: 100%; height: 100%; object-fit: cover; object-position: center 58%; }
+.learn-section::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(7,63,124,.9); pointer-events: none; }
 .learn-layout { display: grid; grid-template-columns: 260px minmax(0,1fr); gap: 46px; align-items: center; }
 .learn-intro h2 { font-size: clamp(34px,3.3vw,46px); font-weight: 400; line-height: 1.08; letter-spacing: -.9px; margin: 0 0 20px; }
 .learn-intro h2 span { display: block; }
@@ -852,7 +855,12 @@ body:has(#video-dialog[open]) { overflow: hidden; }
 .footer-brand, .footer-navigation, .footer-contact { min-width: 0; }
 .footer-brand img { width: 230px; height: auto; }
 .footer-brand p { font-size: 15px; line-height: 1.6; max-width: 280px; margin: 22px 0 18px; }
-.footer-socials { display: flex; gap: 20px; flex-wrap: wrap; color: var(--purple); font-size: 14px; font-weight: 600; }
+.footer-socials { display: flex; gap: 12px; flex-wrap: wrap; color: var(--purple); font-size: 14px; font-weight: 600; }
+.footer-socials a { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 8px; background: var(--blue); transition: background .2s ease; }
+.footer-socials a:hover { background: var(--purple); }
+.footer-socials a:focus-visible { outline: 2px solid var(--purple); outline-offset: 4px; }
+.footer-socials a img { width: 28px; height: auto; display: block; }
+.footer-socials a img[src*="youtube"] { width: 40px; }
 .site-footer h2 { font-size: 19px; font-weight: 600; letter-spacing: -.2px; margin: 0 0 20px; }
 .footer-navigation ul { padding: 0; margin: 0; list-style: none; display: grid; gap: 14px; }
 .footer-navigation a { font-size: 15px; line-height: 1.4; display: inline-block; }

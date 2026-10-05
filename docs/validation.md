@@ -62,3 +62,7 @@ La reproducción audiovisual real no se pudo confirmar en el navegador de este e
 Chromium en 320, 390, 768, 1024, 1440 y 1920 px. Aprende con MALBA sigue inmediatamente a Programas destacados y sus tres tarjetas usan fondo blanco. Footer semántico único, año actual, enlaces a secciones, contacto por diálogo y retorno de foco comprobados. Banner de dos vistas, menú móvil y popup de video mantienen su funcionamiento. La prueba del iframe de video aisló la interfaz con una respuesta simulada; permanece la limitación de reproducción externa descrita arriba.
 
 Sin desbordamiento horizontal, imágenes faltantes, excepciones JavaScript ni respuestas locales 4xx/5xx. node --check y git diff --check pasan. Capturas completas home-desktop/mobile, footer-desktop/mobile y learn-desktop/mobile actualizadas. La hoja styles.css sigue intacta.
+
+### Iconos oficiales y fondo de Aprende con MALBA
+
+Verificados 1920, 1440, 1024, 768, 390 y 320 px: sin desbordamiento, tarjetas blancas, enlaces sociales con nombres accesibles y recursos locales cargados. Fotografía decorativa responsive con capa azul al 90 %. Se conserva el comportamiento del popup de video, menú y carrusel. La reproducción externa de YouTube conserva la limitación de validación descrita anteriormente.
