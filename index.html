@@ -103,9 +103,7 @@
             <a class="nav-link" href="https://malba-pmc.com/proximos-cursos"
               >Academy</a
             >
-            <button class="nav-link" type="button" data-dialog="digital-dialog">
-              Soluciones digitales
-            </button>
+            <a class="nav-link" href="#soluciones">Soluciones digitales</a>
             <button
               class="nav-link"
               type="button"
@@ -184,13 +182,7 @@
                     href="https://malba-pmc.com/proximos-cursos"
                     >Conocer MALBA Academy <span aria-hidden="true">→</span></a
                   >
-                  <button
-                    class="button button-outline"
-                    type="button"
-                    data-dialog="solutions-dialog"
-                  >
-                    Explorar soluciones <span aria-hidden="true">↗</span>
-                  </button>
+                  <a class="button button-outline" href="#soluciones">Explorar soluciones <span aria-hidden="true">→</span></a>
                 </div>
               </div>
             </div>
@@ -438,20 +430,9 @@
               >Ver todos los programas <span aria-hidden="true">↗</span></a
             >
           </div>
-          <div class="program-grid">
+          <div class="program-grid" id="program-list" tabindex="0" aria-label="Programas destacados: desliza o usa las flechas para explorar">
             <article class="program-card">
-              <div class="program-art" aria-hidden="true">
-                <svg
-                  viewBox="0 0 120 90"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                >
-                  <path
-                    d="M45 82 59 8h3l14 74M52 43h17M48 61h25M44 82h33M56 25h10M35 36h50M29 49h62M57 12l9 13-14 18 19 18-27 21m19-70-8 13 14 18-21 18 29 21M35 36l3-9m47 9-3-9M29 49l3-9m59 9-3-9"
-                  />
-                </svg>
-              </div>
+              <div class="program-art"><img src="assets/banner-transmision-1672.webp" srcset="assets/banner-transmision-960.webp 960w, assets/banner-transmision-1672.webp 1672w" sizes="(max-width: 760px) 80vw, 33vw" width="1672" height="941" alt="Línea de transmisión eléctrica entre montañas" loading="lazy" decoding="async" /></div>
               <div class="program-card-copy">
                 <h3>Dirección de Proyectos de Transmisión Eléctrica</h3>
                 <p>
@@ -466,21 +447,7 @@
               </div>
             </article>
             <article class="program-card">
-              <div class="program-art" aria-hidden="true">
-                <svg
-                  viewBox="0 0 120 90"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                >
-                  <path
-                    d="m60 8 29 10v25c0 17-15 31-29 39-14-8-29-22-29-39V18L60 8Z"
-                  />
-                  <path
-                    d="m46 45 10 10 20-22M20 23h-7m7 19H9m91-19h7m-7 19h11"
-                  />
-                </svg>
-              </div>
+              <div class="program-art"><img src="assets/programs/riesgos-960.webp" srcset="assets/programs/riesgos-480.webp 480w, assets/programs/riesgos-960.webp 960w" sizes="(max-width: 760px) 80vw, 33vw" width="960" height="540" alt="Imagen ilustrativa de profesionales analizando riesgos de un proyecto eléctrico" loading="lazy" decoding="async" /></div>
               <div class="program-card-copy">
                 <h3>
                   Gestión de Riesgos en Proyectos de Transmisión Eléctrica
@@ -497,20 +464,7 @@
               </div>
             </article>
             <article class="program-card">
-              <div class="program-art" aria-hidden="true">
-                <svg
-                  viewBox="0 0 120 90"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                >
-                  <rect x="40" y="10" width="40" height="20" rx="3" />
-                  <rect x="9" y="61" width="26" height="20" rx="3" />
-                  <rect x="47" y="61" width="26" height="20" rx="3" />
-                  <rect x="85" y="61" width="26" height="20" rx="3" />
-                  <path d="M60 30v31M22 61V45h76v16" />
-                </svg>
-              </div>
+              <div class="program-art"><img src="assets/programs/pmo-960.webp" srcset="assets/programs/pmo-480.webp 480w, assets/programs/pmo-960.webp 960w" sizes="(max-width: 760px) 80vw, 33vw" width="960" height="540" alt="Imagen ilustrativa de un equipo planificando proyectos en una oficina de gestión" loading="lazy" decoding="async" /></div>
               <div class="program-card-copy">
                 <h3>Diseño, Implementación y Mejora de PMO</h3>
                 <p>
@@ -525,10 +479,80 @@
               </div>
             </article>
           </div>
+          <div class="collection-controls" data-collection="program-list" aria-label="Recorrer programas">
+            <span>Explora nuestros programas</span>
+            <div><button type="button" data-collection-step="-1" aria-label="Programa anterior">←</button><button type="button" data-collection-step="1" aria-label="Programa siguiente">→</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="solutions-section section-container" id="soluciones" aria-labelledby="solutions-section-title">
+        <div class="solutions-layout">
+          <div class="solutions-intro">
+            <div class="section-intro">
+              <h2 id="solutions-section-title">Nuestras soluciones</h2>
+              <p>Simulación, gestión de riesgos y aprendizaje para tomar mejores decisiones en tus proyectos.</p>
+            </div>
+            <!-- Añadir un archivo MP4 local o URL HTTPS en data-video-src. Sin fuente no se muestra un botón de reproducción ficticio. -->
+            <figure class="solutions-video" data-video-src="">
+              <img src="assets/solutions/simulador-1100.webp" width="1100" height="542" loading="lazy" decoding="async" alt="Vista real de MALBA Simulator, con escenarios de infraestructura eléctrica" />
+              <figcaption><strong>Conoce MALBA en acción</strong><span>Video de presentación · Próximamente</span></figcaption>
+            </figure>
+          </div>
+          <div class="solution-examples">
+            <div class="solution-preview-grid" id="solution-list" tabindex="0" aria-label="Ejemplos de soluciones: desliza para explorar">
+              <article class="solution-card">
+                <div class="solution-screen"><img src="assets/solutions/simulador-600.webp" width="600" height="296" alt="Pantalla de MALBA Simulator" loading="lazy" decoding="async" /></div>
+                <div class="solution-card-copy"><h3>MALBA Simulator</h3><p>Practica decisiones en proyectos eléctricos y analiza su impacto en costo y plazo.</p><a class="text-link" href="https://malba-pmc.com/simulador-de-gestion-de-proyectos-de-transmision-electrica/">Conocer simulador <span aria-hidden="true">↗</span></a></div>
+              </article>
+              <article class="solution-card">
+                <div class="rac-preview" aria-label="Riesgo, Alcance y Conocimiento"><span>R<small>Riesgo</small></span><b aria-hidden="true">→</b><span>A<small>Alcance</small></span><b aria-hidden="true">→</b><span>C<small>Conocimiento</small></span></div>
+                <div class="solution-card-copy"><h3>Método RAC®</h3><p>Conecta riesgo, alcance y conocimiento para gestionar mejor tus proyectos.</p><button class="text-link" type="button" data-dialog="rac-dialog">Explorar método <span aria-hidden="true">→</span></button></div>
+              </article>
+            </div>
+            <div class="solutions-actions"><button class="button button-purple" type="button" data-dialog="all-solutions-dialog">Ver todas las soluciones <span aria-hidden="true">→</span></button></div>
+            <div class="collection-controls" data-collection="solution-list" aria-label="Recorrer soluciones"><span>Simulación y conocimiento aplicado</span><div><button type="button" data-collection-step="-1" aria-label="Solución anterior">←</button><button type="button" data-collection-step="1" aria-label="Solución siguiente">→</button></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="knowledge-section" id="conocimiento" aria-labelledby="knowledge-title">
+        <div class="section-container">
+          <div class="section-intro knowledge-heading"><h2 id="knowledge-title">Cómo transformamos experiencias en conocimiento</h2><p>Un ciclo continuo que convierte lo aprendido en mejores decisiones para cada proyecto.</p></div>
+          <ol class="knowledge-steps" aria-label="Etapas del ciclo de conocimiento">
+            <li><button type="button" data-knowledge-step="0" aria-pressed="true" aria-controls="knowledge-detail"><span class="step-number">01</span><span>Experiencia</span></button></li>
+            <li><button type="button" data-knowledge-step="1" aria-pressed="false" aria-controls="knowledge-detail"><span class="step-number">02</span><span>Lecciones aprendidas</span></button></li>
+            <li><button type="button" data-knowledge-step="2" aria-pressed="false" aria-controls="knowledge-detail"><span class="step-number">03</span><span>Metodologías</span></button></li>
+            <li><button type="button" data-knowledge-step="3" aria-pressed="false" aria-controls="knowledge-detail"><span class="step-number">04</span><span>Programas ejecutivos</span></button></li>
+            <li><button type="button" data-knowledge-step="4" aria-pressed="false" aria-controls="knowledge-detail"><span class="step-number">05</span><span>Simuladores y herramientas</span></button></li>
+            <li><button type="button" data-knowledge-step="5" aria-pressed="false" aria-controls="knowledge-detail"><span class="step-number">06</span><span>Aplicación</span></button></li>
+            <li><button type="button" data-knowledge-step="6" aria-pressed="false" aria-controls="knowledge-detail"><span class="step-number">07</span><span>Resultados</span></button></li>
+          </ol>
+          <div class="knowledge-detail" id="knowledge-detail" aria-live="polite" aria-atomic="true">
+            <div class="knowledge-orbit" aria-hidden="true"><span id="knowledge-number">01</span><svg viewBox="0 0 160 160" fill="none"><circle cx="80" cy="80" r="65" stroke="currentColor" stroke-width="1"/><path d="M80 15a65 65 0 0 1 65 65" stroke="currentColor" stroke-width="4"/><circle cx="145" cy="80" r="5" fill="currentColor"/></svg></div>
+            <div class="knowledge-copy"><h3 id="knowledge-detail-title">Experiencia que sirve de punto de partida</h3><p id="knowledge-detail-text">Partimos de los desafíos de proyectos de infraestructura eléctrica para identificar qué funciona, qué puede mejorar y qué merece compartirse.</p></div>
+            <div class="knowledge-controls"><span id="knowledge-position">01 / 07</span><div><button type="button" data-knowledge-direction="-1" aria-label="Etapa anterior">←</button><button type="button" data-knowledge-direction="1" aria-label="Etapa siguiente">→</button></div></div>
+          </div>
+          <p class="knowledge-closing">Cada resultado alimenta una nueva experiencia. El conocimiento sigue creciendo.</p>
         </div>
       </section>
     </main>
 
+    <dialog id="all-solutions-dialog" class="solutions-dialog" aria-labelledby="all-solutions-title">
+      <div class="dialog-heading"><h2 id="all-solutions-title">Todas nuestras soluciones</h2><button type="button" class="dialog-close" aria-label="Cerrar">×</button></div>
+      <div class="solution-catalog">
+        <article><h3>MALBA Simulator</h3><p>Simulación de proyectos de transmisión. Practica decisiones y analiza su impacto en costos y plazos.</p><a class="text-link" href="https://malba-pmc.com/simulador-de-gestion-de-proyectos-de-transmision-electrica/">Conocer más ↗</a></article>
+        <article><h3>MALBA Risk</h3><p>Gestión de riesgos: identificación, valoración, priorización y seguimiento para tus proyectos.</p><button type="button" class="text-link" data-dialog="contact-dialog">Consultar información →</button></article>
+        <article><h3>Método RAC®</h3><p>Riesgo, Alcance y Conocimiento conectados para fortalecer la gestión de proyectos y contratos.</p><button type="button" class="text-link" data-dialog="rac-dialog">Explorar método →</button></article>
+        <article><h3>MALBA LMS</h3><p>Programas, recursos y aprendizaje online desde nuestra aula virtual.</p><a class="text-link" href="https://malba-pmc.com/escritorio">Ir al aula virtual ↗</a></article>
+      </div>
+    </dialog>
+    <dialog id="rac-dialog" aria-labelledby="rac-title">
+      <div class="dialog-heading"><h2 id="rac-title">Método RAC®</h2><button type="button" class="dialog-close" aria-label="Cerrar">×</button></div>
+      <p>Riesgo, Alcance y Conocimiento: tres dimensiones que se conectan para mejorar la gestión de proyectos de infraestructura.</p>
+      <div class="dialog-description"><h3>Riesgo</h3><p>Identificar y conectar riesgos con las decisiones y condiciones del proyecto.</p><h3>Alcance</h3><p>Alinear requisitos, compromisos e interesados con los objetivos del proyecto.</p><h3>Conocimiento</h3><p>Incorporar lecciones aprendidas para fortalecer la planificación y ejecución.</p></div>
+      <button class="button button-purple" type="button" data-dialog="contact-dialog">Solicitar información →</button>
+    </dialog>
     <dialog id="contact-dialog" aria-labelledby="contact-title">
       <div class="dialog-heading">
         <h2 id="contact-title">¿Cómo podemos ayudarte?</h2>

@@ -51,7 +51,7 @@ Revisado en Chromium en 320, 390, 768, 1280 y 1440 px: sin scroll horizontal, re
 
 ## Ajuste del banner
 
-Foto de fondo en toda la sección, sin panel azul separado ni etiqueta sobre la imagen. Capa azul uniforme con opacidad 0.76, que pasa a 0.80 en hover con mouse y foco de teclado. El contenido permanece visible en pantallas táctiles. Título abreviado en tres líneas: “Conocimiento que / transforma proyectos / eléctricos.” La descripción mantiene “infraestructura eléctrica”. Capturas actualizadas en `docs/`.
+Foto de fondo en toda la sección, sin panel azul separado ni etiqueta sobre la imagen. Capa azul uniforme con la opacidad 0.54 ajustada por el propietario en styles.css. El contenido permanece visible en pantallas táctiles. Título abreviado en tres líneas: “Conocimiento que / transforma proyectos / eléctricos.” La descripción mantiene “infraestructura eléctrica”. Capturas actualizadas en `docs/`.
 
 
 ## Portada: carrusel, ecosistema y programas
@@ -72,3 +72,16 @@ Referencia adicional revisada: https://lilianabuchtik.com/, especialmente la pre
 ## Presentación visual del libro
 
 La segunda vista añade un fondo de infraestructura eléctrica con opacidad 0.23, un círculo morado y un aro fino detrás del libro, y un mockup más grande. No hay degradados ni nuevos recursos externos. El libro entra con una oscilación suave de 4.5 segundos, una sola vez por entrada a esa vista; el texto aparece en 0.65 segundos. No hay movimiento continuo. Todo el movimiento se desactiva con `prefers-reduced-motion`.
+
+
+## Programas, soluciones y ciclo de conocimiento
+
+Se sustituyen los iconos de Programas destacados por fotografías con carga diferida y tamaños adaptables. Dirección reutiliza la foto de infraestructura de MALBA. Riesgos y PMO usan fotografías ilustrativas generadas con la herramienta integrada; no representan al equipo real de MALBA. Archivos: `assets/programs/riesgos-{480,960}.webp` y `assets/programs/pmo-{480,960}.webp`. Originales: 1672×941; versiones WebP reducidas conservan la proporción.
+
+Prompts: (Riesgos) fotografía editorial panorámica de dos profesionales latinoamericanos revisando planos en una sala de control con infraestructura eléctrica al fondo, ropa azul y blanca, luz natural, composición despejada, sin textos, iconos ni logotipos; (PMO) tres profesionales latinoamericanos trabajando con cronogramas y un portátil alrededor de una mesa en oficina moderna, ropa azul, morada y blanca, fotografía editorial natural sin texto ni logos.
+
+Nuestras soluciones tiene dos columnas: título, descripción y espacio de video a la izquierda; MALBA Simulator y Método RAC a la derecha. El botón Ver todas abre un catálogo con Simulator, Risk, RAC y LMS. Los enlaces existentes llevan al sitio MALBA; para productos sin URL oficial proporcionada se ofrece información, sin inventar páginas o funcionalidades. La captura de Simulator es real, descargada del recurso publicado `https://malba-pmc.com/wp-content/uploads/2026/02/IMG1-MALBA.png` (1600×789) y guardada localmente como WebP.
+
+**Video pendiente:** la página actual del simulador contiene `VIDEO_ID_AQUI`, no un video reproducible. No se reutiliza ese enlace. El espacio muestra una captura y “Video de presentación · Próximamente”, sin falso botón de reproducción. Para integrar un MP4, guardar el archivo en `assets/solutions/` y completar `data-video-src` en la figura `.solutions-video` de `index.html`, por ejemplo `data-video-src="assets/solutions/presentacion.mp4"`. El código lo convierte en un reproductor nativo con controles, `playsinline`, póster y `preload="none"`. Si se facilita un enlace de YouTube, sustituir este espacio por su embed oficial.
+
+El ciclo reproduce las siete etapas de la referencia. Aparecen progresivamente al entrar en pantalla; cada botón selecciona una explicación y mueve el acento orbital y la línea de progreso. Flechas y teclas izquierda/derecha, Home y End permiten recorrerlo. No hay avance automático. Las animaciones respetan movimiento reducido. En móvil, ecosistema, programas, soluciones y etapas se recorren horizontalmente dentro de sus secciones: la página no se desborda horizontalmente y no apila todos los contenidos.

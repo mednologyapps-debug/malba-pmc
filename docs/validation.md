@@ -30,3 +30,15 @@ No se ejecutó una compra ni se alteró ningún dato o sitio de producción. El 
 Comprobada en 320, 390, 768, 1440 y 1920 px: foto de fondo presente, aro y círculo discretos, título en tres líneas, sin overflow horizontal ni recorte del contenido. Animación del libro de 4500 ms y una iteración; el libro queda visible al terminar. Movimiento reducido elimina la animación. Sin errores JavaScript ni recursos HTTP fallidos. Capturas actualizadas de la segunda vista en desktop, mobile y wide.
 
 Se conserva el commit del propietario 323855f (ajuste de styles.css). Se eliminó de home-sections.css la regla que anulaba su transparencia 0.54 en la primera vista.
+
+## Programas, soluciones y conocimiento (5 de octubre de 2026)
+
+- Referencias suministradas: tarjetas de programas, catálogo de cuatro soluciones y ciclo de siete etapas.
+- Chromium: 320, 390, 760, 768, 1024, 1440 y 1920 px. Ajustes finales de compactación revisados otra vez en 320, 390, 760 y 1440 px.
+- Tres fotografías en programas; todas las imágenes y fuentes cargan sin respuestas de error. WebP locales y carga diferida, sin imágenes enlazadas a un proveedor externo.
+- Página sin desbordamiento horizontal en los siete anchos. En móvil las colecciones se desplazan dentro de su propio contenedor. Botones de avance/retroceso y estados desactivados al llegar a los extremos comprobados.
+- Ver todas abre las cuatro soluciones. La navegación al detalle de RAC, cierre con Escape y cambio entre diálogos funcionan.
+- Las siete etapas se seleccionan por botón y flechas. Home/End y retorno a la primera etapa comprobados. Movimiento reducido desactiva la animación de contenido; no hay autoplay.
+- Video: se probó la configuración del reproductor nativo con controles, playsinline y preload none, usando una fuente configurada sólo para verificar su creación. No se probó reproducción audiovisual: falta el MP4 o enlace oficial. Sin fuente, la vista indica Próximamente y no muestra un botón de reproducción ficticio.
+- Sin excepciones de JavaScript ni recursos 4xx/5xx durante el recorrido. node --check y git diff --check pasan. styles.css sigue intacto: se conserva la opacidad manual del banner.
+- Capturas: programs-desktop/mobile.png, solutions-desktop/mobile.png y knowledge-desktop/mobile.png.
