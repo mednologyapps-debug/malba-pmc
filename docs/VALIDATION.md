@@ -24,3 +24,7 @@ La composición fotográfica fue sustituida por una ilustración 3D original con
 Se retiró la fotografía del primer banner para mostrar una sola torre sobre azul MALBA sólido (#073F7C). La ilustración entra en tres capas alineadas: base, módulo central y torre, con retrasos de 0, 650 y 1300 ms. Al terminar se sustituye por la imagen completa para evitar uniones visibles. La secuencia se reproduce una vez por sesión de pestaña; recargar no la repite.
 
 Verificados los tres estados de ensamblaje, la recarga y diez anchos entre 320 y 1920 px: sin desbordamiento horizontal, título de máximo tres líneas, fondo correcto, navegación al libro y regreso, sin recursos locales faltantes ni errores JavaScript. Con movimiento reducido o JavaScript desactivado se muestra el modelo completo. Actualizadas las capturas de escritorio y celular. `node --check home-sections.js` y `git diff --check` correctos.
+
+### Fondo arquitectónico sutil
+
+Imagen original de arquitectura con pocos planos, sin torres ni equipos adicionales. WebP responsive de 1536 y 800 px con capa azul uniforme al 74%, 68% al hover/foco. Revisados diez anchos de 320 a 1920 px, tres pasos del ensamblaje, sesión, navegación al libro, movimiento reducido y alternativa sin JavaScript: sin desbordamiento horizontal, recursos locales faltantes ni errores de JavaScript. Capturas actualizadas.

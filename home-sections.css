@@ -929,9 +929,11 @@ body:has(#video-dialog[open]) { overflow: hidden; }
   .hero-assembly-part { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
 
-/* A single, clean brand background gives the 3D object full contrast. */
+/* Quiet architectural texture supports the model without duplicating its silhouette. */
 .hero-with-showcase { background: var(--blue); }
-.hero-with-showcase::after, .hero-with-showcase:hover::after, .hero-with-showcase:focus-within::after { background: transparent; }
+.hero-with-showcase::after { background: rgba(7,63,124,.74); }
+.hero-with-showcase:hover::after, .hero-with-showcase:focus-within::after { background: rgba(7,63,124,.68); }
+.hero-visual-architecture img { object-position: center; }
 /* Three aligned slices reuse one transparent image and assemble seamlessly. */
 .hero-part-base { clip-path: inset(83% 0 0); }
 .hero-part-module { clip-path: inset(49.9% 0 16.9%); }
