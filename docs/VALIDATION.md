@@ -40,3 +40,7 @@ Se sustituyeron los destellos aislados por una órbita elíptica con un haz blan
 ### CMS funcional de Academia
 
 Panel responsive con Outfit y colores MALBA, API Python con sesiones privadas, protección CSRF/origen, borradores, imágenes, creación/orden de programas, vista previa, publicación atómica, historial y exportación. Once pruebas automatizadas correctas, incluyendo acceso, bloqueo de rutas privadas/traversal, conflicto de edición, guardado/publicación, persistencia y recuperación. En navegador se verificaron login, edición, subida de imagen, borrador, recarga, popup, publicación visible, creación, historial y logout a 1440, 1024, 768, 390 y 320 px sin desbordamiento horizontal ni errores JavaScript/recursos. Las pruebas usan una copia desechable del sitio y una base de datos independiente. Capturas `cms-*.png`; instrucciones y límites de despliegue en `CMS.md`.
+
+### Compatibilidad UTF-8 en Windows
+
+El generador y la inicialización del CMS leen HTML, plantillas y JSON con UTF-8 explícito; la generación también escribe HTML/XML en UTF-8. Esto evita depender de CP1252 en Windows. Once pruebas correctas y comprobación de todas las operaciones de texto del backend.

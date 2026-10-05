@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('build',ROOT/'scripts/build_academia.py')
 build=importlib.util.module_from_spec(spec);spec.loader.exec_module(build)
 class AcademiaPublishingTests(unittest.TestCase):
-    def setUp(self):self.data=json.loads((ROOT/'content/academia.json').read_text())
+    def setUp(self):self.data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
     def test_publish_content_changes_in_catalog_and_detail(self):
         p=self.data['programs'][0]
         p.update(title='Nuevo título del programa',startDate='2027-03-15',hours=32,sessions=10,image='assets/programs/pmo-960.webp',status='abierto')

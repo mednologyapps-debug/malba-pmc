@@ -46,7 +46,7 @@ def initialize(username=None, password=None):
         CREATE TABLE IF NOT EXISTS previews (id TEXT PRIMARY KEY, outputs TEXT NOT NULL, username TEXT NOT NULL, created REAL NOT NULL);
         ''')
         if not db.execute('SELECT 1 FROM draft').fetchone():
-            data=json.loads((ROOT/'content/academia.json').read_text())
+            data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
             db.execute('INSERT INTO draft VALUES(1,?,1,?)',(dump(data),time.time()))
             db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(data),dump(renderer.render_outputs(data)),'Inicial',time.time()))
         if username is not None and password is not None:
@@ -58,7 +58,7 @@ def initialize(username=None, password=None):
 
 def validate_content(data):
     if not isinstance(data,dict) or len(data.get('programs',[])) not in range(1,31):raise ValueError('Debe haber entre 1 y 30 programas.')
-    original=json.loads((ROOT/'content/academia.json').read_text())
+    original=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
     ids=set();slugs=set()
     with connect() as db:published=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
     old={p['id']:p['slug'] for p in published['programs']}

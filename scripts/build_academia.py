@@ -109,7 +109,7 @@ def card(program, prefix):
     </article>'''
 
 def shared(template, prefix, active, programs):
-    s = (ROOT/'templates'/template).read_text().strip()
+    s = (ROOT/'templates'/template).read_text(encoding='utf-8').strip()
     if template == 'header.html':
         menu = '<div class="academy-menu-heading"><div><strong>Academia MALBA</strong><p>Elige tu próxima especialización.</p></div><a href="academia/">Ver todos los programas <span aria-hidden="true">→</span></a></div><div class="academy-menu-programs">'
         menu += ''.join(f'<a class="academy-menu-program" href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p.get("cardDescription",p["description"]))}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in programs)
@@ -253,7 +253,7 @@ def render_outputs(data, home=None):
     validate(data)
     outputs={'academia/index.html':academy(data),'academia/proximos/index.html':upcoming(data)}
     outputs.update({p['slug']+'/index.html':program_page(p,data['programs']) for p in data['programs']})
-    home = home if home is not None else (ROOT/'index.html').read_text()
+    home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',data['programs']),home,flags=re.S)
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',data['programs']),home,flags=re.S)
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
@@ -262,10 +262,10 @@ def render_outputs(data, home=None):
     return outputs
 
 def build():
-    data=json.loads((ROOT/'content/academia.json').read_text())
+    data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
     outputs=render_outputs(data)
     for name,body in outputs.items():
-        dest=ROOT/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body)
+        dest=ROOT/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body,encoding='utf-8')
     print(f'Built {len(outputs)-2} pages; shared homepage navigation and sitemap updated.')
 
 if __name__=='__main__':build()
