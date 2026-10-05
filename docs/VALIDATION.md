@@ -32,3 +32,7 @@ Imagen original de arquitectura con pocos planos, sin torres ni equipos adiciona
 ### Modelo ampliado y destellos
 
 Se amplió el contenedor 3D de 430 a 470 px en escritorio y de 215 a 240 px en celular, con tamaños intermedios adaptados. Cuatro trazos luminosos suaves animan detrás del modelo mediante CSS, sin recursos adicionales. Se pausan en la diapositiva inactiva y se ocultan con movimiento reducido. Actualizada la clave de sesión a v2 para mostrar nuevamente el ensamblaje al probar esta versión. Verificados diez anchos (320–1920 px), secuencia base/módulo/torre, navegación al libro, ausencia de desbordamientos y errores; comprobada la visibilidad de los destellos y su alternativa con movimiento reducido.
+
+### Órbita luminosa alrededor del modelo
+
+Se sustituyeron los destellos aislados por una órbita elíptica con un haz blanco y un punto de luz que completan una vuelta cada seis segundos. Capas SVG coincidentes por delante y detrás del modelo producen profundidad; la órbita aparece al terminar el ensamblaje. Verificados movimiento real del haz, pausa en diapositiva inactiva, alternativa sin movimiento, secuencia de tres caídas y diez anchos de 320 a 1920 px, sin desbordamientos ni errores de recursos o JavaScript. Capturas actualizadas.
