@@ -3,6 +3,28 @@ const heroSlides = [...document.querySelectorAll(".hero-slide")];
 const heroDots = [...document.querySelectorAll("[data-slide-to]")];
 const sliderStatus = document.querySelector("#slider-status");
 const motionPreference = matchMedia("(prefers-reduced-motion: reduce)");
+// Assemble once per browsing session, after decoding the shared image.
+const heroAssembly = document.querySelector('[data-hero-assembly]');
+async function startHeroAssembly() {
+  if (!heroAssembly || !document.documentElement.classList.contains('hero-assembly-pending')) return;
+  try {
+    await Promise.all([...heroAssembly.querySelectorAll('img')].map(img => img.decode()));
+    if (motionPreference.matches || !document.documentElement.classList.contains('hero-assembly-pending')) return;
+    try { sessionStorage.setItem('malba-hero-assembly-v1', 'seen'); } catch (_) {}
+    heroAssembly.classList.add('is-assembling');
+    const finish = () => heroAssembly.classList.remove('is-assembling');
+    heroAssembly.querySelector('.hero-part-tower').addEventListener('animationend', finish, {once:true});
+    setTimeout(finish, 2300);
+  } catch (_) { /* Decode failed: keep the normal image fallback. */ }
+  finally { document.documentElement.classList.remove('hero-assembly-pending'); }
+}
+startHeroAssembly();
+motionPreference.addEventListener('change', event => {
+  if (event.matches) {
+    document.documentElement.classList.remove('hero-assembly-pending');
+    heroAssembly?.classList.remove('is-assembling');
+  }
+});
 let activeHeroSlide = 0;
 let heroScrollFrame = 0;
 function fitHeroHeight() {

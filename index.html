@@ -3,6 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // Prepare the first-visit animation before paint; static fallback after 3.5 s.
+      try {
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !sessionStorage.getItem('malba-hero-assembly-v1')) {
+          document.documentElement.classList.add('hero-assembly-pending');
+          setTimeout(() => document.documentElement.classList.remove('hero-assembly-pending'), 3500);
+        }
+      } catch (_) { /* Storage unavailable: display the complete model. */ }
+    </script>
     <title>MALBA PMC | Gestión de proyectos de infraestructura eléctrica</title>
     <meta
       name="description"
@@ -189,27 +198,24 @@
                   <a class="button button-outline" href="#soluciones">Explorar soluciones <span aria-hidden="true">→</span></a>
                 </div>
               </div>
-              <div class="hero-showcase hero-showcase-3d" aria-hidden="true">
-                <picture>
+              <div class="hero-showcase hero-showcase-3d" data-hero-assembly aria-hidden="true">
+                <picture class="hero-assembly-rest">
                   <source media="(max-width: 760px)" srcset="assets/hero/infraestructura-3d-640.webp">
-                  <img src="assets/hero/infraestructura-3d-1280.webp" width="1280" height="1170" alt="" decoding="async">
+                  <img src="assets/hero/infraestructura-3d-1280.webp" width="1280" height="1170" alt="" decoding="async" fetchpriority="high">
+                </picture>
+                <picture class="hero-assembly-part hero-part-base" data-assembly-part="base">
+                  <source media="(max-width: 760px)" srcset="assets/hero/infraestructura-3d-640.webp">
+                  <img src="assets/hero/infraestructura-3d-1280.webp" width="1280" height="1170" alt="" decoding="async" fetchpriority="high">
+                </picture>
+                <picture class="hero-assembly-part hero-part-module" data-assembly-part="module">
+                  <source media="(max-width: 760px)" srcset="assets/hero/infraestructura-3d-640.webp">
+                  <img src="assets/hero/infraestructura-3d-1280.webp" width="1280" height="1170" alt="" decoding="async" fetchpriority="high">
+                </picture>
+                <picture class="hero-assembly-part hero-part-tower" data-assembly-part="tower">
+                  <source media="(max-width: 760px)" srcset="assets/hero/infraestructura-3d-640.webp">
+                  <img src="assets/hero/infraestructura-3d-1280.webp" width="1280" height="1170" alt="" decoding="async" fetchpriority="high">
                 </picture>
               </div>
-            </div>
-            <div class="hero-visual" aria-hidden="true">
-              <img
-                src="assets/banner-transmision-1672.webp"
-                srcset="
-                  assets/banner-transmision-960.webp   960w,
-                  assets/banner-transmision-1672.webp 1672w
-                "
-                sizes="100vw"
-                width="1672"
-                height="941"
-                fetchpriority="high"
-                decoding="async"
-                alt=""
-              />
             </div>
           </section>
           <section

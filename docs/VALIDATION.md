@@ -18,3 +18,9 @@ Se añadió una composición con fotografía de profesionales y captura real del
 ### Banner con infraestructura 3D
 
 La composición fotográfica fue sustituida por una ilustración 3D original con torre y subestación en colores MALBA. Los WebP de 1280 y 640 px preservan el canal alfa (rango 0–255), y el fondo se integra con la fotografía existente. Comprobados los diez anchos de la revisión anterior (320–1920 px): título de tres líneas, controles y botones sin solapamientos, cambio al libro y regreso, ausencia de desbordamiento de página y errores de recursos locales/JavaScript. La animación de entrada respeta la preferencia de movimiento reducido. Capturas de home actualizadas.
+
+### Contraste y ensamblaje del modelo
+
+Se retiró la fotografía del primer banner para mostrar una sola torre sobre azul MALBA sólido (#073F7C). La ilustración entra en tres capas alineadas: base, módulo central y torre, con retrasos de 0, 650 y 1300 ms. Al terminar se sustituye por la imagen completa para evitar uniones visibles. La secuencia se reproduce una vez por sesión de pestaña; recargar no la repite.
+
+Verificados los tres estados de ensamblaje, la recarga y diez anchos entre 320 y 1920 px: sin desbordamiento horizontal, título de máximo tres líneas, fondo correcto, navegación al libro y regreso, sin recursos locales faltantes ni errores JavaScript. Con movimiento reducido o JavaScript desactivado se muestra el modelo completo. Actualizadas las capturas de escritorio y celular. `node --check home-sections.js` y `git diff --check` correctos.
