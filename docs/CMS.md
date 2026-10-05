@@ -23,7 +23,7 @@ El servidor está limitado a tu equipo por defecto. No uses el servidor estátic
 
 ## Flujo de edición
 
-1. Selecciona Academia, Convocatorias o un programa.
+1. Selecciona **Academia** en el menú lateral. El centro muestra los accesos a Portada y catálogo, Próximas convocatorias y la lista visual de programas. Pulsa una tarjeta para abrir su editor; **Volver a Academia** regresa al catálogo. Las demás áreas del menú están preparadas para próximas etapas y permanecen deshabilitadas.
 2. Edita textos, imágenes, colores, contenidos, duración, fechas, inscripción, precios y enlaces. Los campos están agrupados en secciones desplegables. Puedes reordenar y añadir elementos.
 3. **Guardar borrador** conserva el trabajo de forma privada, incluso al reiniciar el servidor. No cambia la web.
 4. **Vista previa** abre el contenido actual, incluidos los cambios aún sin guardar, en otra pestaña. Requiere la sesión del editor y vence después de 30 minutos.
@@ -39,7 +39,7 @@ Los precios modifican el contenido visible en esta web. **No cambian los product
 
 La base de datos, usuarios, sesiones, borradores, publicaciones y vistas previas se almacenan en `.cms-private/cms.sqlite3`. Las rutas privadas, scripts y archivos de código no se sirven por HTTP. La carpeta de estado y las imágenes subidas están excluidas de Git; las contraseñas no se suben al repositorio.
 
-Realiza copias de `.cms-private/` y `assets/uploads/` con el servidor detenido. Cambiar o actualizar los archivos del repositorio no sustituye el contenido guardado en la base. Para recuperar una contraseña, ejecuta `py scripts/cms_server.py --reset-admin` con el servidor detenido; crea nuevamente el usuario y su contraseña e invalida las sesiones anteriores.
+Realiza copias de `.cms-private/` y `assets/uploads/` con el servidor detenido. Actualizar los archivos del repositorio conserva el contenido guardado en la base. Al reiniciar, la publicación actual se vuelve a renderizar con las nuevas plantillas y rutas sin modificar el borrador, sus revisiones ni el historial. Para recuperar una contraseña, ejecuta `py scripts/cms_server.py --reset-admin` con el servidor detenido; crea nuevamente el usuario y su contraseña e invalida las sesiones anteriores.
 
 **Descargar web publicada** exporta un ZIP de la publicación activa con HTML, contenido JSON, CSS, JavaScript e imágenes; no incluye el dashboard, la base de datos ni credenciales. Sirve para subir la web estática a una carpeta de pruebas de Hostinger. Los cambios posteriores en el CMS requieren exportar/subir otra vez si la web se aloja de esta manera.
 
@@ -66,6 +66,16 @@ El home conserva su contenido visual; el generador sincroniza sus enlaces de nav
 
 ## Validación
 
-`python -m unittest discover -s tests -v`: once pruebas, incluidas integración HTTP sobre un sitio y base desechables. Verifican control de acceso, CSRF/origen, rutas privadas y traversal, borrador/vista previa/publicación, conflictos, persistencia, recuperación, exportación, carga de imágenes y creación de programa.
+`python -m unittest discover -s tests -v`: las pruebas automatizadas, incluidas integración HTTP sobre un sitio y base desechables. Verifican control de acceso, CSRF/origen, rutas privadas y traversal, borrador/vista previa/publicación, conflictos, persistencia, recuperación, exportación, carga de imágenes y creación de programa.
 
-Prueba de navegador: login, edición, recarga del borrador, popup de vista previa, publicación visible en Academia, todos los programas, subida de imagen, historial, creación y cierre de sesión. Revisado a 1440, 1024, 768, 390 y 320 px sin desbordamientos horizontales, errores JavaScript ni recursos locales faltantes.
+Prueba de navegador: navegación por áreas y catálogo central del CMS, edición, recarga del borrador, vista previa, publicación, subida de imagen, historial, creación y cierre de sesión. Web pública revisada a 1440, 1131, 1024, 768, 390 y 320 px; CMS a 1440, 1024, 768, 390 y 320 px. Sin desbordamientos, errores JavaScript ni recursos locales faltantes. Verificados hover y navegación táctil de los dos submenús, cierre con Escape, enlaces de tarjetas, los tres planes, cantidades de licencias, regreso del foco y contenido de la solicitud de WhatsApp.
+
+## Soluciones digitales
+
+- Catálogo: http://localhost:8080/soluciones-digitales/
+- MALBA Simulator: http://localhost:8080/soluciones-digitales/simulador-de-gestion-de-proyectos/
+- MALBA Risk: http://localhost:8080/soluciones-digitales/malba-risk/ (próximamente).
+
+El menú superior incorpora un submenú con imagen, título y descripción. El catálogo y las fichas se generan desde `content/solutions.json` y `scripts/build_solutions.py`, con estilos en `soluciones.css`. En esta etapa el dashboard solo edita Academia.
+
+La ficha de Simulator sigue la referencia SaaS: presentación, pasos, resultados, certificación y planes Individual/Universitario/Empresarial. Los precios y el video definitivo están pendientes. La selección de plan/licencias prepara una solicitud de acceso por WhatsApp; no cobra ni activa licencias. La pantalla del producto reutiliza imágenes reales del proyecto. El certificado es un modelo ilustrativo. Esta entrega implementa las páginas comerciales, sin cambiar el motor del simulador ni crear un sistema de pagos o alumnos.

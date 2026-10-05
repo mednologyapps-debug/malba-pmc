@@ -1,4 +1,4 @@
-# MALBA PMC — menú y banner, v1
+# MALBA PMC — web y CMS
 
 Primera entrega de la reconstrucción. El repositorio original solo contenía este README, sin el código de Hostinger.
 
@@ -145,3 +145,11 @@ py scripts/cms_server.py
 ```
 
 La primera ejecución solicita el usuario y la contraseña. Panel: http://localhost:8080/dashboard/. Web de prueba: http://localhost:8080/. Requiere Python 3.10 o superior. Guarda los cambios en una base privada y publica el HTML desde el mismo backend; no sobrescribe tu web actual de Hostinger. Guía completa, persistencia, exportación y requisitos de alojamiento: [docs/CMS.md](docs/CMS.md).
+
+## Soluciones digitales y CMS por áreas
+
+El dashboard abre Academia como área de la web; el centro permite editar la portada, convocatorias y cada programa. Las demás áreas permanecen preparadas para próximas etapas. Consulta `docs/CMS.md` para iniciar el servidor y conservar tus borradores al actualizar.
+
+El catálogo público está en `/soluciones-digitales/`, con submenú visual y fichas de MALBA Simulator y MALBA Risk. El simulador incluye presentación SaaS, pasos, resultados, certificado ilustrativo y planes con selección de licencias. La solicitud de acceso se prepara por WhatsApp; las tarifas y el video definitivo están pendientes. No incluye cobros, activación de licencias ni modificaciones al motor de simulación.
+
+Los textos de esta sección se encuentran en `content/solutions.json`; el generador de páginas se ejecuta con `py scripts/build_academia.py` y usa UTF-8 explícito para Windows.

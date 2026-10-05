@@ -32,7 +32,11 @@
               <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="academy-menu" aria-label="Mostrar programas de Academia"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
               <div class="academy-menu" id="academy-menu" hidden>{{PROGRAM_LINKS}}</div>
             </div>
-            <a class="nav-link" href="#soluciones">Soluciones digitales</a>
+            <div class="nav-academia nav-digital">
+              <a class="nav-link{{DIGITAL_CLASS}}" href="soluciones-digitales/"{{DIGITAL_ARIA}}>Soluciones digitales</a>
+              <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="digital-menu" aria-label="Mostrar soluciones digitales"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <div class="academy-menu" id="digital-menu" hidden>{{SOLUTION_LINKS}}</div>
+            </div>
             <button
               class="nav-link"
               type="button"

@@ -115,7 +115,12 @@ def shared(template, prefix, active, programs):
         menu += ''.join(f'<a class="academy-menu-program" href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p.get("cardDescription",p["description"]))}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in programs)
         menu += '</div><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
 
-        s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if active != 'home' else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
+        digital=json.loads((ROOT/'content/solutions.json').read_text(encoding='utf-8'))
+        digital_menu='<div class="academy-menu-heading"><div><strong>Soluciones digitales</strong><p>Entrena y mejora tus decisiones.</p></div><a href="soluciones-digitales/">Ver todas las soluciones →</a></div><div class="academy-menu-programs digital-menu-programs">'
+        digital_menu+=''.join(f'<a class="academy-menu-program" href="soluciones-digitales/{esc(p["slug"])}/"><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p["description"])}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in digital['solutions'])+'</div>'
+        is_academy=active in ['academy','upcoming']+[p['id'] for p in programs]
+        s=s.replace('{{SOLUTION_LINKS}}',digital_menu).replace('{{DIGITAL_CLASS}}',' current' if active.startswith('digital') else '').replace('{{DIGITAL_ARIA}}',' aria-current="page"' if active=='digital' else '')
+        s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if is_academy else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
     def resolve(match):
         attr, url = match.group(1), match.group(2)
         if url.startswith('#'):
@@ -134,8 +139,8 @@ def document(title, description, slug, prefix, main, programs, active, schema, i
 <link rel="canonical" href="{esc(canonical)}"><meta name="robots" content="noindex, follow"><meta name="theme-color" content="#073F7C">
 <meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="MALBA PMC"><meta property="og:title" content="{esc(title)} | MALBA PMC"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(canonical)}"><meta property="og:image" content="{esc(ORIGIN+image)}"><meta property="og:image:alt" content="{esc(image_alt)}"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{prefix}assets/favicon.png"><link rel="preload" href="{prefix}assets/fonts/outfit-semibold.ttf" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="{prefix}styles.css"><link rel="stylesheet" href="{prefix}home-sections.css"><link rel="stylesheet" href="{prefix}academia.css">
-<script src="{prefix}app.js" defer></script><script src="{prefix}academia.js" defer></script><script type="application/ld+json">{data}</script></head>
+<link rel="stylesheet" href="{prefix}styles.css"><link rel="stylesheet" href="{prefix}home-sections.css"><link rel="stylesheet" href="{prefix}academia.css"><link rel="stylesheet" href="{prefix}soluciones.css">
+<script src="{prefix}app.js" defer></script><script src="{prefix}academia.js" defer></script><script src="{prefix}soluciones.js" defer></script><script type="application/ld+json">{data}</script></head>
 <body><a class="skip-link" href="#contenido">Ir al contenido</a>{shared('header.html',prefix,active,programs)}<main id="contenido">{main}</main>{shared('footer.html',prefix,active,programs)}{shared('dialogs.html',prefix,active,programs)}</body></html>\n'''
 
 def breadcrumbs(title, slug):
@@ -256,8 +261,10 @@ def render_outputs(data, home=None):
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',data['programs']),home,flags=re.S)
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',data['programs']),home,flags=re.S)
+    from build_solutions import render_solutions
+    outputs.update(render_solutions(data['programs']))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
-    urls=['']+['academia/','academia/proximos/']+[p['slug']+'/' for p in data['programs']]
+    urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html')]
     outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{s}</loc></url>\n' for s in urls)+'</urlset>\n'
     return outputs
 

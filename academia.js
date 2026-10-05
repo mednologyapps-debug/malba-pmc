@@ -1,54 +1,28 @@
-// Shared navigation works with mouse, touch and keyboard.
-const academyToggle = document.querySelector('.academy-menu-toggle');
-const academyMenu = document.querySelector('#academy-menu');
-const academyGroup = document.querySelector('.nav-academia');
-function closeAcademyMenu() {
-  clearTimeout(academyCloseTimer);
-  academyToggle?.setAttribute('aria-expanded', 'false');
-  if (academyMenu) academyMenu.hidden = true;
-}
-const academyDesktop = matchMedia('(min-width: 1131px) and (hover: hover)');
-let academyCloseTimer;
-function openAcademyMenu() {
-  clearTimeout(academyCloseTimer);
-  if (!academyMenu) return;
-  academyMenu.style.setProperty('--academy-menu-top', `${document.querySelector('.site-header').getBoundingClientRect().bottom}px`);
-  academyToggle.setAttribute('aria-expanded', 'true');
-  academyMenu.hidden = false;
-}
-academyToggle?.addEventListener('click', () => {
-  if (academyToggle.getAttribute('aria-expanded') === 'true') closeAcademyMenu();
-  else openAcademyMenu();
+// Visual menus share mouse, touch and keyboard behavior.
+const menuClosers=[];
+document.querySelectorAll('.nav-academia').forEach(group=>{
+  const toggle=group.querySelector('.academy-menu-toggle'),menu=group.querySelector('.academy-menu');
+  const desktop=matchMedia('(min-width: 1131px) and (hover: hover)');let timer;
+  const close=()=>{clearTimeout(timer);toggle.setAttribute('aria-expanded','false');menu.hidden=true;};
+  menuClosers.push(close);
+  const open=()=>{menuClosers.forEach(fn=>{if(fn!==close)fn();});clearTimeout(timer);menu.style.setProperty('--academy-menu-top',`${document.querySelector('.site-header').getBoundingClientRect().bottom}px`);toggle.setAttribute('aria-expanded','true');menu.hidden=false;};
+  toggle.addEventListener('click',()=>menu.hidden?open():close());
+  group.addEventListener('pointerenter',e=>{if(desktop.matches&&e.pointerType==='mouse')open();});
+  group.addEventListener('pointerleave',()=>{if(desktop.matches)timer=setTimeout(()=>{if(!group.contains(document.activeElement))close();},240);});
+  menu.addEventListener('pointerenter',()=>clearTimeout(timer));
+  group.addEventListener('focusin',e=>{if(desktop.matches&&e.target.matches('.nav-link'))open();});
+  group.addEventListener('focusout',e=>{if(!group.contains(e.relatedTarget))close();});
+  group.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){e.stopPropagation();close();toggle.focus();}});
+  document.addEventListener('click',e=>{if(!group.contains(e.target))close();});
+  menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',close));
+  window.addEventListener('resize',close);document.querySelector('.menu-toggle')?.addEventListener('click',close);
+  matchMedia('(min-width:1131px)').addEventListener('change',close);
 });
-academyGroup?.addEventListener('pointerenter', event => {
-  if (academyDesktop.matches && event.pointerType === 'mouse') openAcademyMenu();
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  const openMenu=document.querySelector('.nav-academia .academy-menu:not([hidden])');
+  if(openMenu){menuClosers.forEach(close=>close());openMenu.parentElement.querySelector('.academy-menu-toggle').focus();}
 });
-academyGroup?.addEventListener('pointerleave', () => {
-  if (academyDesktop.matches) academyCloseTimer = setTimeout(() => {
-    if (!academyMenu.contains(document.activeElement)) closeAcademyMenu();
-  }, 240);
-});
-academyMenu?.addEventListener('pointerenter', () => clearTimeout(academyCloseTimer));
-academyGroup?.addEventListener('focusin', event => {
-  if (academyDesktop.matches && event.target.matches('.nav-link')) openAcademyMenu();
-});
-academyGroup?.addEventListener('focusout', event => {
-  if (!academyGroup.contains(event.relatedTarget)) closeAcademyMenu();
-});
-window.addEventListener('resize', closeAcademyMenu);
-academyGroup?.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && !academyMenu.hidden) {
-    event.stopPropagation();
-    closeAcademyMenu();
-    academyToggle.focus();
-  }
-});
-document.addEventListener('click', event => {
-  if (!event.target.closest('.nav-academia')) closeAcademyMenu();
-});
-academyMenu?.querySelectorAll('a').forEach(a => a.addEventListener('click', closeAcademyMenu));
-document.querySelector('.menu-toggle')?.addEventListener('click', closeAcademyMenu);
-matchMedia('(min-width: 1131px)').addEventListener('change', closeAcademyMenu);
 const year = document.querySelector('#footer-year');
 if (year) year.textContent = new Date().getFullYear();
 // Prices follow the configured deadline in Peru, without relying on a stale launch banner.

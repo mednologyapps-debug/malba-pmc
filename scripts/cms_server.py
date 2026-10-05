@@ -18,7 +18,7 @@ ATTEMPTS = collections.defaultdict(collections.deque)
 MAX_BODY = 7 * 1024 * 1024
 SESSION_IDLE = 1800
 SESSION_MAX = 28800
-RESERVED = {'academia','dashboard','assets','content','scripts','tests','cms-preview','api','docs'}
+RESERVED = {'academia','soluciones-digitales','dashboard','assets','content','scripts','tests','cms-preview','api','docs'}
 
 @contextmanager
 def connect():
@@ -49,6 +49,12 @@ def initialize(username=None, password=None):
             data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
             db.execute('INSERT INTO draft VALUES(1,?,1,?)',(dump(data),time.time()))
             db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(data),dump(renderer.render_outputs(data)),'Inicial',time.time()))
+        # Refresh the current publication with new templates/routes without resetting
+        # saved content, draft revisions, user accounts or publication history.
+        latest=db.execute('SELECT id,data FROM publications ORDER BY id DESC LIMIT 1').fetchone()
+        if latest:
+            outputs=renderer.render_outputs(json.loads(latest['data']))
+            db.execute('UPDATE publications SET outputs=? WHERE id=?',(dump(outputs),latest['id']))
         if username is not None and password is not None:
             if not re.fullmatch(r'[a-zA-Z0-9_.@-]{3,100}',username):raise ValueError('Usuario inválido: usa al menos 3 letras/números.')
             if not 12<=len(password)<=256:raise ValueError('La contraseña debe tener entre 12 y 256 caracteres.')
@@ -174,7 +180,7 @@ class Handler(BaseHTTPRequestHandler):
                 outputs=json.loads(pub['outputs'])
                 for name,body in outputs.items():z.writestr(name,body)
                 z.writestr('content/academia.json',pub['data'])
-                for name in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','app.js','robots.txt']:
+                for name in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
                     z.write(ROOT/name,name)
                 for f in (ROOT/'assets').rglob('*'):
                     if f.is_file():z.write(f,str(f.relative_to(ROOT)))
@@ -198,7 +204,7 @@ class Handler(BaseHTTPRequestHandler):
         if outputs and filename in outputs:
             self.response(outputs[filename],mime='application/xml; charset=utf-8' if filename.endswith('.xml') else 'text/html; charset=utf-8');return
         if path=='/dashboard':self.response('',302,'text/plain',{'Location':'/dashboard/'});return
-        allowed=filename in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
+        allowed=filename in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
         target=(ROOT/filename).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file() or filename.startswith('assets/') and not target.is_relative_to((ROOT/'assets').resolve()):self.response('Página no encontrada.',404,'text/plain');return
         mime=mimetypes.guess_type(str(target))[0] or 'application/octet-stream'

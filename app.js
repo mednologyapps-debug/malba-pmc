@@ -45,7 +45,7 @@ document.querySelectorAll("[data-dialog]").forEach((button) => {
 document.querySelectorAll("dialog").forEach((dialog) => {
   dialog
     .querySelector(".dialog-close")
-    .addEventListener("click", () => dialog.close());
+    ?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("click", (event) => {
     const box = dialog.getBoundingClientRect();
     if (

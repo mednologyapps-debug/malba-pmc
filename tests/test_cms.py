@@ -1,5 +1,5 @@
 """Integration checks use a disposable site/database; no production credentials."""
-import base64, copy, http.client, importlib, json, shutil, sys, tempfile, threading, unittest
+import base64, copy, http.client, importlib, io, json, shutil, sys, tempfile, threading, unittest, zipfile
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 import cms_server as cms
@@ -60,6 +60,37 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertNotEqual(restored['data']['academy']['title'],'CMS publicación de prueba')
         self.assertIn('CMS publicación de prueba',self.call('/academia/')[1])
         self.assertEqual(self.call('/api/export')[0],200)
+    def test_upgrade_refreshes_routes_preserving_draft_and_publication(self):
+        self.login();current=self.call('/api/content')[1]
+        data=current['data'];data['academy']['title']='Borrador conservado después de actualizar'
+        saved=self.call('/api/draft',{'data':data,'revision':current['revision']})[1]
+        with cms.connect() as db:
+            latest=db.execute('SELECT id,data,outputs,created FROM publications ORDER BY id DESC LIMIT 1').fetchone()
+            outputs=json.loads(latest['outputs'])
+            outputs={k:v for k,v in outputs.items() if not k.startswith('soluciones-digitales/')}
+            db.execute('UPDATE publications SET outputs=? WHERE id=?',(cms.dump(outputs),latest['id']))
+        self.assertEqual(self.call('/soluciones-digitales/')[0],404)
+        cms.initialize()
+        after=self.call('/api/content')[1]
+        self.assertEqual(after['revision'],saved['revision'])
+        self.assertEqual(after['data']['academy']['title'],data['academy']['title'])
+        self.assertNotIn(data['academy']['title'],self.call('/academia/')[1])
+        self.assertEqual(len(self.call('/api/history')[1]),1)
+        for path in ['/soluciones-digitales/','/soluciones-digitales/simulador-de-gestion-de-proyectos/','/soluciones-digitales/malba-risk/','/soluciones.css','/soluciones.js']:
+            self.assertEqual(self.call(path)[0],200,path)
+        self.assertIn('soluciones-digitales/simulador-de-gestion-de-proyectos/',self.call('/sitemap.xml')[1])
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port)
+        connection.request('GET','/api/export',headers={'Cookie':self.cookie})
+        exported=connection.getresponse();self.assertEqual(exported.status,200)
+        with zipfile.ZipFile(io.BytesIO(exported.read())) as archive:
+            for name in ['soluciones.css','soluciones.js','soluciones-digitales/index.html','soluciones-digitales/simulador-de-gestion-de-proyectos/index.html']:
+                self.assertIn(name,archive.namelist())
+            self.assertFalse(any('.cms-private' in name or name.startswith('dashboard/') for name in archive.namelist()))
+        connection.close()
+        with cms.connect() as db:
+            now=db.execute('SELECT data,created FROM publications ORDER BY id DESC LIMIT 1').fetchone()
+            self.assertEqual(now['data'],latest['data']);self.assertEqual(now['created'],latest['created'])
+
     def test_invalid_publish_does_not_change_publication(self):
         self.login();d=self.call('/api/content')[1];data=d['data'];data['programs'][0]['pricing']['regular']=-1
         self.assertEqual(self.call('/api/publish',{'data':data,'revision':d['revision']})[0],400)

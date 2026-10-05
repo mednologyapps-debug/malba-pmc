@@ -1,0 +1,14 @@
+{
+  "title": "Soluciones digitales",
+  "description": "Convierte el conocimiento en decisiones. Simuladores y herramientas digitales para entrenar, gestionar y mejorar tus proyectos.",
+  "contactUrl": "https://wa.me/51932563293",
+  "solutions": [
+    {"id":"simulator","slug":"simulador-de-gestion-de-proyectos","title":"MALBA Simulator","subtitle":"Simulador de gestión de proyectos","description":"Entrena la dirección de proyectos eléctricos tomando decisiones y observando su impacto en costos, plazos y desempeño.","image":"assets/solutions/simulador-1100.webp","imageSmall":"assets/solutions/simulador-600.webp","status":"Solicitar acceso","features":["Caso integral de subestación y línea de transmisión","Decisiones por etapas y resultados de desempeño","Licencia personal o para tu organización"]},
+    {"id":"risk","slug":"malba-risk","title":"MALBA Risk","subtitle":"Gestión de riesgos para tus proyectos","description":"Identifica, valora y prioriza los riesgos de tus proyectos con una visión estructurada para tomar mejores decisiones.","image":"assets/programs/riesgos-960.webp","imageSmall":"assets/programs/riesgos-480.webp","status":"Próximamente","features":["Identificación y valoración de riesgos","Priorización para orientar la respuesta","Seguimiento de los riesgos del proyecto"]}
+  ],
+  "plans": [
+    {"id":"individual","title":"Individual","description":"Para profesionales y estudiantes que quieren entrenar a su propio ritmo.","license":"1 licencia personal","features":["Simulación completa del proyecto","Uso individual autónomo","Resultados de desempeño detallados","Certificado digital al completar la experiencia"]},
+    {"id":"universitario","title":"Universitario","description":"Para universidades, escuelas de negocios y programas de ingeniería.","license":"Licencias para tu institución","features":["Cantidad de licencias según tus participantes","Una licencia por correo de estudiante","Participación individual o por equipos","Administración de licencias y resultados"]},
+    {"id":"empresarial","title":"Empresarial","description":"Para capacitar y desarrollar equipos corporativos y oficinas de proyectos.","license":"Licencias para tu equipo","features":["Cantidad de licencias según tu equipo","Una licencia por correo de participante","Entrenamiento individual o en equipos","Seguimiento de resultados de participantes"]}
+  ]
+}
