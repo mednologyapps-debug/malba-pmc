@@ -153,14 +153,3 @@ const knowledgeObserver = new IntersectionObserver((entries) => {
   }
 }, {threshold: .35});
 knowledgeObserver.observe(knowledgeList);
-
-// Configuración del video oficial: no descargarlo hasta que haya una fuente real.
-const videoFigure = document.querySelector('[data-video-src]');
-if (videoFigure.dataset.videoSrc) {
-  const video = document.createElement('video');
-  video.controls = true; video.preload = 'none'; video.playsInline = true;
-  video.poster = videoFigure.querySelector('img').src;
-  video.src = videoFigure.dataset.videoSrc;
-  video.setAttribute('aria-label', 'Presentación de las soluciones MALBA');
-  videoFigure.replaceChildren(video);
-}

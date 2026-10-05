@@ -42,3 +42,9 @@ Se conserva el commit del propietario 323855f (ajuste de styles.css). Se elimin�
 - Video: se probó la configuración del reproductor nativo con controles, playsinline y preload none, usando una fuente configurada sólo para verificar su creación. No se probó reproducción audiovisual: falta el MP4 o enlace oficial. Sin fuente, la vista indica Próximamente y no muestra un botón de reproducción ficticio.
 - Sin excepciones de JavaScript ni recursos 4xx/5xx durante el recorrido. node --check y git diff --check pasan. styles.css sigue intacto: se conserva la opacidad manual del banner.
 - Capturas: programs-desktop/mobile.png, solutions-desktop/mobile.png y knowledge-desktop/mobile.png.
+
+## Presentación editorial de Miguel Alba
+
+Sustituye la sección de ejemplos de soluciones por texto de Miguel, foto real y tres accesos: Nuestra academia, Soluciones que ofrecemos y Publicaciones. Capturas actuales: miguel-desktop.png y miguel-mobile.png; las capturas solutions anteriores documentan una versión reemplazada.
+
+Chromium en 320, 390, 600, 768, 900, 1024, 1440 y 1920 px: sin desbordamiento horizontal, imágenes faltantes o errores JavaScript. Foto comprobada: ancho mostrado nunca superior al ancho nativo de 264 px. Catálogo de cuatro soluciones, Escape, retorno de foco y continuidad del ciclo de conocimiento comprobados. styles.css permanece intacto; opacidad 0.54 conservada. node --check y git diff --check pasan.
