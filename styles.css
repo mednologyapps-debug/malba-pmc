@@ -448,7 +448,7 @@ dialog > p,
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgba(7, 63, 124, 0.76);
+  background: rgba(7, 63, 124, 0.54);
   pointer-events: none;
   transition: background-color 0.2s ease;
 }
@@ -498,11 +498,11 @@ dialog > p,
 }
 @media (hover: hover) and (pointer: fine) {
   .hero:hover::after {
-    background: rgba(7, 63, 124, 0.8);
-  }
+  background: rgba(7, 63, 124, 0.54);
+}
 }
 .hero:focus-within::after {
-  background: rgba(7, 63, 124, 0.8);
+  background: rgba(7, 63, 124, 0.54);
 }
 @media (min-width: 1700px) {
   .hero {
