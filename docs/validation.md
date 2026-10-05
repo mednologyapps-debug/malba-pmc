@@ -66,3 +66,15 @@ Sin desbordamiento horizontal, imágenes faltantes, excepciones JavaScript ni re
 ### Iconos oficiales y fondo de Aprende con MALBA
 
 Verificados 1920, 1440, 1024, 768, 390 y 320 px: sin desbordamiento, tarjetas blancas, enlaces sociales con nombres accesibles y recursos locales cargados. Fotografía decorativa responsive con capa azul al 90 %. Se conserva el comportamiento del popup de video, menú y carrusel. La reproducción externa de YouTube conserva la limitación de validación descrita anteriormente.
+
+### Academia y migración de los programas
+
+- Cinco vistas generadas: Academia, Próximos programas y tres programas existentes.
+- 30 combinaciones de página y viewport (1920, 1440, 1024, 768, 390 y 320 px): un H1, Outfit, imágenes locales cargadas, sin desbordamiento horizontal de la página, sin errores de consola ni recursos locales fallidos.
+- Todos los enlaces internos revisados responden 200. Navegación desde el menú del home al catálogo y desde una tarjeta al programa verificada.
+- Menú Academia desplegable, cierre con Escape y retorno de foco; menú móvil y diálogo de información comprobados. El catálogo móvil tiene scroll horizontal, controles y teclado.
+- Temario accesible con `details/summary`: 9 módulos en Dirección, 9 en Riesgos y 6 en PMO. El programa PMO conserva 8 sesiones; sus 6 módulos no se confundieron con el número de sesiones.
+- Todos los párrafos, títulos de tarjetas y listas de los cuerpos adjuntos se mantienen. No se inventaron testimonios para sustituir el shortcode dependiente de WordPress.
+- Cinco pruebas de publicación y configuración: edición de contenidos/fechas/precios, publicación de promociones vigentes, vencimiento de promociones, bloqueo de compras pausadas y escape de contenido/URLs inseguras.
+- No se probó una compra real ni se enviaron consultas de WhatsApp. El formulario de brochure del plugin WordPress no estaba incluido; los botones abren los PDFs originales.
+- El contenido está separado del diseño. CMS/dashboard, autenticación, API y sincronización con WooCommerce quedan para una implementación posterior.

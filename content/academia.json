@@ -1,0 +1,1017 @@
+{
+  "version": 1,
+  "academy": {
+    "title": "Academia MALBA",
+    "subtitle": "Formación especializada para liderar proyectos y tomar mejores decisiones en el sector eléctrico.",
+    "image": "assets/academia/academia-1672.webp",
+    "imageSmall": "assets/academia/academia-960.webp",
+    "imageAlt": "Profesionales trabajando en la planificación de un proyecto",
+    "introTitle": "Fortalece tu conocimiento. Lleva la experiencia a tus proyectos.",
+    "introText": "En la Academia MALBA fortalecemos tus conocimientos en gestión de proyectos, riesgos y PMO con una formación práctica, casos del sector eléctrico y herramientas que podrás aplicar en tu trabajo. Conecta la experiencia con el aprendizaje y desarrolla capacidades para afrontar nuevos desafíos.",
+    "programsTitle": "Nuestros programas",
+    "programsText": "Explora nuestras áreas de especialización y encuentra la formación que acompaña tu desarrollo profesional."
+  },
+  "upcoming": {
+    "title": "Próximos programas",
+    "description": "Nuevas oportunidades para seguir fortaleciendo tus capacidades en gestión de proyectos del sector eléctrico.",
+    "image": "assets/banner-transmision-1672.webp",
+    "imageSmall": "assets/banner-transmision-960.webp",
+    "introTitle": "Prepárate para tu próxima especialización",
+    "introText": "Consulta los programas con fechas por confirmar y conversa con nuestro equipo para conocer las próximas convocatorias.",
+    "contactUrl": "https://wa.me/51932563293?text=Hola%2C%20deseo%20informaci%C3%B3n%20sobre%20las%20pr%C3%B3ximas%20convocatorias%20de%20la%20Academia%20MALBA."
+  },
+  "programs": [
+    {
+      "id": "direccion",
+      "slug": "gestion-de-proyectos-de-transmision-electrica",
+      "category": "Gestión de proyectos",
+      "title": "Dirección de Proyectos de Transmisión Eléctrica",
+      "description": "Formamos directores de proyecto capaces de liderar proyectos de infraestructura eléctrica mediante una formación práctica, estratégica y basada en experiencias reales.",
+      "image": "assets/banner-transmision-1672.webp",
+      "imageSmall": "assets/banner-transmision-960.webp",
+      "imageAlt": "Infraestructura de transmisión eléctrica",
+      "edition": "8.ª edición",
+      "status": "consultar",
+      "startDate": "2026-08-18",
+      "startLabel": "18 de agosto de 2026 · edición anterior",
+      "schedule": "Martes, jueves y viernes · 7:00 p. m. a 10:00 p. m.",
+      "modality": "Virtual en vivo",
+      "hours": 27,
+      "sessions": 9,
+      "pricing": {
+        "currency": "USD",
+        "regular": 350,
+        "launch": 300,
+        "launchEndsAt": "2026-08-06T00:00:00-05:00",
+        "note": "Factura electrónica incluida"
+      },
+      "brochureUrl": "https://malba-pmc.com/wp-content/uploads/2026/07/Brochure_Programa-Ejecutivo-Direccion-Proyectos-Transmision-Electrica.pdf",
+      "whatsappUrl": "https://wa.me/51932563293?text=Hola%2C%20deseo%20informaci%C3%B3n%20sobre%20el%20Programa%20Ejecutivo%20de%20Direcci%C3%B3n%20de%20Proyectos%20de%20Transmisi%C3%B3n%20El%C3%A9ctrica.",
+      "checkoutUrl": "https://malba-pmc.com/finalizar-compra/?add-to-cart=3439&quantity=1",
+      "registrationNote": "Consulta la disponibilidad y las fechas de la próxima edición.",
+      "learning": {
+        "title": "¿Qué aprenderás durante el curso?",
+        "description": "Aprenderás a dirigir proyectos de transmisión eléctrica con una visión estratégica, integrando interesados, alcance, cronograma, costos, riesgos y control del desempeño.",
+        "items": [
+          {
+            "title": "Dirección estratégica",
+            "description": "Comprenderás el proyecto, su ciclo de vida, el entorno y el rol del Director de Proyectos para generar valor desde el inicio."
+          },
+          {
+            "title": "Gestión de interesados",
+            "description": "Identificarás, analizarás y comprometerás a los actores clave para alinear expectativas y asegurar su apoyo."
+          },
+          {
+            "title": "Estructura del proyecto",
+            "description": "Definirás el alcance y organizarás los entregables mediante una estructura clara, completa y orientada a resultados."
+          },
+          {
+            "title": "Programa integral",
+            "description": "Desarrollarás un cronograma ejecutable considerando lógica constructiva, dependencias, recursos y restricciones."
+          },
+          {
+            "title": "Alcance, plazo y costos",
+            "description": "Construirás la línea base integrando alcance, cronograma y presupuesto para gestionar eficazmente el desempeño."
+          },
+          {
+            "title": "Riesgos: identificar",
+            "description": "Desarrollarás una visión preventiva para identificar y estructurar los riesgos que pueden afectar los objetivos."
+          },
+          {
+            "title": "Riesgos: responder",
+            "description": "Priorizarás los riesgos y diseñarás respuestas efectivas para reducir su impacto y proteger el proyecto."
+          },
+          {
+            "title": "Control del desempeño",
+            "description": "Medirás objetivamente el avance físico y económico para tomar decisiones oportunas y maximizar el valor."
+          },
+          {
+            "title": "Taller integrador",
+            "description": "Integrarás todos los conocimientos y herramientas para presentar y defender la estrategia completa del proyecto."
+          }
+        ]
+      },
+      "curriculum": {
+        "title": "Contenido del programa",
+        "description": "Nueve sesiones para dirigir proyectos de transmisión con una visión estratégica e integrada.",
+        "modules": [
+          {
+            "title": "Dirección estratégica de proyectos de transmisión",
+            "paragraphs": [
+              "Comprender el proyecto, su ciclo de vida, el entorno y el rol del Director de Proyectos para generar valor desde el inicio."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Involucramiento estratégico de los interesados",
+            "paragraphs": [
+              "Identificar, analizar y comprometer a los actores clave para alinear expectativas y asegurar su apoyo a lo largo del proyecto."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Diseño de la estructura del proyecto",
+            "paragraphs": [
+              "Definir el alcance y organizar los entregables mediante una estructura clara y completa."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Programa integral del proyecto",
+            "paragraphs": [
+              "Desarrollar un cronograma ejecutable considerando lógica constructiva, dependencias, recursos y restricciones."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Integración de alcance, cronograma y costos",
+            "paragraphs": [
+              "Construir la línea base integrando alcance, tiempo y presupuesto para una gestión efectiva del desempeño."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Gestión estratégica de riesgos - Parte I",
+            "paragraphs": [
+              "Desarrollar una visión preventiva mediante la identificación y estructuración de los riesgos que pueden afectar los objetivos."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Gestión estratégica de riesgos - Parte II",
+            "paragraphs": [
+              "Priorizar los riesgos y diseñar respuestas efectivas para reducir su impacto y proteger los objetivos del proyecto."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Control estratégico del desempeño del proyecto",
+            "paragraphs": [
+              "Medir objetivamente el avance físico y económico para tomar decisiones oportunas y maximizar el valor."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Taller integrador - Dirección de un proyecto de transmisión",
+            "paragraphs": [
+              "Integrar todos los conocimientos y herramientas para presentar y defender la estrategia completa de dirección del proyecto."
+            ],
+            "topics": []
+          }
+        ]
+      },
+      "specialization": {
+        "title": "¿Por qué especializarte?",
+        "description": "El sector necesita profesionales capaces de desarrollar proyectos más rápido, con mayor eficiencia y menor exposición al riesgo.",
+        "points": [
+          "Nuevos proyectos de transmisión para sostener el crecimiento económico.",
+          "Infraestructura crítica para la seguridad y confiabilidad del sistema eléctrico.",
+          "Retrasos y sobrecostos que exigen mejores capacidades de dirección.",
+          "Necesidad de líderes preparados para tomar mejores decisiones.",
+          "Metodología, herramientas y simulación para mejorar resultados."
+        ]
+      },
+      "instructors": [
+        {
+          "name": "Miguel Alba",
+          "credentials": "Ingeniero Electricista · MBA · PMP® · RMP®",
+          "description": "Especialista en gestión de proyectos con amplia experiencia liderando proyectos de transmisión eléctrica de alta tensión.",
+          "image": "assets/people/miguel-alba.webp",
+          "points": [
+            "Más de 25 años de experiencia y más de 10 años en transmisión eléctrica AT.",
+            "Proyectos de líneas y subestaciones de 60 kV a 500 kV, incluyendo más de 700 km.",
+            "Experiencia integral desde factibilidad y caso de negocio hasta construcción, puesta en servicio y operación.",
+            "Evaluación económica y financiera, coordinación institucional, docencia y consultoría internacional."
+          ]
+        }
+      ],
+      "methodology": {
+        "title": "¿Cómo aprenderás?",
+        "description": "Una metodología práctica que combina conceptos, herramientas, simulación y toma de decisiones.",
+        "items": [
+          {
+            "title": "Aprender",
+            "description": "Conceptos clave y buenas prácticas de gestión aplicadas a transmisión eléctrica."
+          },
+          {
+            "title": "Practicar",
+            "description": "Aplicación con herramientas profesionales mediante talleres dirigidos."
+          },
+          {
+            "title": "Simular",
+            "description": "Decisiones estratégicas en el Simulador MALBA durante cada fase."
+          },
+          {
+            "title": "Analizar",
+            "description": "Evaluación de resultados, indicadores y lecciones aprendidas."
+          },
+          {
+            "title": "Mejorar",
+            "description": "Ajuste de planes y estrategias para optimizar el desempeño del proyecto."
+          },
+          {
+            "title": "Integrar",
+            "description": "Consolidación del plan de gestión con una visión integral del proyecto."
+          }
+        ]
+      },
+      "applied": {
+        "title": "Entrena con el Simulador MALBA",
+        "description": "Practica la toma de decisiones en escenarios realistas de transmisión eléctrica antes de enfrentarlos en un proyecto real.",
+        "points": [
+          "Más de 50 escenarios de riesgo para identificar, valorar y priorizar.",
+          "Decisiones estratégicas en cada fase del proyecto.",
+          "Evaluación de impactos sobre alcance, cronograma, costos y riesgos.",
+          "Entorno web exclusivo, interactivo y orientado a resultados."
+        ],
+        "image": "assets/academia/simulador.webp",
+        "stats": [
+          {
+            "value": "50+",
+            "label": "Escenarios de riesgo."
+          },
+          {
+            "value": "Web",
+            "label": "Acceso interactivo."
+          },
+          {
+            "value": "6 fases",
+            "label": "Aprender, practicar, simular, analizar, mejorar e integrar."
+          },
+          {
+            "value": "100%",
+            "label": "Enfocado en transmisión."
+          }
+        ],
+        "tools": [],
+        "sectors": [],
+        "lab": null
+      },
+      "outcomes": {
+        "title": "¿Qué lograrás?",
+        "description": "Al finalizar, habrás desarrollado competencias clave para liderar proyectos de transmisión eléctrica de manera estratégica, integrada y efectiva.",
+        "items": [
+          {
+            "title": "Visión estratégica",
+            "description": "Comprenderás el contexto del negocio, el ciclo de vida y tu rol como director de proyectos."
+          },
+          {
+            "title": "Liderazgo e influencia",
+            "description": "Sabrás identificar, analizar y comprometer a los interesados clave para alinear expectativas."
+          },
+          {
+            "title": "Gestión del alcance",
+            "description": "Diseñarás la estructura del proyecto y gestionarás los entregables de forma clara y efectiva."
+          },
+          {
+            "title": "Planificación integral",
+            "description": "Elaborarás cronogramas realistas considerando lógica constructiva, recursos y restricciones."
+          },
+          {
+            "title": "Integración de costos",
+            "description": "Integrarás alcance, cronograma y costos para construir una línea base sólida y confiable."
+          },
+          {
+            "title": "Gestión de riesgos",
+            "description": "Identificarás, analizarás y priorizarás riesgos, diseñando respuestas para proteger los objetivos."
+          },
+          {
+            "title": "Control del desempeño",
+            "description": "Aplicarás Valor Ganado y otros indicadores para monitorear, controlar y prever resultados."
+          },
+          {
+            "title": "Programación de cronogramas",
+            "description": "Aplicarás Ruta Crítica y Cadena Crítica para gestionar el plazo con enfoque en resultados."
+          },
+          {
+            "title": "Toma de decisiones",
+            "description": "Tomarás decisiones oportunas basadas en datos, evaluando alternativas y gestionando incertidumbre."
+          },
+          {
+            "title": "Aplicación inmediata",
+            "description": "Aplicarás lo aprendido en un taller integrador con un caso realista de transmisión eléctrica."
+          }
+        ]
+      },
+      "certificate": {
+        "title": "Obtén tu certificado de aprobación",
+        "description": "Al aprobar el programa, recibirás un certificado emitido por MALBA PMC que acredita tu formación especializada en dirección de proyectos de transmisión eléctrica.",
+        "image": "assets/academia/certificado.webp",
+        "imageAlt": "Certificado de aprobación del programa",
+        "points": [
+          "✓Acredita una formación 100% enfocada en transmisión eléctrica.",
+          "Acredita una formación 100% enfocada en transmisión eléctrica.",
+          "Potencia tu perfil profesional en el sector eléctrico.",
+          "Incluido dentro de la inversión del programa."
+        ],
+        "note": "Certificación incluida junto con materiales, plantillas y acceso al simulador."
+      },
+      "lab": null,
+      "proof": {
+        "title": "¿Por qué MALBA PMC?",
+        "description": "Una formación aplicada, respaldada por experiencia real y recursos listos para usar.",
+        "stats": [
+          {
+            "value": "+9",
+            "label": "Años de experiencia"
+          },
+          {
+            "value": "8",
+            "label": "Ediciones realizadas"
+          },
+          {
+            "value": "100%",
+            "label": "Enfocado en transmisión"
+          }
+        ],
+        "items": [
+          {
+            "title": "Docente experto",
+            "description": "Experiencia real liderando proyectos de transmisión en Perú y Latinoamérica."
+          },
+          {
+            "title": "Metodología práctica",
+            "description": "Casos, ejercicios, plantillas y herramientas aplicables desde el primer día."
+          },
+          {
+            "title": "Simulador web exclusivo",
+            "description": "Entrenamiento de decisiones en un entorno interactivo y realista."
+          },
+          {
+            "title": "Plantillas y formatos",
+            "description": "Recursos editables listos para utilizar en tus proyectos."
+          },
+          {
+            "title": "Clases grabadas por seis meses",
+            "description": "Revisa y refuerza el contenido cuando lo necesites."
+          },
+          {
+            "title": "Factura electrónica incluida",
+            "description": "Comprobante electrónico incluido en tu inscripción."
+          }
+        ]
+      },
+      "final": {
+        "title": "Dirige proyectos de transmisión con una visión estratégica",
+        "description": "Fortalece tu capacidad para planificar, integrar, controlar riesgos y tomar mejores decisiones en proyectos de infraestructura eléctrica."
+      },
+      "imageWide": "assets/banner-transmision-1672.webp"
+    },
+    {
+      "id": "riesgos",
+      "slug": "gestion-de-riesgos-de-proyectos-de-transmision-electrica",
+      "category": "Gestión de riesgos",
+      "title": "Gestión de Riesgos en Proyectos de Transmisión",
+      "description": "Desarrolla una gestión integral de riesgos para anticipar amenazas y oportunidades, priorizar escenarios críticos y diseñar respuestas que protejan los objetivos de proyectos de transmisión eléctrica.",
+      "image": "assets/programs/riesgos-960.webp",
+      "imageSmall": "assets/programs/riesgos-960.webp",
+      "imageAlt": "Análisis de proyectos en una sala de control",
+      "edition": null,
+      "status": "proximamente",
+      "startDate": null,
+      "startLabel": "Próximamente",
+      "schedule": "Martes, jueves y viernes · 7:00 p. m. a 10:00 p. m.",
+      "modality": "Virtual en vivo",
+      "hours": 27,
+      "sessions": 9,
+      "pricing": {
+        "currency": "USD",
+        "regular": null,
+        "launch": null,
+        "launchEndsAt": null,
+        "note": "Inversión por confirmar"
+      },
+      "brochureUrl": "https://malba-pmc.com/wp-content/uploads/2026/09/GESTION-DE-RIESGOS-EN-PROYECTOS-DE-TRANSMISION-MALBA-PMC-SET.pdf",
+      "whatsappUrl": "https://wa.me/51932563293?text=Hola%2C%20deseo%20informaci%C3%B3n%20sobre%20el%20programa%20Gestión%20de%20Riesgos%20en%20Proyectos%20de%20Transmisión.",
+      "checkoutUrl": null,
+      "registrationNote": "Las inscripciones se habilitarán cuando se confirmen las nuevas fechas.",
+      "learning": {
+        "title": "¿Qué aprenderás durante el curso?",
+        "description": "Aprenderás a gestionar riesgos de forma integral en proyectos de transmisión eléctrica, desde su identificación y análisis hasta la planificación de respuestas, implementación y monitoreo.",
+        "items": [
+          {
+            "title": "Fundamentos de riesgos",
+            "description": "Comprenderás amenazas, oportunidades, riesgos inherentes, residuales y secundarios."
+          },
+          {
+            "title": "Planificación",
+            "description": "Definirás roles, responsabilidades, apetito, tolerancia y umbrales de riesgo."
+          },
+          {
+            "title": "Identificación",
+            "description": "Aplicarás técnicas para estructurar amenazas y oportunidades de forma clara."
+          },
+          {
+            "title": "Análisis cualitativo",
+            "description": "Evaluarás probabilidad, impacto, urgencia y proximidad para priorizar riesgos."
+          },
+          {
+            "title": "Análisis cuantitativo",
+            "description": "Aplicarás EMV, Monte Carlo y cálculo de reservas de contingencia."
+          },
+          {
+            "title": "Respuesta",
+            "description": "Diseñarás estrategias y planes de contingencia para riesgos prioritarios."
+          },
+          {
+            "title": "Implementación",
+            "description": "Ejecutarás respuestas y coordinarás acciones con cronograma, contratos y adquisiciones."
+          },
+          {
+            "title": "Monitoreo",
+            "description": "Reevaluarás riesgos, identificarás nuevos eventos y controlarás reservas."
+          },
+          {
+            "title": "Integración",
+            "description": "Consolidarás el registro, mapa de calor y acciones para presentarlas a un Comité de Riesgos."
+          }
+        ]
+      },
+      "curriculum": {
+        "title": "Contenido del programa",
+        "description": "Nueve sesiones para gestionar los riesgos de un proyecto de transmisión desde la identificación hasta su monitoreo y control.",
+        "modules": [
+          {
+            "title": "Fundamentos de Gestión de Riesgos",
+            "paragraphs": [
+              "Definiciones de riesgos, riesgos conocidos y desconocidos, amenazas y oportunidades, riesgo inherente, residual y secundario.",
+              "Presentación del proyecto base: construcción de una subestación en alta tensión y línea de transmisión asociada.",
+              "Taller: análisis preliminar de riesgos, identificando amenazas y oportunidades iniciales del proyecto."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Planificar la Gestión de Riesgos",
+            "paragraphs": [
+              "Plan de gestión de riesgos: estructura, contenido y propósito.",
+              "Aptitud frente al riesgo: apetito, tolerancia y umbrales. Roles, responsabilidades, métodos y herramientas.",
+              "Taller: planificación de la gestión de riesgos para el proyecto base."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Identificar los Riesgos",
+            "paragraphs": [
+              "Brainstorming, entrevistas y lecciones aprendidas.",
+              "Uso de la Estructura de Desglose de Riesgos y metelenguaje: causa, riesgo y consecuencia.",
+              "Identificación de riesgos residuales y secundarios.",
+              "Taller: desarrollo del registro de riesgos organizado por categorías."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Análisis Cualitativo de Riesgos",
+            "paragraphs": [
+              "Probabilidad e impacto, matriz de riesgos y mapa de calor.",
+              "Priorización de riesgos, factores de urgencia y proximidad.",
+              "Taller: calificación del registro, generación del mapa de calor inicial y definición de riesgos prioritarios."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Análisis Cuantitativo de Riesgos",
+            "paragraphs": [
+              "Técnicas de análisis mediante EMV y Simulación Monte Carlo.",
+              "Modelado del riesgo en cronograma y costos.",
+              "Identificación de reservas de contingencia.",
+              "Taller: cálculo del EMV y estimación de la reserva de contingencia del proyecto."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Planificar la Respuesta a los Riesgos",
+            "paragraphs": [
+              "Estrategias para amenazas y oportunidades.",
+              "Definición de triggers y diseño de planes de contingencia.",
+              "Taller: definición de planes de contingencia para riesgos prioritarios, responsables y costos estimados."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Implementar la Respuesta a los Riesgos",
+            "paragraphs": [
+              "Ejecución de acciones de respuesta y activación de planes de contingencia.",
+              "Coordinación con cronograma, adquisiciones y contratos.",
+              "Registro de decisiones y cambios.",
+              "Taller: actualización del registro con las respuestas implementadas."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Monitorear los Riesgos",
+            "paragraphs": [
+              "Seguimiento de los planes, identificación de nuevos riesgos y reevaluación de eventos existentes.",
+              "Control del uso de la reserva de contingencia.",
+              "Taller: actualización del registro con información del monitoreo."
+            ],
+            "topics": []
+          },
+          {
+            "title": "Integración del Proceso de Gestión de Riesgos",
+            "paragraphs": [
+              "Integración de todo el proceso de gestión de riesgos.",
+              "Evaluación de la eficacia del plan aplicado.",
+              "Consolidación del registro, mapa de calor y acciones implementadas.",
+              "Simulación de presentación a Comité de Riesgos del Proyecto.",
+              "Taller final: presentación del registro actualizado, matriz de probabilidad e impacto, contingencias, reservas y recomendaciones."
+            ],
+            "topics": []
+          }
+        ]
+      },
+      "specialization": {
+        "title": "¿Por qué especializarte?",
+        "description": "Los proyectos de transmisión movilizan inversiones significativas y están expuestos a incertidumbres técnicas, contractuales, sociales, ambientales y de ejecución.",
+        "points": [
+          "Desarrolla una cultura de prevención y anticipación.",
+          "Integra la gestión de riesgos con las diferentes áreas y especialidades del proyecto.",
+          "Protege alcance, plazo, presupuesto y objetivos estratégicos.",
+          "Prioriza recursos sobre los eventos de mayor exposición.",
+          "Toma decisiones basadas en información estructurada."
+        ]
+      },
+      "instructors": [
+        {
+          "name": "Miguel Alba",
+          "credentials": "Ingeniero Electricista · MBA · PMP® · RMP® · ISO 31000",
+          "description": "Especialista en gestión de proyectos y riesgos aplicados a instalaciones eléctricas de alta tensión.",
+          "image": "assets/people/miguel-alba.webp",
+          "points": [
+            "Experiencia en proyectos de 60 kV, 138 kV, 220 kV y 500 kV.",
+            "Gestión desde inicio y planificación hasta ejecución, monitoreo y puesta en servicio.",
+            "Experiencia en proyectos conectados al SEIN.",
+            "Certificaciones especializadas en dirección y gestión de riesgos."
+          ]
+        }
+      ],
+      "methodology": {
+        "title": "¿Cómo aprenderás?",
+        "description": "Un enfoque aplicado que combina fundamentos, casos reales del sector eléctrico, herramientas y talleres prácticos.",
+        "items": [
+          {
+            "title": "Comprender",
+            "description": "Revisa los fundamentos y conceptos especializados de gestión de riesgos."
+          },
+          {
+            "title": "Identificar",
+            "description": "Detecta amenazas y oportunidades mediante técnicas estructuradas."
+          },
+          {
+            "title": "Analizar",
+            "description": "Evalúa los riesgos cualitativa y cuantitativamente."
+          },
+          {
+            "title": "Responder",
+            "description": "Diseña estrategias, contingencias y triggers para los riesgos prioritarios."
+          },
+          {
+            "title": "Implementar",
+            "description": "Ejecuta respuestas e intégralas con las demás áreas del proyecto."
+          },
+          {
+            "title": "Monitorear",
+            "description": "Controla exposición, reservas, nuevos riesgos y eficacia del plan."
+          }
+        ]
+      },
+      "applied": {
+        "title": "Trabaja con herramientas especializadas",
+        "description": "Aplica herramientas para evaluar incertidumbre en cronograma y costos, priorizar riesgos y estimar contingencias.",
+        "points": [
+          "Construcción y actualización del registro de riesgos.",
+          "Matrices de probabilidad e impacto y mapas de calor.",
+          "Modelado del riesgo en cronograma y costos.",
+          "Simulación Monte Carlo y cálculo de contingencias."
+        ],
+        "image": null,
+        "stats": [],
+        "tools": [
+          {
+            "title": "Microsoft Project",
+            "description": "Modelado y análisis del cronograma."
+          },
+          {
+            "title": "@RISK",
+            "description": "Simulación y análisis cuantitativo de incertidumbre y contingencias."
+          },
+          {
+            "title": "Registro de riesgos",
+            "description": "Estructuración, priorización, respuesta y seguimiento."
+          }
+        ],
+        "sectors": [],
+        "lab": null,
+        "toolsTitle": "Herramientas del programa"
+      },
+      "outcomes": {
+        "title": "¿Qué lograrás?",
+        "description": "Al finalizar, podrás gestionar los riesgos de proyectos de transmisión con una visión preventiva e integral.",
+        "items": [
+          {
+            "title": "Cultura preventiva",
+            "description": "Anticiparás eventos antes de que comprometan los objetivos."
+          },
+          {
+            "title": "Registro estructurado",
+            "description": "Construirás registros de riesgos claros y accionables."
+          },
+          {
+            "title": "Priorización objetiva",
+            "description": "Identificarás los riesgos que requieren mayor atención."
+          },
+          {
+            "title": "Mapa de calor",
+            "description": "Representarás visualmente exposición y criticidad."
+          },
+          {
+            "title": "Monte Carlo",
+            "description": "Evaluarás escenarios de incertidumbre cuantitativamente."
+          },
+          {
+            "title": "Contingencias",
+            "description": "Estimarás reservas y planes de respuesta."
+          },
+          {
+            "title": "Triggers",
+            "description": "Definirás cuándo activar respuestas y contingencias."
+          },
+          {
+            "title": "Monitoreo continuo",
+            "description": "Reevaluarás la exposición durante todo el ciclo del proyecto."
+          },
+          {
+            "title": "Comité de riesgos",
+            "description": "Presentarás resultados y recomendaciones de manera ejecutiva."
+          }
+        ]
+      },
+      "certificate": {
+        "title": "Obtén tu certificado de participación",
+        "description": "Al completar el programa, recibirás un certificado emitido por MALBA PMC que acredita tu formación especializada en gestión de riesgos aplicada a proyectos de alta tensión.",
+        "image": "assets/academia/certificado.webp",
+        "imageAlt": "Certificado de participación MALBA PMC",
+        "points": [
+          "✓ Formación especializada en riesgos de proyectos de transmisión.",
+          "Formación especializada en riesgos de proyectos de transmisión.",
+          "Potencia tu perfil profesional en el sector eléctrico.",
+          "Incluido dentro de la inversión del programa."
+        ],
+        "note": ""
+      },
+      "lab": null,
+      "proof": {
+        "title": "¿Por qué MALBA PMC?",
+        "description": "Una formación aplicada, enfocada en proyectos reales de transmisión y respaldada por experiencia especializada.",
+        "stats": [
+          {
+            "value": "9",
+            "label": "Sesiones especializadas",
+            "binding": "sessions"
+          },
+          {
+            "value": "27 h",
+            "label": "Formación en vivo",
+            "binding": "hours"
+          },
+          {
+            "value": "100%",
+            "label": "Enfocado en transmisión"
+          }
+        ],
+        "items": [
+          {
+            "title": "Certificación",
+            "description": "Certificado emitido por MALBA PMC."
+          },
+          {
+            "title": "Clases grabadas",
+            "description": "Revisa y refuerza los contenidos del programa."
+          },
+          {
+            "title": "Casos de alta tensión",
+            "description": "Talleres construidos sobre situaciones reales del sector."
+          },
+          {
+            "title": "Docente experto",
+            "description": "Experiencia real en proyectos de transmisión."
+          },
+          {
+            "title": "Talleres prácticos",
+            "description": "Aplicación inmediata de cada etapa de gestión de riesgos."
+          },
+          {
+            "title": "Factura electrónica",
+            "description": "Comprobante incluido en tu inscripción."
+          }
+        ]
+      },
+      "final": {
+        "title": "Anticipa los riesgos antes de que impacten tu proyecto",
+        "description": "Aprende a identificar, priorizar, cuantificar, responder y monitorear los riesgos de proyectos de transmisión eléctrica."
+      },
+      "imageWide": "assets/programs/riesgos-1672.webp"
+    },
+    {
+      "id": "pmo",
+      "slug": "diseno-implementacion-y-mejora-de-pmo",
+      "category": "Especialización en PMO",
+      "title": "Diseño, Implementación y Mejora de PMO",
+      "description": "Diseña, implementa o mejora una PMO alineada con la estrategia, que fortalezca la gobernanza y contribuya a generar valor sostenible en empresas del sector eléctrico.",
+      "image": "assets/programs/pmo-960.webp",
+      "imageSmall": "assets/programs/pmo-960.webp",
+      "imageAlt": "Planificación y colaboración en una reunión profesional",
+      "edition": null,
+      "status": "proximamente",
+      "startDate": null,
+      "startLabel": "Próximamente",
+      "schedule": "Fechas y horario por confirmar",
+      "modality": "Modalidad por confirmar",
+      "hours": 24,
+      "sessions": 8,
+      "pricing": {
+        "currency": "USD",
+        "regular": null,
+        "launch": null,
+        "launchEndsAt": null,
+        "note": "Inversión por confirmar"
+      },
+      "brochureUrl": "https://malba-pmc.com/wp-content/uploads/2026/08/NUEVO-PROGRAMA-ESPECIALIZADO-DE-PMO.pdf",
+      "whatsappUrl": "https://wa.me/51932563293?text=Hola%2C%20deseo%20informaci%C3%B3n%20sobre%20el%20programa%20Dise%C3%B1o%2C%20Implementaci%C3%B3n%20y%20Mejora%20de%20PMO.",
+      "checkoutUrl": "https://malba-pmc.com/finalizar-compra/?add-to-cart=3736&quantity=1",
+      "registrationNote": "Las inscripciones se habilitarán cuando se confirmen las nuevas fechas.",
+      "learning": {
+        "title": "¿Qué aprenderás durante el programa?",
+        "description": "Aprenderás a diseñar, implementar y evolucionar una PMO alineada con la estrategia, capaz de fortalecer la gobernanza y contribuir a la realización sostenible de valor.",
+        "items": [
+          {
+            "title": "Alineamiento estratégico",
+            "description": "Relaciona estrategia, portafolios, programas, proyectos y generación de valor."
+          },
+          {
+            "title": "Diagnóstico",
+            "description": "Evalúa el contexto, interesados, madurez y necesidades que debe atender la PMO."
+          },
+          {
+            "title": "Diseño de PMO",
+            "description": "Define mandato, propuesta de valor, modelo operativo, servicios y capacidades."
+          },
+          {
+            "title": "Implementación",
+            "description": "Planifica el despliegue progresivo, recursos, comunicación, cambio y adopción."
+          },
+          {
+            "title": "Realización de valor",
+            "description": "Mide desempeño, beneficios y madurez para demostrar el valor de la PMO."
+          },
+          {
+            "title": "Laboratorio integrador",
+            "description": "Diseña una PMO y su hoja de ruta para una empresa del sector eléctrico."
+          }
+        ]
+      },
+      "curriculum": {
+        "title": "Contenido del programa",
+        "description": "Seis etapas para diseñar, implementar, liderar y mejorar una PMO orientada al valor.",
+        "modules": [
+          {
+            "title": "Fundamentos y alineamiento estratégico",
+            "paragraphs": [
+              "Comprenderás el propósito estratégico de una PMO y su relación con gobernanza, portafolios, programas, proyectos y generación de valor.",
+              "Taller: Evaluador de Escenario Contextual PMO y Matriz de Respuesta."
+            ],
+            "topics": [
+              "Definición de PMO.",
+              "Enfoques y visión general de la PMO.",
+              "Enfoque en el cliente.",
+              "Factores de éxito.",
+              "Competencias de la PMO.",
+              "Ciclo de experiencia del cliente.",
+              "The PMO Value Ring™ Framework."
+            ]
+          },
+          {
+            "title": "Exploración y diagnóstico",
+            "paragraphs": [
+              "Comprenderás la organización antes de diseñar la PMO.",
+              "Taller: diagnóstico guiado de una empresa del sector eléctrico: problemas, causas, impactos y oportunidades de mejora."
+            ],
+            "topics": [
+              "Comprensión del negocio.",
+              "Objetivos estratégicos.",
+              "Madurez organizacional vs. madurez de la PMO.",
+              "Generación de conciencia de la PMO.",
+              "Evaluación de necesidades."
+            ]
+          },
+          {
+            "title": "Diseño de la PMO",
+            "paragraphs": [
+              "Diseñarás una PMO alineada con la estrategia empresarial.",
+              "Taller: diseño de una PMO para una empresa del sector eléctrico."
+            ],
+            "topics": [
+              "Propuesta de valor.",
+              "Diseño de servicios.",
+              "Modelo de PMO.",
+              "Gobierno.",
+              "Roles y responsabilidades.",
+              "Catálogo de servicios.",
+              "Indicadores.",
+              "Roadmap."
+            ]
+          },
+          {
+            "title": "Implementación y cambio",
+            "paragraphs": [
+              "Planificarás y ejecutarás el despliegue progresivo de la PMO.",
+              "Taller: construcción del Plan de Implementación de la PMO."
+            ],
+            "topics": [
+              "Incorporación de servicios.",
+              "Operación de servicios.",
+              "Estrategia de implementación.",
+              "Gestión del cambio.",
+              "Plan de implementación."
+            ]
+          },
+          {
+            "title": "Mejora y realización de valor",
+            "paragraphs": [
+              "Aprenderás a asegurar que la PMO genere beneficios sostenibles para la organización."
+            ],
+            "topics": [
+              "Monitoreo y mejora de servicios.",
+              "Entrega y reconocimiento de valor.",
+              "Beneficios organizacionales.",
+              "Indicadores estratégicos.",
+              "Medición del desempeño.",
+              "Evaluación de la madurez.",
+              "Realización del valor."
+            ]
+          },
+          {
+            "title": "Laboratorio integrador",
+            "paragraphs": [
+              "Durante el laboratorio los equipos elaborarán los principales entregables de la implementación de una PMO.",
+              "Aplicación: diseño de una PMO corporativa y elaboración de su hoja de ruta para una empresa del sector eléctrico."
+            ],
+            "topics": []
+          }
+        ]
+      },
+      "specialization": {
+        "title": "¿Por qué especializarte?",
+        "description": "Las empresas del sector eléctrico gestionan proyectos cada vez más complejos y diversos. Una PMO permite conectar estrategia y ejecución.",
+        "points": [
+          "Alinear estrategia con la ejecución.",
+          "Fortalecer la gobernanza organizacional.",
+          "Gestionar portafolios, programas y proyectos.",
+          "Desarrollar capacidades organizacionales.",
+          "Demostrar resultados y generación sostenible de valor."
+        ]
+      },
+      "instructors": [
+        {
+          "name": "Dayana Romero",
+          "credentials": "Ing. Civil · MBA Project Management",
+          "description": "Más de 16 años en control de proyectos, oficina técnica, PMO y dirección de proyectos, programas y portafolios. CEO y Directora de Dayana Romero® Consulting y más de 10 años en docencia superior y universitaria.",
+          "image": null,
+          "points": []
+        },
+        {
+          "name": "Miguel Alba",
+          "credentials": "Ingeniero Electricista · MBA · PMP® · RMP®",
+          "description": "Especialista en gestión de proyectos, con formación en gerencia de proyectos electromecánicos, liderazgo e ISO 31000.",
+          "image": "assets/people/miguel-alba.webp",
+          "points": []
+        }
+      ],
+      "methodology": {
+        "title": "¿Cómo aprenderás?",
+        "description": "Una metodología práctica, herramientas aplicadas y un enfoque basado en la experiencia del sector eléctrico.",
+        "items": [
+          {
+            "title": "Comprender",
+            "description": "Parte de la estrategia, la gobernanza y el propósito de una PMO."
+          },
+          {
+            "title": "Diagnosticar",
+            "description": "Analiza contexto, problemas, necesidades, interesados y madurez."
+          },
+          {
+            "title": "Diseñar",
+            "description": "Construye propuesta de valor, servicios, gobierno e indicadores."
+          },
+          {
+            "title": "Implementar",
+            "description": "Define el despliegue, recursos, cambio y adopción de la PMO."
+          },
+          {
+            "title": "Mejorar",
+            "description": "Mide desempeño, madurez, beneficios y oportunidades de mejora."
+          },
+          {
+            "title": "Aplicar",
+            "description": "Integra el aprendizaje en un caso empresarial del sector eléctrico."
+          }
+        ]
+      },
+      "applied": {
+        "title": "Una PMO para articular estrategia, portafolios y proyectos",
+        "description": "Casos y decisiones aplicados a empresas de generación, transmisión y distribución eléctrica.",
+        "points": [],
+        "image": null,
+        "stats": [],
+        "tools": [],
+        "sectors": [
+          "Eólico",
+          "Solar",
+          "Térmico",
+          "Subestaciones",
+          "Líneas",
+          "Modernización de redes"
+        ],
+        "lab": {
+          "title": "Laboratorio integrador",
+          "description": "Diseñarás una PMO corporativa y elaborarás una hoja de ruta aplicada a una empresa del sector eléctrico."
+        }
+      },
+      "outcomes": {
+        "title": "¿Qué lograrás?",
+        "description": "Una PMO no se improvisa: se diagnostica, se diseña, se implementa, se mejora y demuestra su valor.",
+        "items": [
+          {
+            "title": "Exploración y diagnóstico",
+            "description": "Comprenderás contexto, madurez y necesidades de la organización."
+          },
+          {
+            "title": "Diseño",
+            "description": "Definirás propósito, servicios y hoja de ruta de la PMO."
+          },
+          {
+            "title": "Implementación",
+            "description": "Planificarás el despliegue progresivo de la oficina."
+          },
+          {
+            "title": "Mejora",
+            "description": "Evaluarás desempeño, adopción y madurez."
+          },
+          {
+            "title": "Realización de valor",
+            "description": "Relacionarás resultados de la PMO con beneficios organizacionales."
+          },
+          {
+            "title": "Hoja de ruta",
+            "description": "Terminarás con un planteamiento aplicable a una empresa eléctrica."
+          }
+        ]
+      },
+      "certificate": null,
+      "lab": {
+        "title": "Laboratorio de implementación de una PMO",
+        "description": "Los equipos elaborarán los principales entregables necesarios para plantear la implementación de una PMO.",
+        "items": [
+          {
+            "title": "Diagnóstico",
+            "description": "Análisis del contexto, problemas y necesidades."
+          },
+          {
+            "title": "Modelo de PMO",
+            "description": "Propuesta de valor, gobierno, servicios y capacidades."
+          },
+          {
+            "title": "Roadmap",
+            "description": "Hoja de ruta para implementar progresivamente la PMO."
+          }
+        ]
+      },
+      "proof": {
+        "title": "Información del programa",
+        "description": "Dirigido a profesionales y organizaciones vinculados a la gestión de proyectos del sector eléctrico.",
+        "stats": [
+          {
+            "value": "24 h",
+            "label": "Duración total",
+            "binding": "hours"
+          },
+          {
+            "value": "8",
+            "label": "Sesiones",
+            "binding": "sessions"
+          },
+          {
+            "value": "Próximamente",
+            "label": "Nueva fecha de inicio",
+            "binding": "start"
+          }
+        ],
+        "items": []
+      },
+      "final": {
+        "title": "Lleva tu PMO de la gestión de proyectos a la realización de valor",
+        "description": "Aprende a diagnosticar, diseñar, implementar y mejorar una PMO alineada con la estrategia de una empresa del sector eléctrico."
+      },
+      "imageWide": "assets/programs/pmo-1672.webp"
+    }
+  ]
+}

@@ -6,7 +6,7 @@
     <title>MALBA PMC | Gestión de proyectos de infraestructura eléctrica</title>
     <meta
       name="description"
-      content="Consultoría, formación ejecutiva y soluciones digitales para la gestión de proyectos de infraestructura eléctrica. Conoce MALBA PMC y MALBA Academy."
+      content="Consultoría, formación ejecutiva y soluciones digitales para la gestión de proyectos de infraestructura eléctrica. Conoce MALBA PMC y Academia MALBA."
     />
     <link rel="canonical" href="https://malba-pmc.com/" />
     <!-- Vista de revisión: retirar noindex únicamente cuando esté lista para producción. -->
@@ -45,6 +45,8 @@
     <link rel="stylesheet" href="home-sections.css" />
     <script src="app.js" defer></script>
     <script src="home-sections.js" defer></script>
+    <link rel="stylesheet" href="academia.css" />
+    <script src="academia.js" defer></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -100,9 +102,11 @@
             <a class="nav-link" href="https://malba-pmc.com/#consultoria"
               >Consultoría</a
             >
-            <a class="nav-link" href="https://malba-pmc.com/proximos-cursos"
-              >Academy</a
-            >
+            <div class="nav-academia">
+              <a class="nav-link" href="academia/">Academia</a>
+              <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="academy-menu" aria-label="Mostrar programas de Academia"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <div class="academy-menu" id="academy-menu" hidden><a href="academia/">Ver toda la academia</a><a href="gestion-de-proyectos-de-transmision-electrica/">Gestión de proyectos</a><a href="gestion-de-riesgos-de-proyectos-de-transmision-electrica/">Gestión de riesgos</a><a href="diseno-implementacion-y-mejora-de-pmo/">Especialización en PMO</a><a href="academia/proximos/">Próximos programas</a></div>
+            </div>
             <a class="nav-link" href="#soluciones">Soluciones digitales</a>
             <button
               class="nav-link"
@@ -179,8 +183,8 @@
                 <div class="hero-actions">
                   <a
                     class="button button-white"
-                    href="https://malba-pmc.com/proximos-cursos"
-                    >Conocer MALBA Academy <span aria-hidden="true">→</span></a
+                    href="academia/"
+                    >Conocer Academia MALBA <span aria-hidden="true">→</span></a
                   >
                   <a class="button button-outline" href="#soluciones">Explorar soluciones <span aria-hidden="true">→</span></a>
                 </div>
@@ -353,12 +357,12 @@
                 d="m4 18 20-10 20 10-20 10-20-10Zm8 5v12c8 6 16 6 24 0V23m8-5v17"
               />
             </svg>
-            <h3>MALBA Academy</h3>
+            <h3>Academia MALBA</h3>
             <p>
               Formación ejecutiva basada en casos reales y experiencias del
               sector de infraestructura eléctrica.
             </p>
-            <a class="text-link" href="#programas"
+            <a class="text-link" href="academia/"
               >Explorar programas <span aria-hidden="true">→</span></a
             >
           </article>
@@ -426,7 +430,7 @@
             </div>
             <a
               class="text-link all-programs"
-              href="https://malba-pmc.com/proximos-cursos"
+              href="academia/"
               >Ver todos los programas <span aria-hidden="true">↗</span></a
             >
           </div>
@@ -441,7 +445,7 @@
                 </p>
                 <a
                   class="text-link"
-                  href="https://malba-pmc.com/gestion-de-proyectos-de-transmision-electrica/"
+                  href="gestion-de-proyectos-de-transmision-electrica/"
                   >Ver programa <span aria-hidden="true">↗</span></a
                 >
               </div>
@@ -458,7 +462,7 @@
                 </p>
                 <a
                   class="text-link"
-                  href="https://malba-pmc.com/gestion-de-riesgos-de-proyectos-de-transmision-electrica/"
+                  href="gestion-de-riesgos-de-proyectos-de-transmision-electrica/"
                   >Ver programa <span aria-hidden="true">↗</span></a
                 >
               </div>
@@ -473,7 +477,7 @@
                 </p>
                 <a
                   class="text-link"
-                  href="https://malba-pmc.com/diseno-implementacion-y-mejora-de-pmo/"
+                  href="diseno-implementacion-y-mejora-de-pmo/"
                   >Ver programa <span aria-hidden="true">↗</span></a
                 >
               </div>
@@ -542,7 +546,7 @@
           <div class="expertise-options">
             <article class="expertise-option">
               <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 17 20-10 20 10-20 10L4 17Zm8 5v13c8 6 16 6 24 0V22m8-5v18M18 43h12"/></svg>
-              <div><h3>Nuestra academia</h3><p>Formación ejecutiva que conecta los desafíos del sector con herramientas para la práctica.</p><a class="text-link" href="#programas">Ver programas <span aria-hidden="true">→</span></a></div>
+              <div><h3>Nuestra academia</h3><p>Formación ejecutiva que conecta los desafíos del sector con herramientas para la práctica.</p><a class="text-link" href="academia/">Ver programas <span aria-hidden="true">→</span></a></div>
             </article>
             <article class="expertise-option">
               <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="24" cy="24" r="18"/><ellipse cx="24" cy="24" rx="8" ry="18"/><path d="M7 18h34M7 30h34M24 6v36"/></svg>
@@ -587,13 +591,18 @@
             <p>Experiencia, formación y tecnología para transformar la gestión de proyectos de infraestructura eléctrica.</p>
             <div class="footer-socials"><a href="https://www.linkedin.com/company/malba-pmc/" target="_blank" rel="noopener noreferrer"> <img src="assets/social/linkedin-white.png" alt="" width="28" height="26" loading="lazy" decoding="async"><span class="sr-only">LinkedIn de MALBA PMC (abre en una nueva pestaña)</span></a><a href="https://www.youtube.com/@malbapmc2563" target="_blank" rel="noopener noreferrer"> <img src="assets/social/youtube-white.png" alt="" width="40" height="34" loading="lazy" decoding="async"><span class="sr-only">YouTube de MALBA PMC (abre en una nueva pestaña)</span></a></div>
           </div>
-          <nav class="footer-navigation" aria-label="Explorar MALBA"><h2>Explora MALBA</h2><ul><li><a href="#ecosistema">Nuestro ecosistema</a></li><li><a href="#programas">Nuestra academia</a></li><li><a href="#soluciones">Soluciones que ofrecemos</a></li><li><a href="https://malba-pmc.com/libro/">Publicaciones</a></li><li><a href="#aprende">Aprende con MALBA</a></li></ul></nav>
+          <nav class="footer-navigation" aria-label="Explorar MALBA"><h2>Explora MALBA</h2><ul><li><a href="#ecosistema">Nuestro ecosistema</a></li><li><a href="academia/">Nuestra academia</a></li><li><a href="#soluciones">Soluciones que ofrecemos</a></li><li><a href="https://malba-pmc.com/libro/">Publicaciones</a></li><li><a href="#aprende">Aprende con MALBA</a></li></ul></nav>
           <nav class="footer-navigation" aria-label="Información de MALBA"><h2>Sobre nosotros</h2><ul><li><a href="https://malba-pmc.com/quienes-somos">Conoce MALBA PMC</a></li><li><a href="https://malba-pmc.com/#consultoria">Consultoría</a></li><li><a href="https://malba-pmc.com/escritorio">Aula virtual</a></li></ul></nav>
           <div class="footer-contact"><h2>Conversemos</h2><p>Encuentra la formación o solución que tu organización necesita.</p><button class="button button-purple" type="button" data-dialog="contact-dialog">Solicitar información <span aria-hidden="true">→</span></button></div>
         </div>
         <div class="footer-bottom"><p>© <span id="footer-year">2026</span> MALBA PMC. Todos los derechos reservados.</p><a href="#contenido">Volver al inicio <span aria-hidden="true">↑</span></a></div>
       </div>
     </footer>
+
+
+
+
+
 
 
     <dialog id="video-dialog" class="youtube-dialog" aria-labelledby="video-dialog-title">
@@ -625,10 +634,10 @@
       </div>
       <p>Elige lo que necesitas conocer de MALBA PMC.</p>
       <div class="dialog-links">
-        <a href="https://malba-pmc.com/proximos-cursos"
+        <a href="academia/"
           ><strong>Formación ejecutiva</strong
           ><span
-            >Conoce los programas de MALBA Academy
+            >Conoce los programas de Academia MALBA
             <b aria-hidden="true">↗</b></span
           ></a
         >
@@ -713,7 +722,7 @@
     <noscript
       ><p class="no-script">
         Para consultar información, visita
-        <a href="https://malba-pmc.com/proximos-cursos">nuestros programas</a> o
+        <a href="academia/">nuestros programas</a> o
         <a href="https://malba-pmc.com/#consultoria">consultoría</a>.
       </p></noscript
     >

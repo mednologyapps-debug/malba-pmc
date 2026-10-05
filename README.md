@@ -121,3 +121,13 @@ Capturas completas actuales: `docs/home-desktop.png` y `docs/home-mobile.png`. F
 ### Ajuste visual: redes y Aprende con MALBA
 
 Iconos blancos originales descargados de [LinkedIn](https://brand.linkedin.com/downloads) y [YouTube](https://brand.youtube/youtube-icon/), sin modificar sus formas. Se sirven localmente en `assets/social/`. La sección de videos reutiliza la fotografía de infraestructura, con una capa azul uniforme al 90 % en `.learn-section::before`, sin degradados. En celular carga la variante de 960 px.
+
+### Academia y páginas de programas
+
+El menú ahora abre **Academia** en `academia/`, con accesos a Gestión de proyectos, Gestión de riesgos, Especialización en PMO y Próximos programas. El catálogo tiene cuatro tarjetas; la última abre las convocatorias con fechas por confirmar. Cada programa tiene una página local con el contenido de los adjuntos, temario desplegable, docentes, metodología, aplicaciones y resultados.
+
+Los datos editables están en `content/academia.json`; se publican con `py scripts/build_academia.py`. El contrato y el alcance de la futura integración con `dashboard.malba-pmc.com` están en [content/README.md](content/README.md). El dashboard todavía no se ha desarrollado.
+
+Las nuevas páginas incluyen título, descripción, canonical, Open Graph, datos estructurados de cursos y breadcrumbs, y sitemap actualizado. Mantienen `noindex, follow` durante esta revisión. Outfit se sirve localmente. No se cambió la capa `.54` del banner del home.
+
+Validación del contenido: `py -m unittest discover -s tests -v`. En navegador se comprobaron las cinco páginas a 1920, 1440, 1024, 768, 390 y 320 px, navegación home → Academia → programa, submenu, temarios, popup de información, precios vencidos y enlaces locales. Brochures y WhatsApp apuntan a los destinos originales; no se enviaron mensajes ni se hicieron compras.

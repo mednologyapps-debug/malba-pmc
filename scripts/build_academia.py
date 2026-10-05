@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""Render Academia and program pages from content/academia.json (Python stdlib only)."""
+from datetime import datetime, timezone
+from pathlib import Path
+from html import escape
+from urllib.parse import urlparse
+import json, re, math
+
+ROOT = Path(__file__).resolve().parents[1]
+ORIGIN = 'https://malba-pmc.com/'
+
+def esc(value):
+    return escape(str(value if value is not None else ''), quote=True)
+
+def safe_url(value):
+    value = str(value)
+    parsed = urlparse(value)
+    if any(ord(c) < 32 for c in value) or value.startswith('//'):
+        raise ValueError('Unsafe URL')
+    if parsed.scheme and parsed.scheme != 'https':
+        raise ValueError('Only HTTPS external URLs are supported')
+    if not parsed.scheme and (value.startswith('/') or '..' in value.split('/')):
+        raise ValueError('Local URLs must be relative to the site root')
+    return value
+
+def local(value, prefix):
+    value = safe_url(value)
+    return value if value.startswith('https://') or value.startswith('#') else prefix + value
+
+def picture(image, small, alt, prefix, cls='', eager=False):
+    return f'''<picture class="{esc(cls)}"><source media="(max-width: 760px)" srcset="{esc(local(small, prefix))}"><img src="{esc(local(image, prefix))}" alt="{esc(alt)}" width="1672" height="941" {'fetchpriority="high"' if eager else 'loading="lazy"'} decoding="async"></picture>'''
+
+def paras(lines):
+    return ''.join(f'<p>{esc(x)}</p>' for x in lines if x)
+
+def checklist(items):
+    return '<ul class="course-checklist">' + ''.join(f'<li>{esc(x)}</li>' for x in items) + '</ul>' if items else ''
+
+def section_head(data):
+    return f'<div class="course-heading"><h2>{esc(data["title"])}</h2><p>{esc(data.get("description", ""))}</p></div>'
+
+def card_grid(items, label):
+    return f'''<div class="course-card-track" tabindex="0" aria-label="{esc(label)}">''' + ''.join(f'<article class="course-small-card"><span class="course-number" aria-hidden="true">{i:02}</span><h3>{esc(x["title"])}</h3><p>{esc(x["description"])}</p></article>' for i, x in enumerate(items, 1)) + '</div><p class="course-swipe-hint">Desliza para explorar todos los contenidos <span aria-hidden="true">→</span></p>'
+
+def statistics(items, program=None):
+    items = [dict(x) for x in items]
+    for x in items:
+        if program and x.get('binding') == 'hours':x['value'] = f"{program['hours']} h"
+        if program and x.get('binding') == 'sessions':x['value'] = str(program['sessions'])
+        if program and x.get('binding') == 'start':x['value'] = start_label(program)
+    return '<div class="course-stats">' + ''.join(f'<div><strong>{esc(x["value"])}</strong><span>{esc(x["label"])}</span></div>' for x in items) + '</div>' if items else ''
+
+def price(program):
+    pricing = program['pricing']
+    regular, launch, end = pricing.get('regular'), pricing.get('launch'), pricing.get('launchEndsAt')
+    use_launch = launch is not None and end and datetime.now(timezone.utc) < datetime.fromisoformat(end)
+    amount = launch if use_launch else regular
+    if amount is None:
+        return '<span class="course-price-unconfirmed">Inversión por confirmar</span>'
+    attrs = f'data-price-regular="{esc(regular)}" data-price-launch="{esc(launch)}" data-price-end="{esc(end)}"'
+    return f'<div class="course-price" {attrs}><span data-price-label>{"Precio de lanzamiento" if use_launch else "Precio regular"}</span><strong data-price-amount>US$ {esc(amount)}</strong></div>'
+
+def action(program, secondary=False):
+    status = program['status']
+    if status == 'abierto' and program.get('checkoutUrl'):
+        return f'<a class="button button-purple" href="{esc(safe_url(program["checkoutUrl"]))}">Inscribirme ahora <span aria-hidden="true">→</span></a>'
+    if status in ['proximamente', 'agotado']:
+        return '<button class="button course-disabled" type="button" disabled>' + ('Inscripciones próximamente' if status == 'proximamente' else 'Inscripciones cerradas') + '</button>'
+    return f'<a class="button button-purple" href="{esc(safe_url(program["whatsappUrl"]))}" target="_blank" rel="noopener noreferrer">Consultar próxima edición <span aria-hidden="true">↗</span></a>'
+
+def card(program, prefix):
+    state = {'proximamente': 'Próximamente', 'consultar': 'Consultar próxima edición', 'abierto': 'Inscripciones abiertas', 'agotado': 'Inscripciones cerradas'}[program['status']]
+    return f'''<article class="academy-program-card">
+      <a class="academy-card-image" href="{esc(local(program['slug']+'/', prefix))}" tabindex="-1" aria-hidden="true">{picture(program['image'], program['imageSmall'], '', prefix)}<span class="academy-card-status">{esc(state)}</span></a>
+      <div class="academy-card-content"><h3><a href="{esc(local(program['slug']+'/', prefix))}">{esc(program['title'])}</a></h3><p>{esc(program['description'])}</p><div class="academy-card-meta"><span>{esc(program['hours'])} horas</span><span>{esc(program['sessions'])} sesiones</span></div><div class="academy-card-bottom">{price(program)}<a class="text-link" href="{esc(local(program['slug']+'/', prefix))}">Ver programa <span aria-hidden="true">→</span><span class="sr-only">: {esc(program['title'])}</span></a></div></div>
+    </article>'''
+
+def shared(template, prefix, active, programs):
+    s = (ROOT/'templates'/template).read_text().strip()
+    if template == 'header.html':
+        menu = '<a href="academia/">Ver toda la academia</a>' + ''.join(f'<a href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'>{esc(p["category"])}</a>' for p in programs) + '<a href="academia/proximos/"'+ (' aria-current="page"' if active == 'upcoming' else '') + '>Próximos programas</a>'
+        s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if active != 'home' else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
+    def resolve(match):
+        attr, url = match.group(1), match.group(2)
+        if url.startswith('#'):
+            url = url if url == '#contenido' else prefix + url
+        elif not url.startswith('https://'):
+            url = (prefix or './') if url == './' else prefix + url
+        return f'{attr}="{url}"'
+    return re.sub(r'(href|src)="([^"]+)"', resolve, s)
+
+def document(title, description, slug, prefix, main, programs, active, schema, image, image_alt=""):
+    canonical = ORIGIN + slug
+    data = json.dumps(schema, ensure_ascii=False).replace('<', '\\u003c')
+    return f'''<!doctype html>
+<html lang="es-PE"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{esc(title)} | MALBA PMC</title><meta name="description" content="{esc(description)}">
+<link rel="canonical" href="{esc(canonical)}"><meta name="robots" content="noindex, follow"><meta name="theme-color" content="#073F7C">
+<meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="MALBA PMC"><meta property="og:title" content="{esc(title)} | MALBA PMC"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(canonical)}"><meta property="og:image" content="{esc(ORIGIN+image)}"><meta property="og:image:alt" content="{esc(image_alt)}"><meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="{prefix}assets/favicon.png"><link rel="preload" href="{prefix}assets/fonts/outfit-semibold.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="{prefix}styles.css"><link rel="stylesheet" href="{prefix}home-sections.css"><link rel="stylesheet" href="{prefix}academia.css">
+<script src="{prefix}app.js" defer></script><script src="{prefix}academia.js" defer></script><script type="application/ld+json">{data}</script></head>
+<body><a class="skip-link" href="#contenido">Ir al contenido</a>{shared('header.html',prefix,active,programs)}<main id="contenido">{main}</main>{shared('footer.html',prefix,active,programs)}{shared('dialogs.html',prefix,active,programs)}</body></html>\n'''
+
+def breadcrumbs(title, slug):
+    items = [{'@type':'ListItem', 'position':1, 'name':'Inicio', 'item':ORIGIN}, {'@type':'ListItem', 'position':2, 'name':'Academia', 'item':ORIGIN+'academia/'}]
+    if slug != 'academia/':items.append({'@type':'ListItem', 'position':3, 'name':title, 'item':ORIGIN+slug})
+    return {'@type':'BreadcrumbList', 'itemListElement':items}
+
+def course_schema(program):
+    return {'@type':'Course', '@id':ORIGIN+program['slug']+'/#course','name':program['title'],'description':program['description'],'url':ORIGIN+program['slug']+'/', 'inLanguage':'es-PE','image':ORIGIN+program['image'],'provider':{'@type':'Organization','name':'MALBA PMC','url':ORIGIN}}
+
+def hero(data, prefix, title=None, desc=None):
+    return f'''<section class="academy-hero" aria-labelledby="academy-title">{picture(data['image'],data['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="section-container"><h1 id="academy-title">{esc(title or data['title'])}</h1><p>{esc(desc or data.get('subtitle',data.get('description')))}</p></div></section>'''
+
+def catalog_controls():
+    return '<div class="academy-navigation"><p>Explora los programas <span aria-hidden="true">→</span></p><div><button type="button" data-program-step="-1" aria-label="Programas anteriores">←</button><button type="button" data-program-step="1" aria-label="Programas siguientes">→</button></div></div>'
+
+def academy(data):
+    a, ps, prefix = data['academy'], data['programs'], '../'
+    forthcoming = data['upcoming']
+    main = hero(a,prefix) + f'<section class="academy-intro section-container"><h2>{esc(a["introTitle"])}</h2><p>{esc(a["introText"])}</p></section>'
+    main += f'<section class="academy-catalog section-container" id="programas" aria-labelledby="programs-title"><div class="academy-catalog-heading"><h2 id="programs-title">{esc(a["programsTitle"])}</h2><p>{esc(a["programsText"])}</p></div><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'
+    main += ''.join(card(p,prefix) for p in ps)
+    main += f'''<article class="academy-program-card academy-upcoming-card"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}<span class="academy-card-status">Nuevas convocatorias</span></a><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming['description'])}</p><div class="academy-card-meta"><span>Fechas por confirmar</span></div><div class="academy-card-bottom"><span>Continúa aprendiendo con MALBA</span><a class="text-link" href="proximos/">Explorar próximos programas <span aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
+    schema = {'@context':'https://schema.org','@graph':[{'@type':'CollectionPage','name':a['title'],'url':ORIGIN+'academia/','description':a['subtitle']}, {'@type':'ItemList','itemListElement':[{'@type':'ListItem','position':i,'item':course_schema(p)} for i,p in enumerate(ps,1)]}, breadcrumbs(a['title'],'academia/')]}
+    return document(a['title'],a['subtitle'],'academia/',prefix,main,ps,'academy',schema,a['image'],a['imageAlt'])
+
+def start_label(program):
+    if not program.get('startDate'):return program.get('startLabel', 'Fechas por confirmar')
+    date = datetime.fromisoformat(program['startDate'])
+    months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+    label = f'{date.day} de {months[date.month-1]} de {date.year}'
+    return label + (' · edición anterior' if program['status'] == 'consultar' else '')
+
+def program_page(p, programs):
+    prefix = '../'
+    main = '<nav class="course-breadcrumb section-container" aria-label="Ruta de navegación"><a href="../">Inicio</a><span aria-hidden="true">/</span><a href="../academia/">Academia</a><span aria-hidden="true">/</span><span>'+esc(p['category'])+'</span></nav>'
+    main += f'''<section class="course-hero" aria-labelledby="course-title">{picture(p.get('imageWide',p['image']),p['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="course-hero-layout section-container"><div class="course-hero-copy"><h1 id="course-title">{esc(p['title'])}</h1><p class="course-summary">{esc(p['description'])}</p><dl class="course-facts"><div><dt>Inicio</dt><dd>{esc(start_label(p))}</dd></div><div><dt>Duración</dt><dd>{esc(p['hours'])} horas · {esc(p['sessions'])} sesiones</dd></div><div><dt>Modalidad</dt><dd>{esc(p['modality'])}</dd></div><div><dt>Horario</dt><dd>{esc(p['schedule'])}</dd></div>{'<div><dt>Edición</dt><dd>'+esc(p['edition'])+'</dd></div>' if p.get('edition') else ''}</dl><a class="button button-white" href="{esc(safe_url(p['brochureUrl']))}" target="_blank" rel="noopener noreferrer">Descargar brochure <span aria-hidden="true">↓</span></a></div><aside class="course-enrollment" aria-label="Información de inscripción"><h2>{'Próximamente' if p['status']=='proximamente' else 'Tu próxima especialización'}</h2>{price(p)}{paras([p['pricing']['note']]) if p['pricing']['regular'] is not None else ''}{action(p)}<a class="course-whatsapp" href="{esc(safe_url(p['whatsappUrl']))}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp <span aria-hidden="true">↗</span></a><p class="course-enrollment-note">{esc(p['registrationNote'])}</p></aside></div></section>'''
+    main += '<nav class="course-jumpnav" aria-label="Secciones del programa"><div class="section-container"><a href="#aprendizaje">Qué aprenderás</a><a href="#contenido-del-programa">Contenido</a><a href="#docentes">Docentes</a><a href="#metodologia">Metodología</a></div></nav>'
+    def section(ident,content,tint=False):
+        return f'<section class="course-section{ " course-section-tint" if tint else ""}" id="{ident}"><div class="section-container">{content}</div></section>'
+    main += section('aprendizaje',section_head(p['learning'])+card_grid(p['learning']['items'],'Contenidos de aprendizaje'))
+    modules=''.join(f'<details class="course-module"><summary><span>{i:02}</span>{esc(m["title"])}</summary><div>{paras(m["paragraphs"])}'+ ('<ul>'+''.join(f'<li>{esc(t)}</li>' for t in m['topics'])+'</ul>' if m['topics'] else '')+'</div></details>' for i,m in enumerate(p['curriculum']['modules'],1))
+    main += section('contenido-del-programa','<div class="course-curriculum-layout">'+section_head(p['curriculum'])+'<div class="course-modules">'+modules+'</div></div>',True)
+    instructors=''
+    for t in p['instructors']:
+        image=f'<img src="{esc(local(t["image"],prefix))}" alt="{esc(t["name"])}" width="264" height="396" loading="lazy" decoding="async">' if t['image'] else ''
+        instructors+=f'<article class="course-teacher"><div class="course-teacher-heading">{image}<div><h3>{esc(t["name"])}</h3><p>{esc(t["credentials"])}</p></div></div><p>{esc(t["description"])}</p>{checklist(t["points"])}</article>'
+    main+=section('docentes','<div class="course-split"><div>'+section_head(p['specialization'])+checklist(p['specialization']['points'])+'</div><div class="course-teachers"><h2>Docentes</h2>'+instructors+'</div></div>')
+    main+=section('metodologia',section_head(p['methodology'])+card_grid(p['methodology']['items'],'Etapas de la metodología'),True)
+    a=p['applied']; visual=''
+    if a['image']:visual=f'<img class="course-application-image" src="{esc(local(a["image"],prefix))}" width="1100" height="508" alt="Simulador MALBA de proyectos de transmisión eléctrica" loading="lazy" decoding="async">'+statistics(a['stats'])
+    if a['tools']:visual='<div class="course-tools"><h3>'+esc(a.get('toolsTitle','Herramientas del programa'))+'</h3>'+''.join(f'<div><strong>{esc(t["title"])}</strong><p>{esc(t["description"])}</p></div>' for t in a['tools'])+'</div>'
+    if a['lab']:visual=f'<div class="course-lab-feature"><h3>{esc(a["lab"]["title"])}</h3><p>{esc(a["lab"]["description"])}</p><div class="course-lab-diagram" aria-hidden="true"><span>Estrategia</span><span>PMO</span><span>Valor</span></div></div>'
+    sectors='<div class="course-sector-list">'+''.join(f'<span>{esc(t)}</span>' for t in a['sectors'])+'</div>' if a['sectors'] else ''
+    main+=section('aplicacion','<div class="course-split"><div>'+section_head(a)+checklist(a['points'])+sectors+'</div><div>'+visual+'</div></div>')
+    main+=section('resultados',section_head(p['outcomes'])+card_grid(p['outcomes']['items'],'Competencias al finalizar'),True)
+    c=p['certificate']
+    if c:
+        main+=section('certificacion',f'<div class="course-split"><img class="course-certificate" src="{esc(local(c["image"],prefix))}" width="1100" height="778" alt="{esc(c["imageAlt"])}" loading="lazy" decoding="async"><div>'+section_head(c)+checklist(c['points'])+ (f'<p>{esc(c["note"])}</p>' if c['note'] else '')+'</div></div>')
+    if p['lab']:main+=section('laboratorio',section_head(p['lab'])+card_grid(p['lab']['items'],'Entregables del laboratorio'))
+    proof=p['proof'];main+=section('respaldo',section_head(proof)+statistics(proof['stats'],p)+ ('<div class="course-benefits">'+''.join(f'<article><h3>{esc(x["title"])}</h3><p>{esc(x["description"])}</p></article>' for x in proof['items'])+'</div>' if proof['items'] else ''),True)
+    main+=f'<section class="course-final"><div class="section-container"><div><h2>{esc(p["final"]["title"])}</h2><p>{esc(p["final"]["description"])}</p></div><div>{price(p)}{action(p)}</div></div></section>'
+    schema={'@context':'https://schema.org','@graph':[course_schema(p),breadcrumbs(p['title'],p['slug']+'/')]}
+    return document(p['title'],p['description'],p['slug']+'/',prefix,main,programs,p['id'],schema,p.get('imageWide',p['image']),p['imageAlt'])
+
+def upcoming(data):
+    u,ps,prefix=data['upcoming'],data['programs'],'../../'
+    main=hero(u,prefix)+f'<section class="academy-intro section-container"><h2>{esc(u["introTitle"])}</h2><p>{esc(u["introText"])}</p></section><section class="academy-catalog section-container"><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'+''.join(card(p,prefix) for p in ps if p['status']=='proximamente')+'</div>'+catalog_controls()
+    main+=f'<div class="academy-next-actions"><a class="button button-purple" href="{esc(safe_url(u["contactUrl"]))}" target="_blank" rel="noopener noreferrer">Consultar convocatorias <span aria-hidden="true">↗</span></a><a class="text-link" href="../">Ver toda la academia <span aria-hidden="true">→</span></a></div></section>'
+    schema={'@context':'https://schema.org','@graph':[{'@type':'CollectionPage','name':u['title'],'url':ORIGIN+'academia/proximos/','description':u['description']},breadcrumbs(u['title'],'academia/proximos/')]}
+    return document(u['title'],u['description'],'academia/proximos/',prefix,main,ps,'upcoming',schema,u['image'],u['title'])
+
+def validate(data):
+    if data['version'] != 1:raise ValueError('Unsupported content version')
+    seen=set()
+    for p in data['programs']:
+        if not re.fullmatch(r'[a-z0-9-]+',p['slug']) or p['slug'] in seen:raise ValueError('Invalid/duplicate slug')
+        seen.add(p['slug'])
+        if p['status'] not in ['abierto','proximamente','consultar','agotado']:raise ValueError('Invalid registration status')
+        if p['pricing']['currency'] != 'USD':raise ValueError('Only USD currently supported')
+        for amount in ['regular','launch']:
+            x=p['pricing'].get(amount)
+            if x is not None and (not isinstance(x,(int,float)) or not math.isfinite(x) or x<0):raise ValueError('Invalid price')
+        for key in ['brochureUrl','whatsappUrl','checkoutUrl']:
+            if p.get(key):safe_url(p[key])
+        if p.get('startDate'):
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}',p['startDate']):raise ValueError('Start date must use YYYY-MM-DD')
+            datetime.fromisoformat(p['startDate'])
+        if p['pricing'].get('launchEndsAt'):
+            end=datetime.fromisoformat(p['pricing']['launchEndsAt'])
+            if end.tzinfo is None:raise ValueError('Price deadline must include timezone')
+        for group in ['learning','methodology','outcomes']:
+            if not p[group]['items'] or any(not x['title'] for x in p[group]['items']):raise ValueError('Empty content cards')
+
+def build():
+    data=json.loads((ROOT/'content/academia.json').read_text());validate(data)
+    outputs={'academia/index.html':academy(data),'academia/proximos/index.html':upcoming(data)}
+    outputs.update({p['slug']+'/index.html':program_page(p,data['programs']) for p in data['programs']})
+    for name,body in outputs.items():
+        dest=ROOT/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body)
+    # Keep shared navigation consistent on the existing homepage; do not re-render its sections.
+    home=(ROOT/'index.html').read_text()
+    home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',data['programs']),home,flags=re.S)
+    home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',data['programs']),home,flags=re.S)
+    home = re.sub(r'</header>\s+<main', '</header>\n    <main', home)
+    (ROOT/'index.html').write_text(home)
+    urls=['']+['academia/','academia/proximos/']+[p['slug']+'/' for p in data['programs']]
+    (ROOT/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{s}</loc></url>\n' for s in urls)+'</urlset>\n')
+    print(f'Built {len(outputs)} pages; shared homepage navigation and sitemap updated.')
+
+if __name__=='__main__':build()
