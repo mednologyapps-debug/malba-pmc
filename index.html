@@ -42,7 +42,9 @@
       crossorigin
     />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="home-sections.css" />
     <script src="app.js" defer></script>
+    <script src="home-sections.js" defer></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -146,48 +148,383 @@
       </div>
     </header>
     <main id="contenido">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <div class="hero-copy-inner">
-            <h1 id="hero-title">
-              <span>Conocimiento que</span>
-              <span>transforma proyectos</span>
-              <span>eléctricos.</span>
-            </h1>
-            <p>
-              Consultoría, formación ejecutiva y tecnología para proyectos de
-              infraestructura eléctrica.
-            </p>
-            <div class="hero-actions">
-              <a
-                class="button button-white"
-                href="https://malba-pmc.com/proximos-cursos"
-                >Conocer MALBA Academy <span aria-hidden="true">→</span></a
-              >
-              <button
-                class="button button-outline"
-                type="button"
-                data-dialog="solutions-dialog"
-              >
-                Explorar soluciones <span aria-hidden="true">↗</span>
-              </button>
+      <div
+        class="hero-slider"
+        role="region"
+        aria-roledescription="carrusel"
+        aria-label="MALBA PMC y publicaciones"
+      >
+        <div
+          class="hero-track"
+          id="hero-track"
+          tabindex="0"
+          aria-label="Desliza para explorar el banner"
+        >
+          <section
+            class="hero hero-slide"
+            role="group"
+            aria-roledescription="diapositiva"
+            aria-label="1 de 2: MALBA PMC"
+            data-slide="0"
+          >
+            <div class="hero-copy">
+              <div class="hero-copy-inner">
+                <h1 id="hero-title">
+                  <span>Conocimiento que</span>
+                  <span>transforma proyectos</span>
+                  <span>eléctricos.</span>
+                </h1>
+                <p>
+                  Consultoría, formación ejecutiva y tecnología para proyectos
+                  de infraestructura eléctrica.
+                </p>
+                <div class="hero-actions">
+                  <a
+                    class="button button-white"
+                    href="https://malba-pmc.com/proximos-cursos"
+                    >Conocer MALBA Academy <span aria-hidden="true">→</span></a
+                  >
+                  <button
+                    class="button button-outline"
+                    type="button"
+                    data-dialog="solutions-dialog"
+                  >
+                    Explorar soluciones <span aria-hidden="true">↗</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+            <div class="hero-visual" aria-hidden="true">
+              <img
+                src="assets/banner-transmision-1672.webp"
+                srcset="
+                  assets/banner-transmision-960.webp   960w,
+                  assets/banner-transmision-1672.webp 1672w
+                "
+                sizes="100vw"
+                width="1672"
+                height="941"
+                fetchpriority="high"
+                decoding="async"
+                alt=""
+              />
+            </div>
+          </section>
+          <section
+            class="book-slide hero-slide"
+            role="group"
+            aria-roledescription="diapositiva"
+            aria-label="2 de 2: Libro de Miguel Alba"
+            data-slide="1"
+            aria-hidden="true"
+            inert
+          >
+            <div class="book-slide-inner">
+              <div class="book-copy">
+                <h2 id="book-title">
+                  <span>Gestión de Proyectos</span><span>de Transmisión.</span
+                  ><span>Factores Clave.</span>
+                </h2>
+                <p>
+                  Una guía práctica para mejorar la planificación, el control y
+                  la gestión de riesgos en proyectos de transmisión eléctrica.
+                </p>
+                <p class="book-author">Miguel Alba</p>
+                <div class="hero-actions">
+                  <a
+                    class="button button-white"
+                    href="https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/"
+                    >Comprar libro <span aria-hidden="true">↗</span></a
+                  >
+                  <a
+                    class="button button-outline"
+                    href="https://malba-pmc.com/libro/"
+                    >Ver contenido <span aria-hidden="true">→</span></a
+                  >
+                </div>
+              </div>
+              <a
+                class="book-visual"
+                href="https://malba-pmc.com/libro/"
+                aria-label="Conocer el libro Gestión de Proyectos de Transmisión, Factores Clave"
+              >
+                <img
+                  src="assets/book/libro-3d-960.webp"
+                  srcset="
+                    assets/book/libro-3d-600.webp 600w,
+                    assets/book/libro-3d-960.webp 960w
+                  "
+                  sizes="(max-width: 760px) 260px, 460px"
+                  width="960"
+                  height="800"
+                  alt="Propuesta de portada en 3D del libro Gestión de Proyectos de Transmisión, Factores Clave, de Miguel Alba"
+                  decoding="async"
+                />
+              </a>
+            </div>
+          </section>
         </div>
-        <div class="hero-visual" aria-hidden="true">
-          <img
-            src="assets/banner-transmision-1672.webp"
-            srcset="
-              assets/banner-transmision-960.webp   960w,
-              assets/banner-transmision-1672.webp 1672w
-            "
-            sizes="100vw"
-            width="1672"
-            height="941"
-            fetchpriority="high"
-            decoding="async"
-            alt=""
-          />
+        <div class="slider-controls" aria-label="Controles del banner">
+          <button
+            type="button"
+            class="slider-arrow"
+            data-slide-step="-1"
+            aria-label="Banner anterior"
+            aria-controls="hero-track"
+          >
+            ←
+          </button>
+          <div class="slider-dots">
+            <button
+              type="button"
+              class="slider-dot is-active"
+              data-slide-to="0"
+              aria-label="Ver presentación de MALBA PMC"
+              aria-pressed="true"
+              aria-controls="hero-track"
+            ></button>
+            <button
+              type="button"
+              class="slider-dot"
+              data-slide-to="1"
+              aria-label="Ver libro de Miguel Alba"
+              aria-pressed="false"
+              aria-controls="hero-track"
+            ></button>
+          </div>
+          <button
+            type="button"
+            class="slider-arrow"
+            data-slide-step="1"
+            aria-label="Banner siguiente"
+            aria-controls="hero-track"
+          >
+            →
+          </button>
+        </div>
+        <p
+          id="slider-status"
+          class="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          Banner 1 de 2: MALBA PMC
+        </p>
+      </div>
+
+      <section
+        class="ecosystem section-container"
+        id="ecosistema"
+        aria-labelledby="ecosystem-title"
+      >
+        <div class="section-intro">
+          <h2 id="ecosystem-title">Nuestro ecosistema</h2>
+          <p>
+            Conectamos experiencia, formación y herramientas para transformar la
+            gestión de proyectos.
+          </p>
+        </div>
+        <div class="ecosystem-grid">
+          <article class="ecosystem-item">
+            <svg
+              class="line-icon"
+              viewBox="0 0 48 48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              aria-hidden="true"
+            >
+              <circle cx="24" cy="13" r="6" />
+              <path
+                d="M12 39v-7a12 12 0 0 1 24 0v7M8 16a5 5 0 0 0 0 10m32-10a5 5 0 0 1 0 10M4 38v-4a8 8 0 0 1 6-8m34 12v-4a8 8 0 0 0-6-8"
+              />
+            </svg>
+            <h3>Consultoría</h3>
+            <p>
+              Acompañamiento especializado para planificar, controlar y mejorar
+              el desempeño de tus proyectos.
+            </p>
+            <a class="text-link" href="https://malba-pmc.com/#consultoria"
+              >Conocer servicios <span aria-hidden="true">↗</span></a
+            >
+          </article>
+          <article class="ecosystem-item">
+            <svg
+              class="line-icon"
+              viewBox="0 0 48 48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              aria-hidden="true"
+            >
+              <path
+                d="m4 18 20-10 20 10-20 10-20-10Zm8 5v12c8 6 16 6 24 0V23m8-5v17"
+              />
+            </svg>
+            <h3>MALBA Academy</h3>
+            <p>
+              Formación ejecutiva basada en casos reales y experiencias del
+              sector de infraestructura eléctrica.
+            </p>
+            <a class="text-link" href="#programas"
+              >Explorar programas <span aria-hidden="true">→</span></a
+            >
+          </article>
+          <article class="ecosystem-item">
+            <svg
+              class="line-icon"
+              viewBox="0 0 48 48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              aria-hidden="true"
+            >
+              <rect x="6" y="8" width="36" height="26" rx="3" />
+              <path d="M16 42h16m-8-8v8m-12-17 8-7 7 4 9-9" />
+            </svg>
+            <h3>Soluciones digitales</h3>
+            <p>
+              Simuladores y herramientas para analizar escenarios, practicar y
+              tomar mejores decisiones.
+            </p>
+            <a
+              class="text-link"
+              href="https://malba-pmc.com/simulador-de-gestion-de-proyectos-de-transmision-electrica/"
+              >Conocer soluciones <span aria-hidden="true">↗</span></a
+            >
+          </article>
+          <article class="ecosystem-item">
+            <svg
+              class="line-icon"
+              viewBox="0 0 48 48"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              aria-hidden="true"
+            >
+              <path
+                d="M24 13c-6-5-13-5-20-3v28c7-2 14-2 20 3 6-5 13-5 20-3V10c-7-2-14-2-20 3Zm0 0v28M10 17h8m-8 7h8m12-7h8m-8 7h8"
+              />
+            </svg>
+            <h3>Publicaciones</h3>
+            <p>
+              Libros y conocimiento aplicado para fortalecer la gestión de
+              proyectos de transmisión eléctrica.
+            </p>
+            <a class="text-link" href="https://malba-pmc.com/libro/"
+              >Explorar publicaciones <span aria-hidden="true">↗</span></a
+            >
+          </article>
+        </div>
+      </section>
+
+      <section
+        class="featured-programs"
+        id="programas"
+        aria-labelledby="programs-title"
+      >
+        <div class="section-container">
+          <div class="programs-heading">
+            <div class="section-intro">
+              <h2 id="programs-title">Programas destacados</h2>
+              <p>
+                Formación especializada para los desafíos reales de tus
+                proyectos.
+              </p>
+            </div>
+            <a
+              class="text-link all-programs"
+              href="https://malba-pmc.com/proximos-cursos"
+              >Ver todos los programas <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <div class="program-grid">
+            <article class="program-card">
+              <div class="program-art" aria-hidden="true">
+                <svg
+                  viewBox="0 0 120 90"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path
+                    d="M45 82 59 8h3l14 74M52 43h17M48 61h25M44 82h33M56 25h10M35 36h50M29 49h62M57 12l9 13-14 18 19 18-27 21m19-70-8 13 14 18-21 18 29 21M35 36l3-9m47 9-3-9M29 49l3-9m59 9-3-9"
+                  />
+                </svg>
+              </div>
+              <div class="program-card-copy">
+                <h3>Dirección de Proyectos de Transmisión Eléctrica</h3>
+                <p>
+                  Fortalece tu capacidad para integrar alcance, plazos, costos y
+                  control del desempeño.
+                </p>
+                <a
+                  class="text-link"
+                  href="https://malba-pmc.com/gestion-de-proyectos-de-transmision-electrica/"
+                  >Ver programa <span aria-hidden="true">↗</span></a
+                >
+              </div>
+            </article>
+            <article class="program-card">
+              <div class="program-art" aria-hidden="true">
+                <svg
+                  viewBox="0 0 120 90"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path
+                    d="m60 8 29 10v25c0 17-15 31-29 39-14-8-29-22-29-39V18L60 8Z"
+                  />
+                  <path
+                    d="m46 45 10 10 20-22M20 23h-7m7 19H9m91-19h7m-7 19h11"
+                  />
+                </svg>
+              </div>
+              <div class="program-card-copy">
+                <h3>
+                  Gestión de Riesgos en Proyectos de Transmisión Eléctrica
+                </h3>
+                <p>
+                  Identifica, analiza y responde a los riesgos que pueden
+                  afectar los objetivos de tu proyecto.
+                </p>
+                <a
+                  class="text-link"
+                  href="https://malba-pmc.com/gestion-de-riesgos-de-proyectos-de-transmision-electrica/"
+                  >Ver programa <span aria-hidden="true">↗</span></a
+                >
+              </div>
+            </article>
+            <article class="program-card">
+              <div class="program-art" aria-hidden="true">
+                <svg
+                  viewBox="0 0 120 90"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <rect x="40" y="10" width="40" height="20" rx="3" />
+                  <rect x="9" y="61" width="26" height="20" rx="3" />
+                  <rect x="47" y="61" width="26" height="20" rx="3" />
+                  <rect x="85" y="61" width="26" height="20" rx="3" />
+                  <path d="M60 30v31M22 61V45h76v16" />
+                </svg>
+              </div>
+              <div class="program-card-copy">
+                <h3>Diseño, Implementación y Mejora de PMO</h3>
+                <p>
+                  Desarrolla una oficina de gestión de proyectos alineada con
+                  las necesidades de tu organización.
+                </p>
+                <a
+                  class="text-link"
+                  href="https://malba-pmc.com/diseno-implementacion-y-mejora-de-pmo/"
+                  >Ver programa <span aria-hidden="true">↗</span></a
+                >
+              </div>
+            </article>
+          </div>
         </div>
       </section>
     </main>
