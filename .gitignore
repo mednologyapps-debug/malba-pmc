@@ -145,3 +145,7 @@ vite.config.ts.timestamp-*
 # Python static page generator
 __pycache__/
 *.py[cod]
+
+# Private CMS database / user images (never commit accounts or sessions)
+.cms-private/
+assets/uploads/

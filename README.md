@@ -135,3 +135,13 @@ Validación del contenido: `py -m unittest discover -s tests -v`. En navegador s
 ### Composición del catálogo de Academia
 
 La presentación se agrupa en un panel de la paleta MALBA y el texto del catálogo queda junto a su título. Cada tarjeta sitúa el estado en la parte superior de la imagen y la duración/sesiones en etiquetas independientes al pie de la foto. Los resúmenes se editan mediante `cardDescription`; el texto completo del programa se conserva. Precios y botones se alinean, con un CTA morado de ancho completo. Próximos programas sigue la misma composición.
+
+## CMS de Academia
+
+Panel con autenticación, edición de programas, imágenes, borradores, vista previa privada, publicación e historial. Para probarlo, reemplaza el servidor estático por:
+
+```sh
+py scripts/cms_server.py
+```
+
+La primera ejecución solicita el usuario y la contraseña. Panel: http://localhost:8080/dashboard/. Web de prueba: http://localhost:8080/. Requiere Python 3.10 o superior. Guarda los cambios en una base privada y publica el HTML desde el mismo backend; no sobrescribe tu web actual de Hostinger. Guía completa, persistencia, exportación y requisitos de alojamiento: [docs/CMS.md](docs/CMS.md).

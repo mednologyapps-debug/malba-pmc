@@ -248,20 +248,24 @@ def validate(data):
         for group in ['learning','methodology','outcomes']:
             if not p[group]['items'] or any(not x['title'] for x in p[group]['items']):raise ValueError('Empty content cards')
 
-def build():
-    data=json.loads((ROOT/'content/academia.json').read_text());validate(data)
+def render_outputs(data, home=None):
+    """Pure publication snapshot, reused by CLI and authenticated CMS."""
+    validate(data)
     outputs={'academia/index.html':academy(data),'academia/proximos/index.html':upcoming(data)}
     outputs.update({p['slug']+'/index.html':program_page(p,data['programs']) for p in data['programs']})
-    for name,body in outputs.items():
-        dest=ROOT/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body)
-    # Keep shared navigation consistent on the existing homepage; do not re-render its sections.
-    home=(ROOT/'index.html').read_text()
+    home = home if home is not None else (ROOT/'index.html').read_text()
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',data['programs']),home,flags=re.S)
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',data['programs']),home,flags=re.S)
-    home = re.sub(r'</header>\s+<main', '</header>\n    <main', home)
-    (ROOT/'index.html').write_text(home)
+    outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
     urls=['']+['academia/','academia/proximos/']+[p['slug']+'/' for p in data['programs']]
-    (ROOT/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{s}</loc></url>\n' for s in urls)+'</urlset>\n')
-    print(f'Built {len(outputs)} pages; shared homepage navigation and sitemap updated.')
+    outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{s}</loc></url>\n' for s in urls)+'</urlset>\n'
+    return outputs
+
+def build():
+    data=json.loads((ROOT/'content/academia.json').read_text())
+    outputs=render_outputs(data)
+    for name,body in outputs.items():
+        dest=ROOT/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(body)
+    print(f'Built {len(outputs)-2} pages; shared homepage navigation and sitemap updated.')
 
 if __name__=='__main__':build()

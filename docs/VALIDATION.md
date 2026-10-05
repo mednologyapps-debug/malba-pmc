@@ -36,3 +36,7 @@ Se amplió el contenedor 3D de 430 a 470 px en escritorio y de 215 a 240 px en c
 ### Órbita luminosa alrededor del modelo
 
 Se sustituyeron los destellos aislados por una órbita elíptica con un haz blanco y un punto de luz que completan una vuelta cada seis segundos. Capas SVG coincidentes por delante y detrás del modelo producen profundidad; la órbita aparece al terminar el ensamblaje. Verificados movimiento real del haz, pausa en diapositiva inactiva, alternativa sin movimiento, secuencia de tres caídas y diez anchos de 320 a 1920 px, sin desbordamientos ni errores de recursos o JavaScript. Capturas actualizadas.
+
+### CMS funcional de Academia
+
+Panel responsive con Outfit y colores MALBA, API Python con sesiones privadas, protección CSRF/origen, borradores, imágenes, creación/orden de programas, vista previa, publicación atómica, historial y exportación. Once pruebas automatizadas correctas, incluyendo acceso, bloqueo de rutas privadas/traversal, conflicto de edición, guardado/publicación, persistencia y recuperación. En navegador se verificaron login, edición, subida de imagen, borrador, recarga, popup, publicación visible, creación, historial y logout a 1440, 1024, 768, 390 y 320 px sin desbordamiento horizontal ni errores JavaScript/recursos. Las pruebas usan una copia desechable del sitio y una base de datos independiente. Capturas `cms-*.png`; instrucciones y límites de despliegue en `CMS.md`.

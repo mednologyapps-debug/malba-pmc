@@ -34,9 +34,9 @@ Las imágenes tienen rutas desde la raíz del sitio, sin `../`. Se recomiendan W
 
 El checkout y los importes de WooCommerce siguen siendo administrados en la plataforma actual. Cambiar un precio visual aquí no modifica WooCommerce: cuando se integre el dashboard debe existir una fuente compartida o una sincronización validada. No se ha creado otro sistema de pagos.
 
-## Integración futura con dashboard.malba-pmc.com
+## CMS y dashboard.malba-pmc.com
 
-Este cambio prepara la fuente de contenido y el renderizador; **el dashboard, la autenticación y su API todavía no están implementados**. Un flujo de publicación posterior puede guardar una revisión validada de este mismo contrato y regenerar las páginas estáticas. Esto evita añadir consultas al CMS en cada visita y conserva el HTML disponible para SEO.
+El dashboard, autenticación y API de borrador/vista previa/publicación están implementados en `dashboard/` y `scripts/cms_server.py`. Se utiliza este contrato y el mismo renderizador para generar publicaciones completas de HTML. El contenido se guarda en SQLite privada, y no se consulta al CMS desde el navegador de los visitantes. Consulta `docs/CMS.md` para iniciar el panel, probarlo y alojarlo. El subdominio público todavía requiere configurar el servidor y DNS.
 
 El panel debe disponer de borradores, vista previa, publicación y revisiones; validar URLs/fechas/importes y gestionar imágenes. Publicar contenido debe requerir autorización en el backend. No se deben poner credenciales, claves privadas ni tokens de escritura en `academia.json` o en JavaScript del sitio.
 
