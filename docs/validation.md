@@ -78,3 +78,9 @@ Verificados 1920, 1440, 1024, 768, 390 y 320 px: sin desbordamiento, tarjetas bl
 - Cinco pruebas de publicación y configuración: edición de contenidos/fechas/precios, publicación de promociones vigentes, vencimiento de promociones, bloqueo de compras pausadas y escape de contenido/URLs inseguras.
 - No se probó una compra real ni se enviaron consultas de WhatsApp. El formulario de brochure del plugin WordPress no estaba incluido; los botones abren los PDFs originales.
 - El contenido está separado del diseño. CMS/dashboard, autenticación, API y sincronización con WooCommerce quedan para una implementación posterior.
+
+### Refinamiento visual de Academia
+
+Presentación agrupada, resúmenes específicos para las tarjetas, estado sobre la imagen y etiquetas independientes de duración/sesiones. CTA morado completo con flecha y alineación de precios/botones. La vista de próximas convocatorias reutiliza estos componentes.
+
+Verificadas Academia y Próximos programas en 1920, 1440, 1024, 768, 390 y 320 px: metadatos dentro de las imágenes, sin desbordamiento de página, recursos locales cargados, botones alineados en escritorio, flechas del catálogo móvil y navegación al programa funcionales. Cinco pruebas de contenido/configuración pasan. Se ajustó la tolerancia del control al inicio del scroll para considerar el padding del carrusel. Capturas actualizadas.

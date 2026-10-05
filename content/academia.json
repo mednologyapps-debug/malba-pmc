@@ -6,8 +6,8 @@
     "image": "assets/academia/academia-1672.webp",
     "imageSmall": "assets/academia/academia-960.webp",
     "imageAlt": "Profesionales trabajando en la planificación de un proyecto",
-    "introTitle": "Fortalece tu conocimiento. Lleva la experiencia a tus proyectos.",
-    "introText": "En la Academia MALBA fortalecemos tus conocimientos en gestión de proyectos, riesgos y PMO con una formación práctica, casos del sector eléctrico y herramientas que podrás aplicar en tu trabajo. Conecta la experiencia con el aprendizaje y desarrolla capacidades para afrontar nuevos desafíos.",
+    "introTitle": "Fortalece tus conocimientos. Mejora tus proyectos.",
+    "introText": "Fortalece tus conocimientos en gestión de proyectos, riesgos y PMO con casos del sector eléctrico, experiencia real y herramientas que podrás aplicar en tu trabajo.",
     "programsTitle": "Nuestros programas",
     "programsText": "Explora nuestras áreas de especialización y encuentra la formación que acompaña tu desarrollo profesional."
   },
@@ -18,7 +18,8 @@
     "imageSmall": "assets/banner-transmision-960.webp",
     "introTitle": "Prepárate para tu próxima especialización",
     "introText": "Consulta los programas con fechas por confirmar y conversa con nuestro equipo para conocer las próximas convocatorias.",
-    "contactUrl": "https://wa.me/51932563293?text=Hola%2C%20deseo%20informaci%C3%B3n%20sobre%20las%20pr%C3%B3ximas%20convocatorias%20de%20la%20Academia%20MALBA."
+    "contactUrl": "https://wa.me/51932563293?text=Hola%2C%20deseo%20informaci%C3%B3n%20sobre%20las%20pr%C3%B3ximas%20convocatorias%20de%20la%20Academia%20MALBA.",
+    "cardDescription": "Conoce las próximas convocatorias y elige tu siguiente especialización."
   },
   "programs": [
     {
@@ -355,7 +356,8 @@
         "title": "Dirige proyectos de transmisión con una visión estratégica",
         "description": "Fortalece tu capacidad para planificar, integrar, controlar riesgos y tomar mejores decisiones en proyectos de infraestructura eléctrica."
       },
-      "imageWide": "assets/banner-transmision-1672.webp"
+      "imageWide": "assets/banner-transmision-1672.webp",
+      "cardDescription": "Planifica, integra y dirige proyectos de transmisión eléctrica con una metodología práctica."
     },
     {
       "id": "riesgos",
@@ -709,7 +711,8 @@
         "title": "Anticipa los riesgos antes de que impacten tu proyecto",
         "description": "Aprende a identificar, priorizar, cuantificar, responder y monitorear los riesgos de proyectos de transmisión eléctrica."
       },
-      "imageWide": "assets/programs/riesgos-1672.webp"
+      "imageWide": "assets/programs/riesgos-1672.webp",
+      "cardDescription": "Anticipa, prioriza y gestiona riesgos para proteger los objetivos de proyectos de transmisión."
     },
     {
       "id": "pmo",
@@ -1011,7 +1014,8 @@
         "title": "Lleva tu PMO de la gestión de proyectos a la realización de valor",
         "description": "Aprende a diagnosticar, diseñar, implementar y mejorar una PMO alineada con la estrategia de una empresa del sector eléctrico."
       },
-      "imageWide": "assets/programs/pmo-1672.webp"
+      "imageWide": "assets/programs/pmo-1672.webp",
+      "cardDescription": "Diseña e implementa una PMO alineada con la estrategia y orientada a generar valor."
     }
   ]
 }

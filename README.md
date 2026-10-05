@@ -131,3 +131,7 @@ Los datos editables están en `content/academia.json`; se publican con `py scrip
 Las nuevas páginas incluyen título, descripción, canonical, Open Graph, datos estructurados de cursos y breadcrumbs, y sitemap actualizado. Mantienen `noindex, follow` durante esta revisión. Outfit se sirve localmente. No se cambió la capa `.54` del banner del home.
 
 Validación del contenido: `py -m unittest discover -s tests -v`. En navegador se comprobaron las cinco páginas a 1920, 1440, 1024, 768, 390 y 320 px, navegación home → Academia → programa, submenu, temarios, popup de información, precios vencidos y enlaces locales. Brochures y WhatsApp apuntan a los destinos originales; no se enviaron mensajes ni se hicieron compras.
+
+### Composición del catálogo de Academia
+
+La presentación se agrupa en un panel de la paleta MALBA y el texto del catálogo queda junto a su título. Cada tarjeta sitúa el estado en la parte superior de la imagen y la duración/sesiones en etiquetas independientes al pie de la foto. Los resúmenes se editan mediante `cardDescription`; el texto completo del programa se conserva. Precios y botones se alinean, con un CTA morado de ancho completo. Próximos programas sigue la misma composición.

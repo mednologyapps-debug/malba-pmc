@@ -43,8 +43,8 @@ document.querySelectorAll('[data-academy-track]').forEach(track => {
   const buttons = [...controls.querySelectorAll('button')];
   const update = () => {
     const limit = track.scrollWidth - track.clientWidth;
-    buttons[0].disabled = track.scrollLeft < 2;
-    buttons[1].disabled = track.scrollLeft >= limit - 2;
+    buttons[0].disabled = track.scrollLeft <= 3;
+    buttons[1].disabled = track.scrollLeft >= limit - 3;
   };
   const move = direction => {
     const first = track.firstElementChild;

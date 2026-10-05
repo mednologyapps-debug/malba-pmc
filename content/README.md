@@ -14,7 +14,7 @@ La regeneración también sincroniza el menú y el footer del home; conserva sus
 | --- | --- |
 | Portada de Academia | `academy.title`, `subtitle`, `image`, `imageSmall`, `imageAlt` |
 | Presentación y catálogo | `introTitle`, `introText`, `programsTitle`, `programsText`; orden de `programs` |
-| Cada programa | `title`, `category`, `description`, imágenes de tarjetas y `imageWide` para el fondo del banner, `edition`, `hours`, `sessions`, `modality`, `schedule` |
+| Cada programa | `title`, `category`, `description`, `cardDescription` para el resumen del catálogo, imágenes de tarjetas y `imageWide` para el fondo del banner, `edition`, `hours`, `sessions`, `modality`, `schedule` |
 | Fechas | `startDate` en `AAAA-MM-DD`; `startLabel` para fechas sin confirmar |
 | Precios | `pricing.regular`, `launch`, `currency`, `launchEndsAt`, `note`; `null` cuando no hay importe confirmado |
 | Inscripciones | `status`, `registrationNote`, `checkoutUrl`, `whatsappUrl`, `brochureUrl` |

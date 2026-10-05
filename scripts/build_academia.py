@@ -68,11 +68,17 @@ def action(program, secondary=False):
         return '<button class="button course-disabled" type="button" disabled>' + ('Inscripciones próximamente' if status == 'proximamente' else 'Inscripciones cerradas') + '</button>'
     return f'<a class="button button-purple" href="{esc(safe_url(program["whatsappUrl"]))}" target="_blank" rel="noopener noreferrer">Consultar próxima edición <span aria-hidden="true">↗</span></a>'
 
+def image_badges(items):
+    clock = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>'
+    calendar = '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16m-11 4h2m2 0h2"/>'
+    return '<div class="academy-image-meta">' + ''.join(f'<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{clock if label.endswith('horas') else calendar}</svg>{esc(label)}</span>' for i,label in enumerate(items)) + '</div>'
+
 def card(program, prefix):
     state = {'proximamente': 'Próximamente', 'consultar': 'Consultar próxima edición', 'abierto': 'Inscripciones abiertas', 'agotado': 'Inscripciones cerradas'}[program['status']]
+    href = esc(local(program['slug']+'/', prefix))
     return f'''<article class="academy-program-card">
-      <a class="academy-card-image" href="{esc(local(program['slug']+'/', prefix))}" tabindex="-1" aria-hidden="true">{picture(program['image'], program['imageSmall'], '', prefix)}<span class="academy-card-status">{esc(state)}</span></a>
-      <div class="academy-card-content"><h3><a href="{esc(local(program['slug']+'/', prefix))}">{esc(program['title'])}</a></h3><p>{esc(program['description'])}</p><div class="academy-card-meta"><span>{esc(program['hours'])} horas</span><span>{esc(program['sessions'])} sesiones</span></div><div class="academy-card-bottom">{price(program)}<a class="text-link" href="{esc(local(program['slug']+'/', prefix))}">Ver programa <span aria-hidden="true">→</span><span class="sr-only">: {esc(program['title'])}</span></a></div></div>
+      <div class="academy-card-media"><a class="academy-card-image" href="{href}" tabindex="-1" aria-hidden="true">{picture(program['image'], program['imageSmall'], '', prefix)}</a><span class="academy-card-status">{esc(state)}</span>{image_badges([str(program['hours'])+' horas',str(program['sessions'])+' sesiones'])}</div>
+      <div class="academy-card-content"><h3><a href="{href}">{esc(program['title'])}</a></h3><p>{esc(program.get('cardDescription',program['description']))}</p><div class="academy-card-bottom"><div class="academy-card-price">{price(program)}</div><a class="button button-purple academy-card-button" href="{href}">Ver programa <span class="academy-button-arrow" aria-hidden="true">→</span><span class="sr-only">: {esc(program['title'])}</span></a></div></div>
     </article>'''
 
 def shared(template, prefix, active, programs):
@@ -119,10 +125,10 @@ def catalog_controls():
 def academy(data):
     a, ps, prefix = data['academy'], data['programs'], '../'
     forthcoming = data['upcoming']
-    main = hero(a,prefix) + f'<section class="academy-intro section-container"><h2>{esc(a["introTitle"])}</h2><p>{esc(a["introText"])}</p></section>'
+    main = hero(a,prefix) + f'<section class="academy-intro section-container"><div class="academy-intro-panel"><h2>{esc(a["introTitle"])}</h2><p>{esc(a["introText"])}</p></div></section>'
     main += f'<section class="academy-catalog section-container" id="programas" aria-labelledby="programs-title"><div class="academy-catalog-heading"><h2 id="programs-title">{esc(a["programsTitle"])}</h2><p>{esc(a["programsText"])}</p></div><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'
     main += ''.join(card(p,prefix) for p in ps)
-    main += f'''<article class="academy-program-card academy-upcoming-card"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}<span class="academy-card-status">Nuevas convocatorias</span></a><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming['description'])}</p><div class="academy-card-meta"><span>Fechas por confirmar</span></div><div class="academy-card-bottom"><span>Continúa aprendiendo con MALBA</span><a class="text-link" href="proximos/">Explorar próximos programas <span aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
+    main += f'''<article class="academy-program-card academy-upcoming-card"><div class="academy-card-media"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}</a><span class="academy-card-status">Nuevas convocatorias</span>{image_badges(['Fechas por confirmar'])}</div><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming.get('cardDescription',forthcoming['description']))}</p><div class="academy-card-bottom"><div class="academy-card-price"><span>Tu próxima especialización</span></div><a class="button button-purple academy-card-button" href="proximos/">Explorar programas <span class="academy-button-arrow" aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
     schema = {'@context':'https://schema.org','@graph':[{'@type':'CollectionPage','name':a['title'],'url':ORIGIN+'academia/','description':a['subtitle']}, {'@type':'ItemList','itemListElement':[{'@type':'ListItem','position':i,'item':course_schema(p)} for i,p in enumerate(ps,1)]}, breadcrumbs(a['title'],'academia/')]}
     return document(a['title'],a['subtitle'],'academia/',prefix,main,ps,'academy',schema,a['image'],a['imageAlt'])
 
@@ -167,7 +173,7 @@ def program_page(p, programs):
 
 def upcoming(data):
     u,ps,prefix=data['upcoming'],data['programs'],'../../'
-    main=hero(u,prefix)+f'<section class="academy-intro section-container"><h2>{esc(u["introTitle"])}</h2><p>{esc(u["introText"])}</p></section><section class="academy-catalog section-container"><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'+''.join(card(p,prefix) for p in ps if p['status']=='proximamente')+'</div>'+catalog_controls()
+    main=hero(u,prefix)+f'<section class="academy-intro section-container"><div class="academy-intro-panel"><h2>{esc(u["introTitle"])}</h2><p>{esc(u["introText"])}</p></div></section><section class="academy-catalog section-container"><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'+''.join(card(p,prefix) for p in ps if p['status']=='proximamente')+'</div>'+catalog_controls()
     main+=f'<div class="academy-next-actions"><a class="button button-purple" href="{esc(safe_url(u["contactUrl"]))}" target="_blank" rel="noopener noreferrer">Consultar convocatorias <span aria-hidden="true">↗</span></a><a class="text-link" href="../">Ver toda la academia <span aria-hidden="true">→</span></a></div></section>'
     schema={'@context':'https://schema.org','@graph':[{'@type':'CollectionPage','name':u['title'],'url':ORIGIN+'academia/proximos/','description':u['description']},breadcrumbs(u['title'],'academia/proximos/')]}
     return document(u['title'],u['description'],'academia/proximos/',prefix,main,ps,'upcoming',schema,u['image'],u['title'])
