@@ -10,7 +10,7 @@ async function startHeroAssembly() {
   try {
     await Promise.all([...heroAssembly.querySelectorAll('img')].map(img => img.decode()));
     if (motionPreference.matches || !document.documentElement.classList.contains('hero-assembly-pending')) return;
-    try { sessionStorage.setItem('malba-hero-assembly-v1', 'seen'); } catch (_) {}
+    try { sessionStorage.setItem('malba-hero-assembly-v2', 'seen'); } catch (_) {}
     heroAssembly.classList.add('is-assembling');
     const finish = () => heroAssembly.classList.remove('is-assembling');
     heroAssembly.querySelector('.hero-part-tower').addEventListener('animationend', finish, {once:true});

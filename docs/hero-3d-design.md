@@ -12,4 +12,4 @@ Use case: stylized-concept. Asset type: premium 3D transparent cutout for the ri
 
 El primer banner utiliza azul sólido #073F7C, sin fotografía de torres detrás. La animación reutiliza la misma ilustración mediante tres capas recortadas con CSS: base, módulo central y torre. No requiere un motor 3D ni recursos adicionales. Al terminar muestra una sola imagen completa.
 
-`home-sections.js` registra la entrada con `sessionStorage` bajo `malba-hero-assembly-v1`. Se reproduce una vez por sesión de pestaña y respeta `prefers-reduced-motion`. Sin JavaScript, almacenamiento o animación, la alternativa es la ilustración completa.
+`home-sections.js` registra la entrada con `sessionStorage` bajo `malba-hero-assembly-v2`. Se reproduce una vez por sesión de pestaña y respeta `prefers-reduced-motion`. Sin JavaScript, almacenamiento o animación, la alternativa es la ilustración completa.

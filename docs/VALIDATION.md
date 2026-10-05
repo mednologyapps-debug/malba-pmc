@@ -28,3 +28,7 @@ Verificados los tres estados de ensamblaje, la recarga y diez anchos entre 320 y
 ### Fondo arquitectónico sutil
 
 Imagen original de arquitectura con pocos planos, sin torres ni equipos adicionales. WebP responsive de 1536 y 800 px con capa azul uniforme al 74%, 68% al hover/foco. Revisados diez anchos de 320 a 1920 px, tres pasos del ensamblaje, sesión, navegación al libro, movimiento reducido y alternativa sin JavaScript: sin desbordamiento horizontal, recursos locales faltantes ni errores de JavaScript. Capturas actualizadas.
+
+### Modelo ampliado y destellos
+
+Se amplió el contenedor 3D de 430 a 470 px en escritorio y de 215 a 240 px en celular, con tamaños intermedios adaptados. Cuatro trazos luminosos suaves animan detrás del modelo mediante CSS, sin recursos adicionales. Se pausan en la diapositiva inactiva y se ocultan con movimiento reducido. Actualizada la clave de sesión a v2 para mostrar nuevamente el ensamblaje al probar esta versión. Verificados diez anchos (320–1920 px), secuencia base/módulo/torre, navegación al libro, ausencia de desbordamientos y errores; comprobada la visibilidad de los destellos y su alternativa con movimiento reducido.
