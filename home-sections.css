@@ -894,3 +894,50 @@ body:has(#video-dialog[open]) { overflow: hidden; }
   .footer-contact .button { margin-top: 6px; width: fit-content; max-width: 100%; }
   .footer-bottom { font-size: 12px; gap: 14px; flex-direction: column; align-items: flex-start; padding: 20px 0; }
 }
+/* Home hero: professional photography paired with the actual MALBA simulator. */
+.hero-with-showcase .hero-copy { display: grid; grid-template-columns: 1.18fr 1fr; align-items: center; gap: 54px; }
+.hero-with-showcase .hero-copy-inner { min-width: 0; position: relative; z-index: 1; }
+.hero-with-showcase #hero-title { font-size: clamp(38px,4.05vw,60px); }
+.hero-with-showcase .hero-actions { gap: 12px; }
+.hero-with-showcase .hero-actions .button { font-size: 14px; padding: 0 19px; gap: 14px; }
+.hero-showcase { position: relative; width: 100%; max-width: 520px; height: 372px; justify-self: end; }
+.hero-showcase::before { content: ""; position: absolute; top: 12px; right: 0; width: 82%; height: 72%; background: var(--purple); border: 1px solid rgba(255,255,255,.22); border-radius: 14px; }
+.hero-showcase-scene { position: absolute; top: 0; right: 18px; width: 90%; aspect-ratio: 1.5; display: block; border: 4px solid rgba(255,255,255,.92); border-radius: 14px; overflow: hidden; box-shadow: 0 16px 35px rgba(7,63,124,.2); }
+.hero-showcase-scene img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.hero-showcase-product { position: absolute; left: 0; bottom: 0; width: 74%; padding: 0 8px 8px; border-radius: 10px; background: var(--white); color: var(--blue); box-shadow: 0 18px 40px rgba(7,63,124,.24); transform: rotate(-3deg); transform-origin: center; animation: malba-showcase-arrive .65s ease both; }
+.hero-showcase-bar { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 5px; font-size: 12px; font-weight: 600; }
+.hero-showcase-mark { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 4px; color: var(--white); background: var(--purple); }
+.hero-showcase-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.hero-showcase-screen { margin-left: auto; width: 17px; height: 17px; }
+.hero-showcase-product > img { display: block; width: 100%; height: auto; aspect-ratio: 1100/508; border: 1px solid rgba(7,63,124,.1); border-radius: 4px; }
+@keyframes malba-showcase-arrive { from { opacity: 0; transform: translateY(16px) rotate(-3deg); } to { opacity: 1; transform: translateY(0) rotate(-3deg); } }
+@media (max-width: 1130px) and (min-width: 761px) {
+  .hero-with-showcase .hero-copy { gap: 32px; grid-template-columns: 1.2fr 1fr; }
+  .hero-with-showcase #hero-title { font-size: clamp(32px,4.05vw,46px); }
+  .hero-showcase { height: 310px; }
+  .hero-with-showcase .hero-actions .button { font-size: 13px; padding: 0 14px; gap: 8px; min-height: 48px; }
+}
+@media (max-width: 900px) and (min-width: 761px) {
+  .hero-showcase { height: 260px; }
+  .hero-with-showcase .hero-copy { gap: 24px; }
+  .hero-with-showcase .hero-copy p { font-size: 17px; }
+}
+@media (max-width: 760px) {
+  .hero-with-showcase .hero-copy { grid-template-columns: 1fr; gap: 24px; padding-top: 38px; padding-bottom: 76px; }
+  .hero-with-showcase #hero-title { font-size: clamp(26px,7vw,48px); }
+  .hero-with-showcase .hero-actions { margin-top: 24px; }
+  .hero-with-showcase .hero-actions .button { font-size: 13px; padding: 0 14px; gap: 10px; min-height: 46px; }
+  .hero-showcase { height: 185px; max-width: 390px; justify-self: center; }
+  .hero-showcase-scene { width: 64%; right: 4px; aspect-ratio: 1.4; border-width: 3px; border-radius: 10px; }
+  .hero-showcase::before { width: 60%; height: 76%; top: 10px; right: 0; border-radius: 10px; }
+  .hero-showcase-product { width: 62%; max-width: 230px; bottom: 0; left: 4px; border-radius: 8px; padding: 0 6px 6px; }
+  .hero-showcase-bar { height: 29px; font-size: 10px; gap: 6px; }
+  .hero-showcase-mark { width: 17px; height: 17px; }
+  .hero-showcase-screen { width: 14px; height: 14px; }
+}
+@media (max-width: 359px) {
+  .hero-showcase { height: 160px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-showcase-product { animation: none; }
+}

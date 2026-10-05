@@ -10,3 +10,7 @@ Submenú con fotografías, títulos y descripciones: probado con hover, tránsit
 ### Rediseño de “Por qué MALBA PMC”
 
 Composición de dos columnas: título y cifras a la izquierda; seis beneficios visibles en un único panel a la derecha. Se retiró la navegación por pasos. En celular el panel usa dos columnas y pasa a una columna en pantallas inferiores a 360 px. Verificados los tres detalles a 1440, 1024, 768, 390, 360 y 320 px: sin desbordamiento, textos truncados, recursos locales faltantes ni errores JavaScript. Los seis beneficios permanecen visibles con JavaScript desactivado. Las pestañas de competencias continúan funcionando. Capturas actualizadas de Dirección y Riesgos.
+
+### Banner de inicio: fotografía y simulador
+
+Se añadió una composición con fotografía de profesionales y captura real del simulador, reutilizando recursos WebP locales de alta resolución. Mantiene el fondo y la capa azul configurada. Revisado a 1920, 1440, 1131, 1024, 900, 768, 760, 390, 360 y 320 px: título de tres líneas, botones libres de superposiciones y sin desbordamiento de página. La composición se compacta en celular. Comprobados el cambio al banner del libro y su regreso, las diapositivas inactivas fuera del foco, los recursos locales y la preferencia de movimiento reducido. Capturas de home actualizadas.
