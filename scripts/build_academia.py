@@ -50,13 +50,24 @@ def outcomes_view(data):
         panels+=f'<div id="{ident}" role="tabpanel" aria-labelledby="outcome-tab-{i}" tabindex="0" data-course-content="{i}"><h3>{esc(g["title"])}</h3><ul class="course-outcome-list">'+''.join(f'<li><strong>{esc(data["items"][j]["title"])}</strong><p>{esc(data["items"][j]["description"])}</p></li>' for j in g['items'])+'</ul></div>'
     return f'<div class="course-outcomes" data-course-switch><div class="course-outcome-tabs" role="tablist" aria-label="Competencias del programa">{tabs}</div><div class="course-outcome-panels">{panels}</div></div>'
 
-def proof_story(items):
-    if not items:return ''
-    steps='';panels=''
-    for i,item in enumerate(items):
-        steps+=f'<li><button type="button" data-course-panel="{i}" aria-pressed="false" aria-controls="proof-panel-{i}"><span>{i+1:02}</span>{esc(item["title"])}</button></li>'
-        panels+=f'<article id="proof-panel-{i}" data-course-content="{i}"><span class="course-story-number" aria-hidden="true">{i+1:02}</span><div><h3>{esc(item["title"])}</h3><p>{esc(item["description"])}</p></div></article>'
-    return f'<div class="course-story" data-course-switch><ol class="course-story-steps">{steps}</ol><div class="course-story-detail">{panels}<div class="course-story-controls"><span data-course-position></span><div><button type="button" data-course-direction="-1" aria-label="Beneficio anterior">←</button><button type="button" data-course-direction="1" aria-label="Beneficio siguiente">→</button></div></div></div></div>'
+def proof_layout(data, program):
+    if not data['items']:return section_head(data)+statistics(data['stats'],program)
+    shapes = {
+        'expert':'<circle cx="12" cy="7" r="3"/><path d="M5 20v-3a7 7 0 0 1 14 0v3M9 16l3 3 3-3"/>',
+        'practice':'<path d="M4 4h6l2 2 2-2h6v15h-6l-2 2-2-2H4zM12 6v15M7 9h2m-2 4h2m6-4h2m-2 4h2"/>',
+        'simulator':'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4M7 12l3-3 3 3 4-5"/>',
+        'resources':'<path d="M3 7h7l2 2h9v11H3zM3 7V4h7l2 3m-4 6h8m-8 3h5"/>',
+        'recordings':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/>',
+        'invoice':'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 7h6m-6 4h6m-6 4h3"/>',
+        'certificate':'<circle cx="12" cy="9" r="6"/><path d="m8 14-2 7 6-3 6 3-2-7m-7-5 2 2 4-4"/>'
+    }
+    items=''
+    for item in data['items']:
+        title=item['title'].lower()
+        key= 'expert' if 'docente' in title else 'recordings' if 'grabad' in title else 'invoice' if 'factura' in title else 'simulator' if 'simulador' in title else 'resources' if 'plantilla' in title else 'certificate' if 'certific' in title else 'practice'
+        icon=f'<span class="course-reason-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{shapes[key]}</svg></span>'
+        items+=f'<li>{icon}<div><h3>{esc(item["title"])}</h3><p>{esc(item["description"])}</p></div></li>'
+    return '<div class="course-proof-layout"><div class="course-proof-intro">'+section_head(data)+statistics(data['stats'],program)+'</div><ul class="course-reasons">'+items+'</ul></div>'
 
 def statistics(items, program=None):
     items = [dict(x) for x in items]
@@ -198,7 +209,7 @@ def program_page(p, programs):
     if c:
         main+=section('certificacion',f'<div class="course-split"><img class="course-certificate" src="{esc(local(c["image"],prefix))}" width="1100" height="778" alt="{esc(c["imageAlt"])}" loading="lazy" decoding="async"><div>'+section_head(c)+checklist(c['points'])+ (f'<p>{esc(c["note"])}</p>' if c['note'] else '')+'</div></div>')
     if p['lab']:main+=section('laboratorio',section_head(p['lab'])+card_grid(p['lab']['items'],'Entregables del laboratorio'))
-    proof=p['proof'];main+=section('respaldo',section_head(proof)+statistics(proof['stats'],p)+proof_story(proof['items']),True)
+    proof=p['proof'];main+=section('respaldo',proof_layout(proof,p),True)
     main+=f'<section class="course-final"><div class="section-container"><div><h2>{esc(p["final"]["title"])}</h2><p>{esc(p["final"]["description"])}</p></div><div>{price(p)}{action(p)}</div></div></section>'
     main+='</div>'
     schema={'@context':'https://schema.org','@graph':[course_schema(p),breadcrumbs(p['title'],p['slug']+'/')]}

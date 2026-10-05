@@ -88,7 +88,7 @@ document.querySelectorAll('[data-academy-track]').forEach(track => {
   update();
 });
 
-// Compact competency groups and a benefits journey, with keyboard controls.
+// Compact competency groups with keyboard controls.
 document.querySelectorAll('[data-course-switch]').forEach(component => {
   const buttons = [...component.querySelectorAll('[data-course-panel]')];
   const panels = [...component.querySelectorAll('[data-course-content]')];
@@ -101,8 +101,6 @@ document.querySelectorAll('[data-course-switch]').forEach(component => {
       if (tabs) button.tabIndex = i === active ? 0 : -1;
     });
     panels.forEach((panel, i) => panel.hidden = i !== active);
-    const position = component.querySelector('[data-course-position]');
-    if (position) position.textContent = `${String(active + 1).padStart(2, '0')} / ${String(buttons.length).padStart(2, '0')}`;
     if (focus) buttons[active].focus();
     if (!reducedMotion.matches) panels[active].animate([{opacity:.35, transform:'translateY(6px)'},{opacity:1, transform:'translateY(0)'}], {duration:220,easing:'ease-out'});
   }
@@ -114,7 +112,6 @@ document.querySelectorAll('[data-course-switch]').forEach(component => {
       select(event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : active + (event.key === 'ArrowRight' ? 1 : -1), true);
     });
   });
-  component.querySelectorAll('[data-course-direction]').forEach(button => button.addEventListener('click', () => select(active + Number(button.dataset.courseDirection))));
   component.classList.add('is-enhanced');
   select(0);
 });
