@@ -42,6 +42,22 @@ def section_head(data):
 def card_grid(items, label):
     return f'''<div class="course-card-track" tabindex="0" aria-label="{esc(label)}">''' + ''.join(f'<article class="course-small-card"><span class="course-number" aria-hidden="true">{i:02}</span><h3>{esc(x["title"])}</h3><p>{esc(x["description"])}</p></article>' for i, x in enumerate(items, 1)) + '</div><p class="course-swipe-hint">Desliza para explorar todos los contenidos <span aria-hidden="true">→</span></p>'
 
+def outcomes_view(data):
+    tabs='';panels=''
+    for i,g in enumerate(data['groups']):
+        ident=f'outcome-panel-{i}'
+        tabs+=f'<button type="button" id="outcome-tab-{i}" role="tab" aria-controls="{ident}" aria-selected="false" data-course-panel="{i}"><span aria-hidden="true">{i+1:02}</span>{esc(g["title"])}</button>'
+        panels+=f'<div id="{ident}" role="tabpanel" aria-labelledby="outcome-tab-{i}" tabindex="0" data-course-content="{i}"><h3>{esc(g["title"])}</h3><ul class="course-outcome-list">'+''.join(f'<li><strong>{esc(data["items"][j]["title"])}</strong><p>{esc(data["items"][j]["description"])}</p></li>' for j in g['items'])+'</ul></div>'
+    return f'<div class="course-outcomes" data-course-switch><div class="course-outcome-tabs" role="tablist" aria-label="Competencias del programa">{tabs}</div><div class="course-outcome-panels">{panels}</div></div>'
+
+def proof_story(items):
+    if not items:return ''
+    steps='';panels=''
+    for i,item in enumerate(items):
+        steps+=f'<li><button type="button" data-course-panel="{i}" aria-pressed="false" aria-controls="proof-panel-{i}"><span>{i+1:02}</span>{esc(item["title"])}</button></li>'
+        panels+=f'<article id="proof-panel-{i}" data-course-content="{i}"><span class="course-story-number" aria-hidden="true">{i+1:02}</span><div><h3>{esc(item["title"])}</h3><p>{esc(item["description"])}</p></div></article>'
+    return f'<div class="course-story" data-course-switch><ol class="course-story-steps">{steps}</ol><div class="course-story-detail">{panels}<div class="course-story-controls"><span data-course-position></span><div><button type="button" data-course-direction="-1" aria-label="Beneficio anterior">←</button><button type="button" data-course-direction="1" aria-label="Beneficio siguiente">→</button></div></div></div></div>'
+
 def statistics(items, program=None):
     items = [dict(x) for x in items]
     for x in items:
@@ -84,7 +100,10 @@ def card(program, prefix):
 def shared(template, prefix, active, programs):
     s = (ROOT/'templates'/template).read_text().strip()
     if template == 'header.html':
-        menu = '<a href="academia/">Ver toda la academia</a>' + ''.join(f'<a href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'>{esc(p["category"])}</a>' for p in programs) + '<a href="academia/proximos/"'+ (' aria-current="page"' if active == 'upcoming' else '') + '>Próximos programas</a>'
+        menu = '<div class="academy-menu-heading"><div><strong>Academia MALBA</strong><p>Elige tu próxima especialización.</p></div><a href="academia/">Ver todos los programas <span aria-hidden="true">→</span></a></div><div class="academy-menu-programs">'
+        menu += ''.join(f'<a class="academy-menu-program" href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p.get("cardDescription",p["description"]))}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in programs)
+        menu += '</div><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
+
         s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if active != 'home' else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
     def resolve(match):
         attr, url = match.group(1), match.group(2)
@@ -161,7 +180,7 @@ def program_page(p, programs):
         return f'<section class="course-section course-section-photo{ " course-section-tint" if tint else ""}{ " course-section-dark" if ident in ["metodologia", "respaldo"] else ""}" id="{ident}"><div class="section-container">{content}</div></section>'
     main += section('aprendizaje',section_head(p['learning'])+card_grid(p['learning']['items'],'Contenidos de aprendizaje'))
     modules=''.join(f'<details class="course-module"><summary><span>{i:02}</span>{esc(m["title"])}</summary><div>{paras(m["paragraphs"])}'+ ('<ul>'+''.join(f'<li>{esc(t)}</li>' for t in m['topics'])+'</ul>' if m['topics'] else '')+'</div></details>' for i,m in enumerate(p['curriculum']['modules'],1))
-    main += section('contenido-del-programa','<div class="course-curriculum-layout">'+section_head(p['curriculum'])+'<div class="course-modules">'+modules+'</div></div>',True)
+    main += section('contenido-del-programa','<div class="course-curriculum-layout">'+'<div class="course-curriculum-intro">'+section_head(p['curriculum'])+picture(p['curriculum'].get('image',p['image']),p['imageSmall'],p['curriculum'].get('imageAlt',p['imageAlt']),prefix,'course-curriculum-image')+'</div><div class="course-modules">'+modules+'</div></div>',True)
     instructors=''
     for t in p['instructors']:
         image=f'<img src="{esc(local(t["image"],prefix))}" alt="{esc(t["name"])}" width="264" height="396" loading="lazy" decoding="async">' if t['image'] else ''
@@ -174,12 +193,12 @@ def program_page(p, programs):
     if a['lab']:visual=f'<div class="course-lab-feature"><h3>{esc(a["lab"]["title"])}</h3><p>{esc(a["lab"]["description"])}</p><div class="course-lab-diagram" aria-hidden="true"><span>Estrategia</span><span>PMO</span><span>Valor</span></div></div>'
     sectors='<div class="course-sector-list">'+''.join(f'<span>{esc(t)}</span>' for t in a['sectors'])+'</div>' if a['sectors'] else ''
     main+=section('aplicacion','<div class="course-split"><div>'+section_head(a)+checklist(a['points'])+sectors+'</div><div>'+visual+'</div></div>')
-    main+=section('resultados',section_head(p['outcomes'])+card_grid(p['outcomes']['items'],'Competencias al finalizar'),True)
+    main+=section('resultados',section_head(p['outcomes'])+outcomes_view(p['outcomes']),True)
     c=p['certificate']
     if c:
         main+=section('certificacion',f'<div class="course-split"><img class="course-certificate" src="{esc(local(c["image"],prefix))}" width="1100" height="778" alt="{esc(c["imageAlt"])}" loading="lazy" decoding="async"><div>'+section_head(c)+checklist(c['points'])+ (f'<p>{esc(c["note"])}</p>' if c['note'] else '')+'</div></div>')
     if p['lab']:main+=section('laboratorio',section_head(p['lab'])+card_grid(p['lab']['items'],'Entregables del laboratorio'))
-    proof=p['proof'];main+=section('respaldo',section_head(proof)+statistics(proof['stats'],p)+ ('<div class="course-benefits">'+''.join(f'<article><h3>{esc(x["title"])}</h3><p>{esc(x["description"])}</p></article>' for x in proof['items'])+'</div>' if proof['items'] else ''),True)
+    proof=p['proof'];main+=section('respaldo',section_head(proof)+statistics(proof['stats'],p)+proof_story(proof['items']),True)
     main+=f'<section class="course-final"><div class="section-container"><div><h2>{esc(p["final"]["title"])}</h2><p>{esc(p["final"]["description"])}</p></div><div>{price(p)}{action(p)}</div></div></section>'
     main+='</div>'
     schema={'@context':'https://schema.org','@graph':[course_schema(p),breadcrumbs(p['title'],p['slug']+'/')]}
@@ -197,6 +216,9 @@ def validate(data):
     seen=set()
     for p in data['programs']:
         theme_style(p,'../')
+        groups=p['outcomes']['groups']
+        indices=[j for g in groups for j in g['items']]
+        if sorted(indices)!=list(range(len(p['outcomes']['items']))):raise ValueError('Outcome groups must contain each competency exactly once')
         if not re.fullmatch(r'[a-z0-9-]+',p['slug']) or p['slug'] in seen:raise ValueError('Invalid/duplicate slug')
         seen.add(p['slug'])
         if p['status'] not in ['abierto','proximamente','consultar','agotado']:raise ValueError('Invalid registration status')

@@ -3,14 +3,39 @@ const academyToggle = document.querySelector('.academy-menu-toggle');
 const academyMenu = document.querySelector('#academy-menu');
 const academyGroup = document.querySelector('.nav-academia');
 function closeAcademyMenu() {
+  clearTimeout(academyCloseTimer);
   academyToggle?.setAttribute('aria-expanded', 'false');
   if (academyMenu) academyMenu.hidden = true;
 }
+const academyDesktop = matchMedia('(min-width: 1131px) and (hover: hover)');
+let academyCloseTimer;
+function openAcademyMenu() {
+  clearTimeout(academyCloseTimer);
+  if (!academyMenu) return;
+  academyMenu.style.setProperty('--academy-menu-top', `${document.querySelector('.site-header').getBoundingClientRect().bottom}px`);
+  academyToggle.setAttribute('aria-expanded', 'true');
+  academyMenu.hidden = false;
+}
 academyToggle?.addEventListener('click', () => {
-  const open = academyToggle.getAttribute('aria-expanded') !== 'true';
-  academyToggle.setAttribute('aria-expanded', String(open));
-  academyMenu.hidden = !open;
+  if (academyToggle.getAttribute('aria-expanded') === 'true') closeAcademyMenu();
+  else openAcademyMenu();
 });
+academyGroup?.addEventListener('pointerenter', event => {
+  if (academyDesktop.matches && event.pointerType === 'mouse') openAcademyMenu();
+});
+academyGroup?.addEventListener('pointerleave', () => {
+  if (academyDesktop.matches) academyCloseTimer = setTimeout(() => {
+    if (!academyMenu.contains(document.activeElement)) closeAcademyMenu();
+  }, 240);
+});
+academyMenu?.addEventListener('pointerenter', () => clearTimeout(academyCloseTimer));
+academyGroup?.addEventListener('focusin', event => {
+  if (academyDesktop.matches && event.target.matches('.nav-link')) openAcademyMenu();
+});
+academyGroup?.addEventListener('focusout', event => {
+  if (!academyGroup.contains(event.relatedTarget)) closeAcademyMenu();
+});
+window.addEventListener('resize', closeAcademyMenu);
 academyGroup?.addEventListener('keydown', event => {
   if (event.key === 'Escape' && !academyMenu.hidden) {
     event.stopPropagation();
@@ -61,4 +86,35 @@ document.querySelectorAll('[data-academy-track]').forEach(track => {
     else move(event.key === 'ArrowRight' ? 1 : -1);
   });
   update();
+});
+
+// Compact competency groups and a benefits journey, with keyboard controls.
+document.querySelectorAll('[data-course-switch]').forEach(component => {
+  const buttons = [...component.querySelectorAll('[data-course-panel]')];
+  const panels = [...component.querySelectorAll('[data-course-content]')];
+  const tabs = !!component.querySelector('[role="tablist"]');
+  let active = 0;
+  function select(index, focus = false) {
+    active = (index + buttons.length) % buttons.length;
+    buttons.forEach((button, i) => {
+      button.setAttribute(tabs ? 'aria-selected' : 'aria-pressed', String(i === active));
+      if (tabs) button.tabIndex = i === active ? 0 : -1;
+    });
+    panels.forEach((panel, i) => panel.hidden = i !== active);
+    const position = component.querySelector('[data-course-position]');
+    if (position) position.textContent = `${String(active + 1).padStart(2, '0')} / ${String(buttons.length).padStart(2, '0')}`;
+    if (focus) buttons[active].focus();
+    if (!reducedMotion.matches) panels[active].animate([{opacity:.35, transform:'translateY(6px)'},{opacity:1, transform:'translateY(0)'}], {duration:220,easing:'ease-out'});
+  }
+  buttons.forEach((button, i) => {
+    button.addEventListener('click', () => select(i));
+    button.addEventListener('keydown', event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      select(event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : active + (event.key === 'ArrowRight' ? 1 : -1), true);
+    });
+  });
+  component.querySelectorAll('[data-course-direction]').forEach(button => button.addEventListener('click', () => select(active + Number(button.dataset.courseDirection))));
+  component.classList.add('is-enhanced');
+  select(0);
 });

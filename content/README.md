@@ -57,3 +57,9 @@ Las fotografías de trabajo son ilustrativas. Miguel Alba utiliza su fotografía
 `academy.features` controla los cuatro beneficios del panel del banner (título y descripción). El catálogo de Academia muestra directamente los programas, sin el antiguo bloque introductorio.
 
 Cada programa tiene `theme.accent`, `theme.accentDark`, `theme.soft` y `theme.navy`: colores hexadecimales de seis dígitos. `accentDark` se usa en botones y texto para mantener contraste; `accent` en detalles decorativos. `sectionImage` es la ruta local de la fotografía de fondo; las capas claras u oscuras se aplican desde CSS, sin degradados. Estos campos forman parte del contenido configurable preparado para el futuro CMS.
+
+### Navegación y competencias agrupadas
+
+El submenú visual reutiliza `title`, `cardDescription` e `imageSmall` de cada programa. En escritorio se abre con el mouse o teclado; en móvil, con el botón de despliegue.
+
+`curriculum.image` e `imageAlt` controlan la fotografía junto al temario. `outcomes.groups` define las tres pestañas: cada grupo tiene un `title` y una lista `items` de índices (desde cero) de las competencias existentes. El generador exige incluir todas las competencias exactamente una vez. Los beneficios interactivos se obtienen de `proof.items`, sin duplicar los textos en JavaScript. El contenido completo se publica en HTML y sigue visible si JavaScript no está disponible.

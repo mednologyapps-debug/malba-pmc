@@ -177,7 +177,9 @@
             ],
             "topics": []
           }
-        ]
+        ],
+        "image": "assets/banner-transmision-1672.webp",
+        "imageAlt": "Infraestructura de transmisión eléctrica"
       },
       "specialization": {
         "title": "¿Por qué especializarte?",
@@ -310,6 +312,33 @@
             "title": "Aplicación inmediata",
             "description": "Aplicarás lo aprendido en un taller integrador con un caso realista de transmisión eléctrica."
           }
+        ],
+        "groups": [
+          {
+            "title": "Lidera con estrategia",
+            "items": [
+              0,
+              1,
+              2
+            ]
+          },
+          {
+            "title": "Planifica e integra",
+            "items": [
+              3,
+              4,
+              5,
+              7
+            ]
+          },
+          {
+            "title": "Decide y aplica",
+            "items": [
+              6,
+              8,
+              9
+            ]
+          }
         ]
       },
       "certificate": {
@@ -378,8 +407,8 @@
       "cardDescription": "Planifica, integra y dirige proyectos de transmisión eléctrica con una metodología práctica.",
       "theme": {
         "accent": "#F59A00",
-        "accentDark": "#8C5100",
-        "soft": "#FFF6E8",
+        "accentDark": "#65479B",
+        "soft": "#F3F0F8",
         "navy": "#061936"
       },
       "sectionImage": "assets/banner-transmision-1672.webp"
@@ -544,7 +573,9 @@
             ],
             "topics": []
           }
-        ]
+        ],
+        "image": "assets/programs/riesgos-960.webp",
+        "imageAlt": "Análisis de proyectos en una sala de control"
       },
       "specialization": {
         "title": "¿Por qué especializarte?",
@@ -669,6 +700,32 @@
           {
             "title": "Comité de riesgos",
             "description": "Presentarás resultados y recomendaciones de manera ejecutiva."
+          }
+        ],
+        "groups": [
+          {
+            "title": "Identifica y prioriza",
+            "items": [
+              0,
+              1,
+              2
+            ]
+          },
+          {
+            "title": "Analiza y responde",
+            "items": [
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "title": "Monitorea y decide",
+            "items": [
+              6,
+              7,
+              8
+            ]
           }
         ]
       },
@@ -892,7 +949,9 @@
             ],
             "topics": []
           }
-        ]
+        ],
+        "image": "assets/programs/pmo-960.webp",
+        "imageAlt": "Planificación y colaboración en una reunión profesional"
       },
       "specialization": {
         "title": "¿Por qué especializarte?",
@@ -998,6 +1057,29 @@
           {
             "title": "Hoja de ruta",
             "description": "Terminarás con un planteamiento aplicable a una empresa eléctrica."
+          }
+        ],
+        "groups": [
+          {
+            "title": "Diagnostica y diseña",
+            "items": [
+              0,
+              1
+            ]
+          },
+          {
+            "title": "Implementa y mejora",
+            "items": [
+              2,
+              3
+            ]
+          },
+          {
+            "title": "Genera valor",
+            "items": [
+              4,
+              5
+            ]
           }
         ]
       },

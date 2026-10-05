@@ -38,6 +38,14 @@ class AcademiaPublishingTests(unittest.TestCase):
         with self.assertRaises(ValueError):build.validate(self.data)
         p['theme']['accent']='#123456';p['sectionImage']='assets/a);color:red.webp'
         with self.assertRaises(ValueError):build.validate(self.data)
+    def test_outcome_groups_preserve_every_competency(self):
+        for p in self.data['programs']:
+            output=build.outcomes_view(p['outcomes'])
+            for item in p['outcomes']['items']:
+                self.assertIn(build.esc(item['title']),output)
+                self.assertIn(build.esc(item['description']),output)
+        self.data['programs'][0]['outcomes']['groups'][0]['items'].append(0)
+        with self.assertRaises(ValueError):build.validate(self.data)
     def test_imported_curriculum_is_complete(self):
         self.assertEqual([len(p['curriculum']['modules']) for p in self.data['programs']],[9,9,6])
         self.assertEqual([len(p['outcomes']['items']) for p in self.data['programs']],[10,9,6])
