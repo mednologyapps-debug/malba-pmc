@@ -14,3 +14,7 @@ Composición de dos columnas: título y cifras a la izquierda; seis beneficios v
 ### Banner de inicio: fotografía y simulador
 
 Se añadió una composición con fotografía de profesionales y captura real del simulador, reutilizando recursos WebP locales de alta resolución. Mantiene el fondo y la capa azul configurada. Revisado a 1920, 1440, 1131, 1024, 900, 768, 760, 390, 360 y 320 px: título de tres líneas, botones libres de superposiciones y sin desbordamiento de página. La composición se compacta en celular. Comprobados el cambio al banner del libro y su regreso, las diapositivas inactivas fuera del foco, los recursos locales y la preferencia de movimiento reducido. Capturas de home actualizadas.
+
+### Banner con infraestructura 3D
+
+La composición fotográfica fue sustituida por una ilustración 3D original con torre y subestación en colores MALBA. Los WebP de 1280 y 640 px preservan el canal alfa (rango 0–255), y el fondo se integra con la fotografía existente. Comprobados los diez anchos de la revisión anterior (320–1920 px): título de tres líneas, controles y botones sin solapamientos, cambio al libro y regreso, ausencia de desbordamiento de página y errores de recursos locales/JavaScript. La animación de entrada respeta la preferencia de movimiento reducido. Capturas de home actualizadas.
