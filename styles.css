@@ -173,47 +173,7 @@ img {
 .menu-toggle {
   display: none;
 }
-.hero {
-  display: grid;
-  grid-template-columns: 52% 48%;
-  min-height: 640px;
-  background: var(--blue);
-}
-.hero-copy {
-  display: flex;
-  align-items: center;
-  padding: 76px 40px 84px max(32px, calc((100vw - var(--max)) / 2 + 32px));
-}
-.hero-copy-inner {
-  max-width: 640px;
-}
-h1 {
-  font-size: clamp(42px, 3.8vw, 60px);
-  font-weight: 600;
-  line-height: 1.09;
-  letter-spacing: -1.8px;
-  margin: 0 0 28px;
-  max-width: 670px;
-  color: var(--white);
-}
-h1 span {
-  display: block;
-}
-.hero-copy p {
-  font-size: 19px;
-  line-height: 1.65;
-  margin: 0;
-  max-width: 480px;
-  color: var(--white);
-  opacity: 0.88;
-}
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-top: 38px;
-}
+
 .button-white {
   background: var(--white);
   color: var(--blue);
@@ -234,40 +194,7 @@ h1 span {
 .hero .button:focus-visible {
   outline-color: var(--white);
 }
-.hero-visual {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-}
-.hero-visual > img {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  inset: 0;
-  object-fit: cover;
-  object-position: 64% center;
-}
-.image-caption {
-  position: absolute;
-  bottom: 30px;
-  left: 30px;
-  right: 30px;
-  display: flex;
-  gap: 13px;
-  align-items: center;
-  color: var(--white);
-  background: var(--blue);
-  padding: 14px 17px;
-  width: fit-content;
-  max-width: calc(100% - 60px);
-  font-size: 13px;
-}
-.caption-line {
-  width: 25px;
-  height: 2px;
-  background: var(--white);
-  flex-shrink: 0;
-}
+
 dialog {
   border: 0;
   padding: 34px;
@@ -363,17 +290,7 @@ dialog > p,
 .no-script a {
   text-decoration: underline;
 }
-@media (min-width: 1700px) {
-  .hero {
-    min-height: 720px;
-  }
-  .hero-copy {
-    padding-right: 70px;
-  }
-  h1 {
-    font-size: 64px;
-  }
-}
+
 @media (max-width: 1279px) {
   .header-inner {
     gap: 24px;
@@ -403,20 +320,6 @@ dialog > p,
   .header-cta {
     font-size: 12px;
     padding: 0 12px;
-  }
-  .hero-copy {
-    padding-left: 28px;
-    padding-right: 28px;
-  }
-  .hero {
-    min-height: 600px;
-  }
-  h1 {
-    font-size: 48px;
-  }
-  .hero-actions .button {
-    font-size: 14px;
-    padding: 0 16px;
   }
 }
 @media (max-width: 1130px) {
@@ -492,22 +395,6 @@ dialog > p,
   .classroom {
     font-size: 14px;
   }
-  .hero-actions {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  h1 span {
-    display: inline;
-  }
-  h1 {
-    font-size: clamp(38px, 4.6vw, 48px);
-  }
-  .hero {
-    min-height: 600px;
-  }
-  .hero-copy p {
-    font-size: 18px;
-  }
 }
 @media (max-width: 760px) {
   .header-inner {
@@ -523,60 +410,141 @@ dialog > p,
     padding: 16px 22px 24px;
     max-height: calc(100dvh - 78px);
   }
-  .hero {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .hero-copy {
-    padding: 52px 24px 46px;
-  }
-  .hero-copy-inner {
-    max-width: 570px;
-  }
-  h1 span {
-    display: inline;
-  }
-  h1 {
-    font-size: clamp(34px, 7.6vw, 50px);
-    line-height: 1.12;
-    letter-spacing: -1.1px;
-    margin-bottom: 22px;
-  }
-  .hero-copy p {
-    font-size: 17px;
-    line-height: 1.65;
-    max-width: 460px;
-  }
-  .hero-actions {
-    margin-top: 28px;
-    flex-direction: row;
-    gap: 12px;
-  }
-  .hero-actions .button {
-    font-size: 14px;
-    padding: 0 18px;
-    min-height: 52px;
-  }
-  .hero-visual {
-    height: 330px;
-  }
-  .hero-visual > img {
-    object-position: 64% 54%;
-  }
-  .image-caption {
-    left: 24px;
-    right: 24px;
-    bottom: 24px;
-    max-width: calc(100% - 48px);
-    font-size: 12px;
-    padding: 12px 14px;
-  }
+
   .dialog-heading h2 {
     font-size: 26px;
   }
   dialog {
     padding: 26px;
+  }
+}
+@media (max-width: 390px) {
+  .nav-actions {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Banner: fotografía completa y una capa azul uniforme, sin degradados. */
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: 590px;
+  overflow: hidden;
+  background: var(--blue);
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(7, 63, 124, 0.76);
+  pointer-events: none;
+  transition: background-color 0.2s ease;
+}
+.hero-visual {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+.hero-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.hero-copy {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 76px 32px 84px;
+}
+.hero-copy-inner {
+  max-width: 760px;
+}
+#hero-title {
+  margin: 0 0 26px;
+  color: var(--white);
+  font-size: clamp(42px, 4.2vw, 62px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -1.5px;
+}
+#hero-title span {
+  display: block;
+}
+.hero-copy p {
+  max-width: 550px;
+  margin: 0;
+  color: var(--white);
+  font-size: 19px;
+  line-height: 1.6;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 34px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero:hover::after {
+    background: rgba(7, 63, 124, 0.8);
+  }
+}
+.hero:focus-within::after {
+  background: rgba(7, 63, 124, 0.8);
+}
+@media (min-width: 1700px) {
+  .hero {
+    min-height: 650px;
+  }
+}
+@media (max-width: 1130px) {
+  .hero {
+    min-height: 560px;
+  }
+  .hero-copy {
+    padding: 64px 28px 72px;
+  }
+}
+@media (max-width: 760px) {
+  .hero {
+    min-height: 510px;
+  }
+  .hero-copy {
+    padding: 54px 24px 60px;
+  }
+  .hero-visual img {
+    object-position: 62% center;
+  }
+  #hero-title {
+    font-size: clamp(26px, 7vw, 48px);
+    letter-spacing: -0.6px;
+    line-height: 1.15;
+    margin-bottom: 24px;
+  }
+  .hero-copy p {
+    font-size: 16px;
+    line-height: 1.65;
+    max-width: 460px;
+  }
+  .hero-actions {
+    margin-top: 28px;
+    gap: 12px;
+  }
+  .hero-actions .button {
+    font-size: 14px;
+    padding: 0 18px;
   }
 }
 @media (max-width: 390px) {
@@ -586,31 +554,9 @@ dialog > p,
   }
   .hero-actions {
     display: grid;
-    width: 100%;
+    max-width: 350px;
   }
   .hero-actions .button {
     justify-content: space-between;
-  }
-  .hero-visual {
-    height: 285px;
-  }
-  .nav-actions {
-    flex-wrap: wrap;
-    gap: 18px;
-  }
-  .image-caption {
-    left: 20px;
-    right: 20px;
-    max-width: calc(100% - 40px);
-    gap: 9px;
-    font-size: 11px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    transition: none !important;
-    scroll-behavior: auto !important;
   }
 }

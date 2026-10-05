@@ -17,7 +17,7 @@ Abrir http://localhost:8080. También se puede abrir `index.html` directamente p
 - Menú sticky, navegación móvil, estados de foco y cierre con Escape.
 - Banner responsive, título HTML real y dos acciones.
 - Logo original, Outfit alojada localmente y colores dominantes del logo: azul `#073F7C`, morado `#544595`, más blanco y transparencias de estos colores. Sin degradados.
-- Fotografía ilustrativa generada para esta entrega, no representa un proyecto de un cliente. WebP a 640, 960 y 1536 px con `srcset`.
+- Fotografía ilustrativa generada para esta entrega, no representa un proyecto de un cliente. Banner panorámico con WebP a 960 y 1672 px con `srcset`, sin ampliación artificial de la imagen nativa.
 - Sin framework, APIs, dependencias de producción, analítica, cookies ni solicitudes de fuentes externas.
 
 ## Botones y enlaces
@@ -43,8 +43,12 @@ Para revisión, subir `index.html`, `styles.css`, `app.js` y `assets/` a una car
 
 ## Imagen y tipografía
 
-Prompt de la imagen: fotografía editorial realista de torres de transmisión eléctrica entre montañas de Perú, torre principal a la derecha, iluminación diurna suave, colores fríos azul y morado, metal nítido, sin personas, texto, logos ni elementos de interfaz. Generada con la herramienta integrada de imágenes, optimizada en WebP sin aumentar artificialmente su resolución. La imagen original suministrada del logo conserva sus proporciones. Outfit distribuida bajo SIL Open Font License; licencia en `assets/fonts/OFL.txt`.
+Prompt de la imagen actual: fotografía editorial panorámica de torres de transmisión eléctrica entre montañas de Perú, torre principal en el tercio derecho, mitad izquierda despejada para el texto, iluminación diurna suave, colores fríos azul y morado, metal nítido, sin personas, texto, logos ni elementos de interfaz. Se solicitó 3840×2160; la herramienta entregó 1672×941 y se conserva esa resolución nativa, sin hacerla pasar por 4K. Generada con la herramienta integrada de imágenes, optimizada en WebP sin aumentar artificialmente su resolución. La imagen original suministrada del logo conserva sus proporciones. Outfit distribuida bajo SIL Open Font License; licencia en `assets/fonts/OFL.txt`.
 
 ## Validación
 
 Revisado en Chromium en 320, 390, 768, 1280 y 1440 px: sin scroll horizontal, recursos faltantes ni excepciones JavaScript. Menú, diálogos, Escape y retorno de foco comprobados. Capturas y alcance de validación en `docs/`.
+
+## Ajuste del banner
+
+Foto de fondo en toda la sección, sin panel azul separado ni etiqueta sobre la imagen. Capa azul uniforme con opacidad 0.76, que pasa a 0.80 en hover con mouse y foco de teclado. El contenido permanece visible en pantallas táctiles. Título abreviado en tres líneas: “Conocimiento que / transforma proyectos / eléctricos.” La descripción mantiene “infraestructura eléctrica”. Capturas actualizadas en `docs/`.

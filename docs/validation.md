@@ -12,3 +12,7 @@ Probada en Chromium headless con Playwright a anchos de 320, 390, 768, 1280 y 14
 - Capturas completas revisadas para escritorio, móvil y tablet; disponibles en esta carpeta.
 
 Los destinos externos se obtuvieron de los enlaces de la portada actual. No se auditó el funcionamiento del Aula Virtual, los formularios ni las páginas externas. No se ejecutó una medición Lighthouse ni una comprobación de indexación o posiciones en Google. Esta entrega no se desplegó en producción.
+
+## Ajuste a fondo completo
+
+Repetidas las comprobaciones en los mismos cinco anchos: título exactamente de tres líneas, descripción de dos o tres líneas, fotografía cubriendo todo el banner y ausencia de la etiqueta eliminada. Hover cambia la capa azul de 0.76 a 0.80. Sin errores de recursos ni de JavaScript. Imagen nativa: 1672×941, versiones WebP 960×540 y 1672×941. No se generó ni se declara un archivo 4K.
