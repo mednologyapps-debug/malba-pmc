@@ -9,7 +9,25 @@
     "introTitle": "Fortalece tus conocimientos. Mejora tus proyectos.",
     "introText": "Fortalece tus conocimientos en gestión de proyectos, riesgos y PMO con casos del sector eléctrico, experiencia real y herramientas que podrás aplicar en tu trabajo.",
     "programsTitle": "Nuestros programas",
-    "programsText": "Explora nuestras áreas de especialización y encuentra la formación que acompaña tu desarrollo profesional."
+    "programsText": "Explora nuestras áreas de especialización y encuentra la formación que acompaña tu desarrollo profesional.",
+    "features": [
+      {
+        "title": "Metodología propia",
+        "description": "Experiencia y casos reales de gestión de proyectos."
+      },
+      {
+        "title": "Aprendizaje práctico",
+        "description": "Talleres y herramientas aplicados a tus proyectos."
+      },
+      {
+        "title": "Enfoque estratégico",
+        "description": "Desarrolla criterio para tomar mejores decisiones."
+      },
+      {
+        "title": "Formación especializada",
+        "description": "Programas para fortalecer tus competencias profesionales."
+      }
+    ]
   },
   "upcoming": {
     "title": "Próximos programas",
@@ -357,7 +375,14 @@
         "description": "Fortalece tu capacidad para planificar, integrar, controlar riesgos y tomar mejores decisiones en proyectos de infraestructura eléctrica."
       },
       "imageWide": "assets/banner-transmision-1672.webp",
-      "cardDescription": "Planifica, integra y dirige proyectos de transmisión eléctrica con una metodología práctica."
+      "cardDescription": "Planifica, integra y dirige proyectos de transmisión eléctrica con una metodología práctica.",
+      "theme": {
+        "accent": "#F59A00",
+        "accentDark": "#8C5100",
+        "soft": "#FFF6E8",
+        "navy": "#061936"
+      },
+      "sectionImage": "assets/banner-transmision-1672.webp"
     },
     {
       "id": "riesgos",
@@ -712,7 +737,14 @@
         "description": "Aprende a identificar, priorizar, cuantificar, responder y monitorear los riesgos de proyectos de transmisión eléctrica."
       },
       "imageWide": "assets/programs/riesgos-1672.webp",
-      "cardDescription": "Anticipa, prioriza y gestiona riesgos para proteger los objetivos de proyectos de transmisión."
+      "cardDescription": "Anticipa, prioriza y gestiona riesgos para proteger los objetivos de proyectos de transmisión.",
+      "theme": {
+        "accent": "#D94B5F",
+        "accentDark": "#B93A4D",
+        "soft": "#FFF0F2",
+        "navy": "#061936"
+      },
+      "sectionImage": "assets/programs/riesgos-960.webp"
     },
     {
       "id": "pmo",
@@ -1015,7 +1047,14 @@
         "description": "Aprende a diagnosticar, diseñar, implementar y mejorar una PMO alineada con la estrategia de una empresa del sector eléctrico."
       },
       "imageWide": "assets/programs/pmo-1672.webp",
-      "cardDescription": "Diseña e implementa una PMO alineada con la estrategia y orientada a generar valor."
+      "cardDescription": "Diseña e implementa una PMO alineada con la estrategia y orientada a generar valor.",
+      "theme": {
+        "accent": "#00A6B8",
+        "accentDark": "#078393",
+        "soft": "#EAF9FB",
+        "navy": "#061936"
+      },
+      "sectionImage": "assets/programs/pmo-960.webp"
     }
   ]
 }

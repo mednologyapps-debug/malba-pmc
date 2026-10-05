@@ -51,3 +51,9 @@ El shortcode `[malba_testimonios]` dependía de un plugin WordPress y no incluí
 Dirección conserva la fecha del 18 de agosto de 2026 como edición anterior y muestra US$ 350 de tarifa regular; la promoción de US$ 300 ya venció. Riesgos y PMO conservan el estado Próximamente. No se inventaron nuevas fechas ni precios para ellos.
 
 Las fotografías de trabajo son ilustrativas. Miguel Alba utiliza su fotografía real, sin ampliarla por encima de la resolución de origen. Dayana Romero conserva su información sin inventar una fotografía.
+
+### Identidad visual de los programas
+
+`academy.features` controla los cuatro beneficios del panel del banner (título y descripción). El catálogo de Academia muestra directamente los programas, sin el antiguo bloque introductorio.
+
+Cada programa tiene `theme.accent`, `theme.accentDark`, `theme.soft` y `theme.navy`: colores hexadecimales de seis dígitos. `accentDark` se usa en botones y texto para mantener contraste; `accent` en detalles decorativos. `sectionImage` es la ruta local de la fotografía de fondo; las capas claras u oscuras se aplican desde CSS, sin degradados. Estos campos forman parte del contenido configurable preparado para el futuro CMS.

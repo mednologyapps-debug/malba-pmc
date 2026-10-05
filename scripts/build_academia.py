@@ -116,8 +116,21 @@ def breadcrumbs(title, slug):
 def course_schema(program):
     return {'@type':'Course', '@id':ORIGIN+program['slug']+'/#course','name':program['title'],'description':program['description'],'url':ORIGIN+program['slug']+'/', 'inLanguage':'es-PE','image':ORIGIN+program['image'],'provider':{'@type':'Organization','name':'MALBA PMC','url':ORIGIN}}
 
+def academy_features(items):
+    shapes = ['<path d="M5 5h14v14H5zM8 9h8M8 13h5"/>', '<path d="m4 9 8-4 8 4-8 4-8-4Zm3 2v6l5 3 5-3v-6"/>', '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="m12 12 7-7"/>', '<path d="M7 3h10v12H7zM10 7h4m-4 3h4M9 15v6l3-2 3 2v-6"/>']
+    return '<div class="academy-feature-panel">'+''.join(f'<article><span class="academy-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{shapes[i%4]}</svg></span><h2>{esc(x["title"])}</h2><p>{esc(x["description"])}</p></article>' for i,x in enumerate(items))+'</div>'
+
+def theme_style(program, prefix):
+    t=program['theme']
+    for key in ['accent','accentDark','soft','navy']:
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}',t[key]):raise ValueError('Invalid theme color')
+    rgb=','.join(str(int(t['navy'][i:i+2],16)) for i in [1,3,5])
+    image=local(program.get('sectionImage',program['image']),prefix)
+    if not re.fullmatch(r'[a-zA-Z0-9_./-]+',image):raise ValueError('Section image must be a local asset path')
+    return esc(f"--course-accent:{t['accent']};--purple:{t['accentDark']};--purple-soft:{t['soft']};--blue-soft:{t['soft']};--blue:{t['navy']};--course-navy-rgb:{rgb};--course-photo:url('{image}')")
+
 def hero(data, prefix, title=None, desc=None):
-    return f'''<section class="academy-hero" aria-labelledby="academy-title">{picture(data['image'],data['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="section-container"><h1 id="academy-title">{esc(title or data['title'])}</h1><p>{esc(desc or data.get('subtitle',data.get('description')))}</p></div></section>'''
+    return f'''<section class="academy-hero" aria-labelledby="academy-title">{picture(data['image'],data['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="section-container academy-hero-layout"><div class="academy-hero-copy"><h1 id="academy-title">{esc(title or data['title'])}</h1><p>{esc(desc or data.get('subtitle',data.get('description')))}</p></div>{academy_features(data['features']) if data.get('features') else ''}</div></section>'''
 
 def catalog_controls():
     return '<div class="academy-navigation"><p>Explora los programas <span aria-hidden="true">→</span></p><div><button type="button" data-program-step="-1" aria-label="Programas anteriores">←</button><button type="button" data-program-step="1" aria-label="Programas siguientes">→</button></div></div>'
@@ -125,7 +138,7 @@ def catalog_controls():
 def academy(data):
     a, ps, prefix = data['academy'], data['programs'], '../'
     forthcoming = data['upcoming']
-    main = hero(a,prefix) + f'<section class="academy-intro section-container"><div class="academy-intro-panel"><h2>{esc(a["introTitle"])}</h2><p>{esc(a["introText"])}</p></div></section>'
+    main = hero(a,prefix)
     main += f'<section class="academy-catalog section-container" id="programas" aria-labelledby="programs-title"><div class="academy-catalog-heading"><h2 id="programs-title">{esc(a["programsTitle"])}</h2><p>{esc(a["programsText"])}</p></div><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'
     main += ''.join(card(p,prefix) for p in ps)
     main += f'''<article class="academy-program-card academy-upcoming-card"><div class="academy-card-media"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}</a><span class="academy-card-status">Nuevas convocatorias</span>{image_badges(['Fechas por confirmar'])}</div><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming.get('cardDescription',forthcoming['description']))}</p><div class="academy-card-bottom"><div class="academy-card-price"><span>Tu próxima especialización</span></div><a class="button button-purple academy-card-button" href="proximos/">Explorar programas <span class="academy-button-arrow" aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
@@ -141,11 +154,11 @@ def start_label(program):
 
 def program_page(p, programs):
     prefix = '../'
-    main = '<nav class="course-breadcrumb section-container" aria-label="Ruta de navegación"><a href="../">Inicio</a><span aria-hidden="true">/</span><a href="../academia/">Academia</a><span aria-hidden="true">/</span><span>'+esc(p['category'])+'</span></nav>'
+    main = f'<div class="course-page" style="{theme_style(p,prefix)}"><nav class="course-breadcrumb section-container" aria-label="Ruta de navegación"><a href="../">Inicio</a><span aria-hidden="true">/</span><a href="../academia/">Academia</a><span aria-hidden="true">/</span><span>'+esc(p['category'])+'</span></nav>'
     main += f'''<section class="course-hero" aria-labelledby="course-title">{picture(p.get('imageWide',p['image']),p['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="course-hero-layout section-container"><div class="course-hero-copy"><h1 id="course-title">{esc(p['title'])}</h1><p class="course-summary">{esc(p['description'])}</p><dl class="course-facts"><div><dt>Inicio</dt><dd>{esc(start_label(p))}</dd></div><div><dt>Duración</dt><dd>{esc(p['hours'])} horas · {esc(p['sessions'])} sesiones</dd></div><div><dt>Modalidad</dt><dd>{esc(p['modality'])}</dd></div><div><dt>Horario</dt><dd>{esc(p['schedule'])}</dd></div>{'<div><dt>Edición</dt><dd>'+esc(p['edition'])+'</dd></div>' if p.get('edition') else ''}</dl><a class="button button-white" href="{esc(safe_url(p['brochureUrl']))}" target="_blank" rel="noopener noreferrer">Descargar brochure <span aria-hidden="true">↓</span></a></div><aside class="course-enrollment" aria-label="Información de inscripción"><h2>{'Próximamente' if p['status']=='proximamente' else 'Tu próxima especialización'}</h2>{price(p)}{paras([p['pricing']['note']]) if p['pricing']['regular'] is not None else ''}{action(p)}<a class="course-whatsapp" href="{esc(safe_url(p['whatsappUrl']))}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp <span aria-hidden="true">↗</span></a><p class="course-enrollment-note">{esc(p['registrationNote'])}</p></aside></div></section>'''
     main += '<nav class="course-jumpnav" aria-label="Secciones del programa"><div class="section-container"><a href="#aprendizaje">Qué aprenderás</a><a href="#contenido-del-programa">Contenido</a><a href="#docentes">Docentes</a><a href="#metodologia">Metodología</a></div></nav>'
     def section(ident,content,tint=False):
-        return f'<section class="course-section{ " course-section-tint" if tint else ""}" id="{ident}"><div class="section-container">{content}</div></section>'
+        return f'<section class="course-section course-section-photo{ " course-section-tint" if tint else ""}{ " course-section-dark" if ident in ["metodologia", "respaldo"] else ""}" id="{ident}"><div class="section-container">{content}</div></section>'
     main += section('aprendizaje',section_head(p['learning'])+card_grid(p['learning']['items'],'Contenidos de aprendizaje'))
     modules=''.join(f'<details class="course-module"><summary><span>{i:02}</span>{esc(m["title"])}</summary><div>{paras(m["paragraphs"])}'+ ('<ul>'+''.join(f'<li>{esc(t)}</li>' for t in m['topics'])+'</ul>' if m['topics'] else '')+'</div></details>' for i,m in enumerate(p['curriculum']['modules'],1))
     main += section('contenido-del-programa','<div class="course-curriculum-layout">'+section_head(p['curriculum'])+'<div class="course-modules">'+modules+'</div></div>',True)
@@ -168,6 +181,7 @@ def program_page(p, programs):
     if p['lab']:main+=section('laboratorio',section_head(p['lab'])+card_grid(p['lab']['items'],'Entregables del laboratorio'))
     proof=p['proof'];main+=section('respaldo',section_head(proof)+statistics(proof['stats'],p)+ ('<div class="course-benefits">'+''.join(f'<article><h3>{esc(x["title"])}</h3><p>{esc(x["description"])}</p></article>' for x in proof['items'])+'</div>' if proof['items'] else ''),True)
     main+=f'<section class="course-final"><div class="section-container"><div><h2>{esc(p["final"]["title"])}</h2><p>{esc(p["final"]["description"])}</p></div><div>{price(p)}{action(p)}</div></div></section>'
+    main+='</div>'
     schema={'@context':'https://schema.org','@graph':[course_schema(p),breadcrumbs(p['title'],p['slug']+'/')]}
     return document(p['title'],p['description'],p['slug']+'/',prefix,main,programs,p['id'],schema,p.get('imageWide',p['image']),p['imageAlt'])
 
@@ -182,6 +196,7 @@ def validate(data):
     if data['version'] != 1:raise ValueError('Unsupported content version')
     seen=set()
     for p in data['programs']:
+        theme_style(p,'../')
         if not re.fullmatch(r'[a-z0-9-]+',p['slug']) or p['slug'] in seen:raise ValueError('Invalid/duplicate slug')
         seen.add(p['slug'])
         if p['status'] not in ['abierto','proximamente','consultar','agotado']:raise ValueError('Invalid registration status')

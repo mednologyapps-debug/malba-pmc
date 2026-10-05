@@ -29,6 +29,15 @@ class AcademiaPublishingTests(unittest.TestCase):
         self.assertNotIn('<script>alert(1)</script>',page);self.assertIn('&lt;script&gt;',page)
         p['brochureUrl']='javascript:alert(1)'
         with self.assertRaises(ValueError):build.validate(self.data)
+    def test_configurable_features_and_themes_are_safe(self):
+        self.data['academy']['features'][0]['title']='Método actualizado'
+        self.assertIn('Método actualizado',build.academy(self.data))
+        p=self.data['programs'][0];p['theme']['accent']='#123456'
+        self.assertIn('--course-accent:#123456',build.program_page(p,self.data['programs']))
+        p['theme']['accent']='red;position:fixed'
+        with self.assertRaises(ValueError):build.validate(self.data)
+        p['theme']['accent']='#123456';p['sectionImage']='assets/a);color:red.webp'
+        with self.assertRaises(ValueError):build.validate(self.data)
     def test_imported_curriculum_is_complete(self):
         self.assertEqual([len(p['curriculum']['modules']) for p in self.data['programs']],[9,9,6])
         self.assertEqual([len(p['outcomes']['items']) for p in self.data['programs']],[10,9,6])

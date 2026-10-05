@@ -1,0 +1,4 @@
+
+### Academia y detalles: fondos e identidad por programa
+
+Se eliminó el bloque introductorio del catálogo, se añadió el panel de beneficios del banner y se ordenaron los datos del programa en tarjetas dentro del hero. Los programas utilizan naranja, rojo y turquesa como acentos configurables, y fotografías con capas de color en las secciones. Se comprobó catálogo y los tres detalles a 1440, 1024, 768, 390 y 320 px: sin desbordamiento horizontal de la página, recursos faltantes ni errores JavaScript. Acordeones del temario y navegación del carrusel funcionan. Las comprobaciones de publicación validan también los colores y las rutas configurables. Capturas actualizadas de escritorio y móvil.
