@@ -86,7 +86,7 @@ Prueba de navegador: navegación por áreas y catálogo central del CMS, edició
 
 El menú superior incorpora un submenú con imagen, título y descripción. El catálogo y las fichas se generan desde `content/solutions.json` y `scripts/build_solutions.py`, con estilos en `soluciones.css`. El dashboard edita Academia y Publicaciones; Soluciones digitales permanece pendiente en el panel.
 
-La ficha de Simulator sigue la referencia SaaS: presentación, pasos, resultados, certificación y planes Individual/Universitario/Empresarial. Los precios y el video definitivo están pendientes. La selección de plan/licencias prepara una solicitud de acceso por WhatsApp; no cobra ni activa licencias. La pantalla del producto reutiliza imágenes reales del proyecto. El certificado es un modelo ilustrativo. Esta entrega implementa las páginas comerciales, sin cambiar el motor del simulador ni crear un sistema de pagos o alumnos.
+La ficha de Simulator sigue la referencia SaaS: presentación, pasos, resultados, certificación y planes Individual/Universitario/Empresarial. Los precios y el video definitivo están pendientes. La selección de plan/licencias prepara una solicitud de acceso por WhatsApp; no cobra ni activa licencias. La pantalla del producto reutiliza imágenes reales del proyecto. El certificado utiliza la misma imagen original de MALBA Simulator incorporada en la referencia. Esta entrega implementa las páginas comerciales, sin cambiar el motor del simulador ni crear un sistema de pagos o alumnos.
 
 ### Validación del admin guiado
 

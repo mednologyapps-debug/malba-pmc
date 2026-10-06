@@ -24,8 +24,8 @@
       "title": "MALBA Risk",
       "subtitle": "Gestión de riesgos para tus proyectos",
       "description": "Identifica, valora y prioriza los riesgos de tus proyectos con una visión estructurada para tomar mejores decisiones.",
-      "image": "assets/programs/riesgos-960.webp",
-      "imageSmall": "assets/programs/riesgos-480.webp",
+      "image": "assets/solutions/riesgos-proyecto-1100.webp",
+      "imageSmall": "assets/solutions/riesgos-proyecto-600.webp",
       "status": "Próximamente",
       "features": [
         "Identificación y valoración de riesgos",
@@ -113,5 +113,9 @@
       "image": "assets/solutions/fondo-soluciones-digitales-1672.webp",
       "imageSmall": "assets/solutions/fondo-soluciones-digitales-960.webp"
     }
+  },
+  "certificate": {
+    "image": "assets/academia/certificado.webp",
+    "imageAlt": "Certificado original de participación en MALBA Simulator: gestión de proyectos eléctricos de alta tensión"
   }
 }
