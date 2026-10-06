@@ -10,15 +10,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
 import build_academia as renderer
+import build_publications as editorial
 
 ROOT = renderer.ROOT
 STATE = ROOT / '.cms-private'
 LOCK = threading.RLock()
 ATTEMPTS = collections.defaultdict(collections.deque)
-MAX_BODY = 7 * 1024 * 1024
+MAX_BODY = 29 * 1024 * 1024
 SESSION_IDLE = 1800
 SESSION_MAX = 28800
-RESERVED = {'academia','soluciones-digitales','dashboard','assets','content','scripts','tests','cms-preview','api','docs'}
+RESERVED = {'academia','publicaciones','soluciones-digitales','dashboard','assets','content','scripts','tests','cms-preview','api','docs'}
 
 @contextmanager
 def connect():
@@ -47,14 +48,29 @@ def initialize(username=None, password=None):
         ''')
         if not db.execute('SELECT 1 FROM draft').fetchone():
             data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
+            data['publications']=editorial.defaults()
             db.execute('INSERT INTO draft VALUES(1,?,1,?)',(dump(data),time.time()))
             db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(data),dump(renderer.render_outputs(data)),'Inicial',time.time()))
-        # Refresh the current publication with new templates/routes without resetting
-        # saved content, draft revisions, user accounts or publication history.
+        # Add the editorial area without resetting saved programs, revisions or accounts.
+        d=db.execute('SELECT data FROM draft').fetchone()
+        draft=json.loads(d['data'])
+        if 'publications' not in draft:
+            draft['publications']=editorial.defaults()
+            db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
         latest=db.execute('SELECT id,data FROM publications ORDER BY id DESC LIMIT 1').fetchone()
         if latest:
-            outputs=renderer.render_outputs(json.loads(latest['data']))
-            db.execute('UPDATE publications SET outputs=? WHERE id=?',(dump(outputs),latest['id']))
+            published=json.loads(latest['data'])
+            published.setdefault('publications',editorial.defaults())
+            # Reconcile previously saved removals after upgrading from draft-only trash.
+            removals={p['id']:p.get('visibility') for p in draft['programs'] if p.get('visibility') in ('hidden','deleted')}
+            changed=False
+            for p in published['programs']:
+                if p['id'] in removals and p.get('visibility','public')!=removals[p['id']]:
+                    p['visibility']=removals[p['id']];changed=True
+            outputs=renderer.render_outputs(published)
+            if changed:
+                db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(published),dump(outputs),'Sincronización de visibilidad',time.time()))
+            else:db.execute('UPDATE publications SET data=?,outputs=? WHERE id=?',(dump(published),dump(outputs),latest['id']))
         if username is not None and password is not None:
             if not re.fullmatch(r'[a-zA-Z0-9_.@-]{3,100}',username):raise ValueError('Usuario inválido: usa al menos 3 letras/números.')
             if not 12<=len(password)<=256:raise ValueError('La contraseña debe tener entre 12 y 256 caracteres.')
@@ -68,6 +84,8 @@ def validate_content(data):
     original=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
     ids=set();slugs=set()
     with connect() as db:published=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
+    published_publications={p['id'] for p in editorial.content(published)['items']}
+    if published_publications-{p.get('id') for p in editorial.content(data)['items'] if isinstance(p,dict)}:raise ValueError('Para eliminar una publicación usa la papelera; sus datos se conservan.')
     old={p['id']:p['slug'] for p in published['programs']}
     if set(old)-{p.get('id') for p in data['programs']}:raise ValueError('Para eliminar un programa publicado envíalo a la papelera; sus datos se conservan para recuperarlo.')
     def walk(value, key=''):
@@ -82,8 +100,9 @@ def validate_content(data):
                 renderer.safe_url(value)
                 if not value.startswith('https://'):
                     if not value.startswith('assets/') or not (ROOT/value).is_file():raise ValueError('La imagen local no existe: '+value)
-                    if key.lower().endswith('url') and key not in ('brochureUrl',):raise ValueError('Usa un enlace HTTPS.')
+                    if key.lower().endswith('url') and key not in ('brochureUrl','pdfUrl'):raise ValueError('Usa un enlace HTTPS.')
     walk(data)
+    editorial.validate(editorial.content(data))
     def shape(template,value,path):
         if template is None or value is None and path.split('.')[-1] in ('certificate','lab'):return
         if isinstance(template,dict):
@@ -129,6 +148,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('Referrer-Policy','same-origin')
         self.send_header('X-Frame-Options','SAMEORIGIN')
+        if mime.startswith(('text/html','application/xml')):self.send_header('Cache-Control','no-store')
         if self.path.startswith(('/api/','/dashboard','/cms-preview')):
             self.send_header('Cache-Control','no-store')
             self.send_header('X-Robots-Tag','noindex, nofollow')
@@ -181,7 +201,7 @@ class Handler(BaseHTTPRequestHandler):
                 outputs=json.loads(pub['outputs'])
                 for name,body in outputs.items():z.writestr(name,body)
                 z.writestr('content/academia.json',dump(renderer.public_content(json.loads(pub['data']))))
-                for name in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
+                for name in ['publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
                     z.write(ROOT/name,name)
                 for f in (ROOT/'assets').rglob('*'):
                     if f.is_file():z.write(f,str(f.relative_to(ROOT)))
@@ -205,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
         if outputs and filename in outputs:
             self.response(outputs[filename],mime='application/xml; charset=utf-8' if filename.endswith('.xml') else 'text/html; charset=utf-8');return
         if path=='/dashboard':self.response('',302,'text/plain',{'Location':'/dashboard/'});return
-        allowed=filename in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
+        allowed=filename in ['publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
         target=(ROOT/filename).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file() or filename.startswith('assets/') and not target.is_relative_to((ROOT/'assets').resolve()):self.response('Página no encontrada.',404,'text/plain');return
         mime=mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
@@ -241,6 +261,37 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/logout':
                 with connect() as db:db.execute('DELETE FROM sessions WHERE id=?',(row['id'],))
                 self.response({'ok':True},headers={'Set-Cookie':self.cookie('',0)});return
+            if path=='/api/upload-pdf':
+                raw=base64.b64decode(body.get('content',''),validate=True)
+                if not raw.startswith(b'%PDF-') or len(raw)>20*1024*1024:raise ValueError('Usa un archivo PDF de hasta 20 MB.')
+                dest=ROOT/'assets/uploads';dest.mkdir(parents=True,exist_ok=True)
+                name=secrets.token_hex(16)+'.pdf';(dest/name).write_bytes(raw)
+                self.response({'path':'assets/uploads/'+name});return
+            if path=='/api/visibility':
+                # Apply only this record's visibility to the last public edition.
+                # Other draft text, price and image edits remain private.
+                with LOCK,connect() as db:
+                    d=db.execute('SELECT * FROM draft').fetchone()
+                    if body.get('revision')!=d['revision']:self.response({'error':'Hay una edición más reciente. Recarga el panel.'},409);return
+                    data=body.get('data');validate_content(data)
+                    kind=body.get('area');state=body.get('visibility');ident=body.get('id')
+                    if kind not in ('academy','publications') or state not in ('public','hidden','deleted'):raise ValueError('Acción de visibilidad inválida.')
+                    records=data['programs'] if kind=='academy' else data['publications']['items']
+                    target=next((p for p in records if p['id']==ident),None)
+                    if not target:raise ValueError('Contenido no encontrado.')
+                    target['visibility']=state
+                    published=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
+                    published.setdefault('publications',editorial.defaults())
+                    public_records=published['programs'] if kind=='academy' else published['publications']['items']
+                    public_target=next((p for p in public_records if p['id']==ident),None)
+                    now=time.time()
+                    if public_target:
+                        public_target['visibility']=state
+                        outputs=renderer.render_outputs(published)
+                        db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(published),dump(outputs),row['username'],now))
+                        db.execute('DELETE FROM publications WHERE id NOT IN (SELECT id FROM publications ORDER BY id DESC LIMIT 30)')
+                    db.execute('UPDATE draft SET data=?,revision=revision+1,updated=? WHERE id=1',(dump(data),now))
+                    self.response({'revision':d['revision']+1,'updated':now,'applied':bool(public_target),'dirty':dump(data)!=dump(published)});return
             if path=='/api/upload':
                 raw=base64.b64decode(body.get('content',''),validate=True)
                 if not raw or len(raw)>5*1024*1024:raise ValueError('La imagen debe pesar menos de 5 MB.')
@@ -257,11 +308,16 @@ class Handler(BaseHTTPRequestHandler):
                     restored=db.execute('SELECT data FROM publications WHERE id=?',(body.get('id'),)).fetchone()
                     if not restored:raise ValueError('Publicación no encontrada.')
                     data=json.loads(restored[0])
+                    data.setdefault('publications',editorial.defaults())
                     current=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
                     restored_ids={p['id'] for p in data['programs']}
                     for p in current['programs']:
                         if p['id'] not in restored_ids:
                             p['status']='agotado';p['visibility']='deleted' if p.get('visibility')=='deleted' else 'hidden';data['programs'].append(p)
+                    recovered={p['id'] for p in data['publications']['items']}
+                    for p in editorial.content(current)['items']:
+                        if p['id'] not in recovered:
+                            p['visibility']='deleted' if p.get('visibility')=='deleted' else 'hidden';data['publications']['items'].append(p)
                 else:data=body.get('data')
                 outputs=validate_content(data);now=time.time();revision=d['revision']
                 if path=='/api/preview':

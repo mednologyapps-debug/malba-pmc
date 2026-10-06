@@ -121,6 +121,7 @@ def shared(template, prefix, active, programs):
         is_academy=active in ['academy','upcoming']+[p['id'] for p in programs]
         s=s.replace('{{SOLUTION_LINKS}}',digital_menu).replace('{{DIGITAL_CLASS}}',' current' if active.startswith('digital') else '').replace('{{DIGITAL_ARIA}}',' aria-current="page"' if active=='digital' else '')
         s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if is_academy else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
+    s=s.replace('{{PUBLICATIONS_CLASS}}',' current' if active=='publications' else '').replace('{{PUBLICATIONS_ARIA}}',' aria-current="page"' if active=='publications' else '')
     def resolve(match):
         attr, url = match.group(1), match.group(2)
         if url.startswith('#'):
@@ -139,7 +140,7 @@ def document(title, description, slug, prefix, main, programs, active, schema, i
 <link rel="canonical" href="{esc(canonical)}"><meta name="robots" content="noindex, follow"><meta name="theme-color" content="#073F7C">
 <meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="MALBA PMC"><meta property="og:title" content="{esc(title)} | MALBA PMC"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(canonical)}"><meta property="og:image" content="{esc(ORIGIN+image)}"><meta property="og:image:alt" content="{esc(image_alt)}"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{prefix}assets/favicon.png"><link rel="preload" href="{prefix}assets/fonts/outfit-semibold.ttf" as="font" type="font/ttf" crossorigin>
-<link rel="stylesheet" href="{prefix}styles.css"><link rel="stylesheet" href="{prefix}home-sections.css"><link rel="stylesheet" href="{prefix}academia.css"><link rel="stylesheet" href="{prefix}soluciones.css">
+<link rel="stylesheet" href="{prefix}styles.css"><link rel="stylesheet" href="{prefix}home-sections.css"><link rel="stylesheet" href="{prefix}academia.css"><link rel="stylesheet" href="{prefix}soluciones.css"><link rel="stylesheet" href="{prefix}publicaciones.css">
 <script src="{prefix}app.js" defer></script><script src="{prefix}academia.js" defer></script><script src="{prefix}soluciones.js" defer></script><script type="application/ld+json">{data}</script></head>
 <body><a class="skip-link" href="#contenido">Ir al contenido</a>{shared('header.html',prefix,active,programs)}<main id="contenido">{main}</main>{shared('footer.html',prefix,active,programs)}{shared('dialogs.html',prefix,active,programs)}</body></html>\n'''
 
@@ -256,7 +257,9 @@ def validate(data):
 
 def public_content(data):
     """Legacy records are public; hidden/trash records never enter public catalogs."""
-    return {**data,'programs':[p for p in data['programs'] if p.get('visibility','public')=='public']}
+    from build_publications import content
+    section=content(data)
+    return {**data,'programs':[p for p in data['programs'] if p.get('visibility','public')=='public'],'publications':{**section,'items':[p for p in section['items'] if p.get('visibility','public')=='public']}}
 
 def unavailable_program(p, programs):
     main='<section class="section-container academy-catalog"><h1>Programa no disponible</h1><p>Este programa está temporalmente fuera de nuestro catálogo.</p><a class="button button-purple" href="academia/">Explorar la Academia →</a></section>'
@@ -273,12 +276,15 @@ def render_outputs(data, home=None, preview=False):
     outputs.update({p['slug']+'/index.html':(program_page(p,programs) if preview else unavailable_program(p,programs)) for p in data['programs'] if p.get('visibility')=='hidden'})
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',programs),home,flags=re.S)
+    home=home.replace('href="https://malba-pmc.com/libro/">Ver publicaciones','href="publicaciones/">Ver publicaciones')
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
     inactive={p['slug']+'/' for p in data['programs'] if p.get('visibility','public')!='public'}
     home=re.sub(r'<article class="program-card">.*?</article>',lambda m:'' if any(f'href="{slug}"' in m[0] for slug in inactive) else m[0],home,flags=re.S)
     if not re.search(r'<article class="program-card">',home):
         empty='<article class="program-card"><div class="program-card-copy"><h3>Próximas convocatorias</h3><p>Estamos preparando nuevas oportunidades de formación.</p><a class="text-link" href="academia/proximos/">Mantenerme informado →</a></div></article>'
         home=re.sub(r'(<div class="program-grid"[^>]*id="program-list"[^>]*>)',lambda m:m[0]+empty,home,count=1)
+    from build_publications import content,render_publications
+    outputs.update(render_publications(content(data),programs))
     from build_solutions import render_solutions
     outputs.update(render_solutions(programs))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)

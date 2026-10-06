@@ -132,6 +132,54 @@ class CMSIntegrationTests(unittest.TestCase):
         revision=self.call('/api/content')[1]['revision']
         self.assertEqual(self.call('/api/publish',{'data':data,'revision':revision})[0],400)
 
+    def test_immediate_visibility_keeps_other_draft_edits_private(self):
+        self.login();current=self.call('/api/content')[1];data=current['data'];p=data['programs'][0]
+        original=self.call('/academia/')[1];data['academy']['title']='Título privado en preparación'
+        body={'data':data,'revision':current['revision'],'area':'academy','id':p['id'],'visibility':'deleted'}
+        status,result,_=self.call('/api/visibility',body);self.assertEqual(status,200);self.assertTrue(result['applied'])
+        self.assertNotIn(p['title'],self.call('/academia/')[1]);self.assertEqual(self.call('/'+p['slug']+'/')[0],404)
+        self.assertNotIn('Título privado en preparación',self.call('/academia/')[1]);self.assertTrue(result['dirty'])
+        saved=self.call('/api/content')[1];self.assertEqual(saved['data']['programs'][0]['visibility'],'deleted')
+        self.assertEqual(saved['data']['academy']['title'],'Título privado en preparación')
+        cms.initialize();self.assertEqual(self.call('/'+p['slug']+'/')[0],404)
+        body.update(data=saved['data'],revision=saved['revision'],visibility='hidden');self.assertEqual(self.call('/api/visibility',body)[0],200)
+        self.assertIn('Programa no disponible',self.call('/'+p['slug']+'/')[1])
+        self.assertIn('no-store',self.call('/academia/')[2]['Cache-Control'])
+
+    def test_upgrade_reconciles_saved_trash_without_publishing_other_edits(self):
+        self.login();current=self.call('/api/content')[1];data=current['data'];p=data['programs'][0]
+        p['visibility']='deleted';data['academy']['title']='Borrador privado anterior'
+        self.assertEqual(self.call('/api/draft',{'data':data,'revision':current['revision']})[0],200)
+        self.assertEqual(self.call('/'+p['slug']+'/')[0],200)
+        cms.initialize();self.assertEqual(self.call('/'+p['slug']+'/')[0],404)
+        self.assertNotIn('Borrador privado anterior',self.call('/academia/')[1])
+        self.assertEqual(self.call('/api/content')[1]['data']['academy']['title'],'Borrador privado anterior')
+
+    def test_publications_edit_upload_visibility_preview_export_and_recovery(self):
+        self.login();current=self.call('/api/content')[1];data=current['data'];section=data['publications'];p=section['items'][0]
+        self.assertEqual(len(section['items']),7);self.assertIn(p['pdfUrl'],self.call('/publicaciones/')[1])
+        self.assertEqual(self.call('/'+p['pdfUrl'])[0],200)
+        self.assertEqual(self.call('/api/upload-pdf',{'content':base64.b64encode(b'not PDF').decode()})[0],400)
+        raw=(self.root/p['pdfUrl']).read_bytes()
+        uploaded=self.call('/api/upload-pdf',{'content':base64.b64encode(raw).decode()})
+        self.assertEqual(uploaded[0],200);self.assertEqual((self.root/uploaded[1]['path']).read_bytes(),raw)
+        old_title=section['title'];section['title']='Biblioteca editada desde CMS';p['pdfUrl']=uploaded[1]['path']
+        body={'data':data,'revision':current['revision']}
+        preview=self.call('/api/preview',body)[1]['url'].replace('academia/','publicaciones/')
+        self.assertIn(section['title'],self.call(preview)[1]);self.assertIn(old_title,self.call('/publicaciones/')[1])
+        result=self.call('/api/publish',body)[1]
+        self.assertIn(section['title'],self.call('/publicaciones/')[1]);self.assertIn(p['pdfUrl'],self.call('/publicaciones/')[1])
+        lifecycle={'data':data,'revision':result['revision'],'area':'publications','id':p['id'],'visibility':'deleted'}
+        deleted=self.call('/api/visibility',lifecycle)[1];self.assertNotIn(p['title'],self.call('/publicaciones/')[1])
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port);connection.request('GET','/api/export',headers={'Cookie':self.cookie})
+        with zipfile.ZipFile(io.BytesIO(connection.getresponse().read())) as archive:
+            self.assertIn('publicaciones/index.html',archive.namelist());self.assertIn('publicaciones.css',archive.namelist())
+            self.assertEqual(len(json.loads(archive.read('content/academia.json'))['publications']['items']),6)
+            self.assertEqual(archive.read(uploaded[1]['path']),raw)
+        connection.close();lifecycle['revision']=deleted['revision'];lifecycle['visibility']='public'
+        self.assertEqual(self.call('/api/visibility',lifecycle)[0],200);self.assertIn(p['title'],self.call('/publicaciones/')[1])
+        self.assertIn('publicaciones/',self.call('/sitemap.xml')[1])
+
     def test_invalid_publish_does_not_change_publication(self):
         self.login();d=self.call('/api/content')[1];data=d['data'];data['programs'][0]['pricing']['regular']=-1
         self.assertEqual(self.call('/api/publish',{'data':data,'revision':d['revision']})[0],400)

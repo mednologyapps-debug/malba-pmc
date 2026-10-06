@@ -37,13 +37,7 @@
               <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="digital-menu" aria-label="Mostrar soluciones digitales"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
               <div class="academy-menu" id="digital-menu" hidden>{{SOLUTION_LINKS}}</div>
             </div>
-            <button
-              class="nav-link"
-              type="button"
-              data-dialog="publications-dialog"
-            >
-              Publicaciones
-            </button>
+            <a class="nav-link{{PUBLICATIONS_CLASS}}" href="publicaciones/"{{PUBLICATIONS_ARIA}}>Publicaciones</a>
             <a class="nav-link" href="https://malba-pmc.com/quienes-somos"
               >Nosotros</a
             >
