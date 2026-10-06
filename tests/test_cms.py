@@ -180,6 +180,40 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertEqual(self.call('/api/visibility',lifecycle)[0],200);self.assertIn(p['title'],self.call('/publicaciones/')[1])
         self.assertIn('publicaciones/',self.call('/sitemap.xml')[1])
 
+    def test_digital_cards_preview_publish_persist_and_detail_isolation(self):
+        self.login();current=self.call('/api/content')[1];data=current['data']
+        self.assertEqual(len(data['digitalCards']),2)
+        detail_path='/soluciones-digitales/simulador-de-gestion-de-proyectos/'
+        original_detail=self.call(detail_path)[1]
+        card=data['digitalCards'][0];card['title']='Tarjeta digital QA';card['description']='Descripción de tarjeta de prueba'
+        card['features']=['Beneficio QA'];card['statusLabel']='Estado QA';card['ctaLabel']='Explorar QA'
+        card['image']=card['imageSmall']='assets/solutions/riesgos-proyecto-600.webp'
+        body={'data':data,'revision':current['revision']}
+        preview=self.call('/api/preview',body)[1]['url'].replace('academia/','soluciones-digitales/')
+        self.assertIn('Tarjeta digital QA',self.call(preview)[1]);self.assertNotIn('Tarjeta digital QA',self.call('/soluciones-digitales/')[1])
+        saved=self.call('/api/draft',body)[1];body['revision']=saved['revision']
+        published=self.call('/api/publish',body)[1]
+        catalog=self.call('/soluciones-digitales/')[1]
+        for text in ['Tarjeta digital QA','Descripción de tarjeta de prueba','Beneficio QA','Estado QA','Explorar QA']:self.assertIn(text,catalog)
+        self.assertEqual(self.call(detail_path)[1],original_detail)
+        cms.initialize();self.assertEqual(self.call('/api/content')[1]['data']['digitalCards'][0]['title'],'Tarjeta digital QA')
+        body['revision']=published['revision'];card['plans']=[{'price':0}]
+        self.assertEqual(self.call('/api/publish',body)[0],400)
+        del card['plans'];card['id']='unknown-product'
+        self.assertEqual(self.call('/api/publish',body)[0],400)
+        self.assertEqual(self.call(detail_path)[1],original_detail)
+
+    def test_digital_cards_upgrade_preserves_private_edits_and_revisions(self):
+        self.login();current=self.call('/api/content')[1]
+        with cms.connect() as db:
+            d=db.execute('SELECT data FROM draft').fetchone();data=json.loads(d['data']);data.pop('digitalCards')
+            data['academy']['title']='Academia privada conservada';db.execute('UPDATE draft SET data=?',(cms.dump(data),))
+            p=db.execute('SELECT id,data FROM publications ORDER BY id DESC LIMIT 1').fetchone();pub=json.loads(p['data']);pub.pop('digitalCards')
+            db.execute('UPDATE publications SET data=? WHERE id=?',(cms.dump(pub),p['id']))
+        cms.initialize();after=self.call('/api/content')[1]
+        self.assertEqual(after['revision'],current['revision']);self.assertEqual(after['data']['academy']['title'],'Academia privada conservada')
+        self.assertEqual(len(after['data']['digitalCards']),2);self.assertNotIn('Academia privada conservada',self.call('/academia/')[1])
+
     def test_invalid_publish_does_not_change_publication(self):
         self.login();d=self.call('/api/content')[1];data=d['data'];data['programs'][0]['pricing']['regular']=-1
         self.assertEqual(self.call('/api/publish',{'data':data,'revision':d['revision']})[0],400)

@@ -74,7 +74,7 @@ El home conserva su contenido visual; el generador sincroniza sus enlaces de nav
 
 ## Validación
 
-`python -m unittest discover -s tests -v`: 17 pruebas automatizadas, incluidas integración HTTP sobre un sitio y base desechables. Verifican control de acceso, CSRF/origen, rutas privadas y traversal, borrador/vista previa/publicación, conflictos, persistencia, recuperación, exportación, carga de imágenes y creación de programa.
+`python -m unittest discover -s tests -v`: 19 pruebas automatizadas, incluidas integración HTTP sobre un sitio y base desechables. Verifican control de acceso, CSRF/origen, rutas privadas y traversal, borrador/vista previa/publicación, conflictos, persistencia, recuperación, exportación, carga de imágenes y creación de programa.
 
 Prueba de navegador: navegación por áreas y catálogo central del CMS, edición, recarga del borrador, vista previa, publicación, subida de imagen, historial, creación y cierre de sesión. Web pública revisada a 1440, 1131, 1024, 768, 390 y 320 px; CMS a 1440, 1024, 768, 390 y 320 px. Sin desbordamientos, errores JavaScript ni recursos locales faltantes. Verificados hover y navegación táctil de los dos submenús, cierre con Escape, enlaces de tarjetas, los tres planes, cantidades de licencias, regreso del foco y contenido de la solicitud de WhatsApp.
 
@@ -84,7 +84,7 @@ Prueba de navegador: navegación por áreas y catálogo central del CMS, edició
 - MALBA Simulator: http://localhost:8080/soluciones-digitales/simulador-de-gestion-de-proyectos/
 - MALBA Risk: http://localhost:8080/soluciones-digitales/malba-risk/ (próximamente).
 
-El menú superior incorpora un submenú con imagen, título y descripción. El catálogo y las fichas se generan desde `content/solutions.json` y `scripts/build_solutions.py`, con estilos en `soluciones.css`. El dashboard edita Academia y Publicaciones; Soluciones digitales permanece pendiente en el panel.
+El menú superior incorpora un submenú con imagen, título y descripción. El catálogo y las fichas se generan desde `content/solutions.json` y `scripts/build_solutions.py`, con estilos en `soluciones.css`. El dashboard edita Academia, Publicaciones y únicamente las tarjetas del catálogo de Soluciones digitales.
 
 La ficha de Simulator sigue la referencia SaaS: presentación, pasos, resultados, certificación y planes Individual/Universitario/Empresarial. Los precios y el video definitivo están pendientes. La selección de plan/licencias prepara una solicitud de acceso por WhatsApp; no cobra ni activa licencias. La pantalla del producto reutiliza imágenes reales del proyecto. El certificado utiliza la misma imagen original de MALBA Simulator incorporada en la referencia. Esta entrega implementa las páginas comerciales, sin cambiar el motor del simulador ni crear un sistema de pagos o alumnos.
 
@@ -106,3 +106,9 @@ Los metadatos iniciales están en `content/publicaciones.json`. El estado editab
 Fondo editorial: `assets/publications/fondo-editorial-1536.webp` y variante de 960 px, generado con la habilidad imagegen y la herramienta integrada. Prompt: escritorio editorial profesional con revistas de gestión de proyectos, publicación abierta y planos sutiles; luz natural, azul MALBA, morado discreto y blancos; espacio negativo; sin texto, logos ni degradados. La capa azul se aplica en CSS.
 
 Verificados en navegador los siete PDFs, carga/alta de revista, publicación, eliminación y restauración, aislamiento de cambios pendientes al retirar un programa, y páginas públicas/admin a 1440, 1024, 768, 390 y 320 px. Las 17 pruebas incluyen migración de papelera anterior, visibilidad inmediata, exportación editorial y carga de PDF.
+
+### Edición de tarjetas de Soluciones digitales
+
+El menú lateral de Soluciones digitales permite seleccionar las dos tarjetas existentes y editar título, subtítulo, descripción, imagen de escritorio/celular, texto alternativo, estado visible, beneficios (entre uno y seis) y texto del botón. Usa el flujo de borrador, vista previa del catálogo y publicación habitual. Los campos permitidos se validan también en el servidor.
+
+Los registros `digitalCards` tienen identificadores fijos y se incorporan a bases anteriores sin reiniciar contenido, cuentas ni revisiones. Los enlaces de destino se derivan de `content/solutions.json`. Los textos, imágenes, planes, licencias y otras secciones del detalle del simulador no se modifican al editar las tarjetas; una prueba compara toda la página de detalle antes/después de publicar cambios del catálogo. No permite crear soluciones nuevas ni editar su funcionamiento.

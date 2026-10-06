@@ -286,7 +286,7 @@ def render_outputs(data, home=None, preview=False):
     from build_publications import content,render_publications
     outputs.update(render_publications(content(data),programs))
     from build_solutions import render_solutions
-    outputs.update(render_solutions(programs))
+    outputs.update(render_solutions(programs,data.get('digitalCards')))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
     urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html') and name not in hidden]
     outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{slug}</loc></url>\n' for slug in urls)+'</urlset>\n'

@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import urlsplit, unquote
 import build_academia as renderer
 import build_publications as editorial
+import build_solutions as digital
 
 ROOT = renderer.ROOT
 STATE = ROOT / '.cms-private'
@@ -49,6 +50,7 @@ def initialize(username=None, password=None):
         if not db.execute('SELECT 1 FROM draft').fetchone():
             data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
             data['publications']=editorial.defaults()
+            data['digitalCards']=digital.default_cards()
             db.execute('INSERT INTO draft VALUES(1,?,1,?)',(dump(data),time.time()))
             db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(data),dump(renderer.render_outputs(data)),'Inicial',time.time()))
         # Add the editorial area without resetting saved programs, revisions or accounts.
@@ -57,10 +59,14 @@ def initialize(username=None, password=None):
         if 'publications' not in draft:
             draft['publications']=editorial.defaults()
             db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
+        if 'digitalCards' not in draft:
+            draft['digitalCards']=digital.default_cards()
+            db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
         latest=db.execute('SELECT id,data FROM publications ORDER BY id DESC LIMIT 1').fetchone()
         if latest:
             published=json.loads(latest['data'])
             published.setdefault('publications',editorial.defaults())
+            published.setdefault('digitalCards',digital.default_cards())
             # Reconcile previously saved removals after upgrading from draft-only trash.
             removals={p['id']:p.get('visibility') for p in draft['programs'] if p.get('visibility') in ('hidden','deleted')}
             changed=False
@@ -103,6 +109,7 @@ def validate_content(data):
                     if key.lower().endswith('url') and key not in ('brochureUrl','pdfUrl'):raise ValueError('Usa un enlace HTTPS.')
     walk(data)
     editorial.validate(editorial.content(data))
+    digital.validate_cards(data.get('digitalCards',digital.default_cards()))
     def shape(template,value,path):
         if template is None or value is None and path.split('.')[-1] in ('certificate','lab'):return
         if isinstance(template,dict):
@@ -309,6 +316,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not restored:raise ValueError('Publicación no encontrada.')
                     data=json.loads(restored[0])
                     data.setdefault('publications',editorial.defaults())
+                    data.setdefault('digitalCards',digital.default_cards())
                     current=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
                     restored_ids={p['id'] for p in data['programs']}
                     for p in current['programs']:

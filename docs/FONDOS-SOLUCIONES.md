@@ -38,3 +38,7 @@ Las tarjetas de soluciones mantienen imágenes, subtítulos, estado visible, ben
 Los bloques de resultados y certificación de Simulator usan el mismo archivo original de la referencia: `assets/academia/certificado.webp`, sin alterar su contenido ni recortarlo. Se eliminó la representación del certificado en HTML.
 
 Imagen específica para MALBA Risk: `assets/solutions/riesgos-proyecto-1100.webp` y `assets/solutions/riesgos-proyecto-600.webp`. Generada con la habilidad imagegen y la herramienta integrada. Prompt: fotografía editorial de manos de un gestor evaluando una matriz de riesgos sobre una mesa de ingeniería; marcadores de prioridades, planos eléctricos sutiles, azul #003B73, morado #5D4594 y grises; luz natural, composición limpia, sin texto, logos, degradados ni interfaces inventadas. Usada en tarjetas, menú y ficha de MALBA Risk.
+
+### Isotipo de Simulator y resultados
+
+`assets/solutions/simulator-isotipo.jpg` es una copia exacta del JPG adjuntado por el cliente. El naranja #F28D01 se obtuvo del color más frecuente del isotipo; se utiliza en el estado y botón de la tarjeta, con texto oscuro para conservar legibilidad. La sección «Tus decisiones tienen consecuencias» utiliza la captura real `assets/solutions/simulador-1100.webp`, que muestra costos, cronograma y desempeño. El certificado original se conserva únicamente en certificación.

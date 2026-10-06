@@ -2,6 +2,29 @@
 import json
 import build_academia as b
 
+CARD_FIELDS={'id','title','subtitle','description','image','imageSmall','imageAlt','statusLabel','features','ctaLabel'}
+
+def default_cards():
+    source=json.loads((b.ROOT/'content/solutions.json').read_text(encoding='utf-8'))
+    return [{**{k:p[k] for k in ('id','title','subtitle','description','image','imageSmall','features')},'imageAlt':p['title'],'statusLabel':p['status'],'ctaLabel':'Conocer solución'} for p in source['solutions']]
+
+def validate_cards(cards):
+    base=default_cards()
+    if not isinstance(cards,list) or len(cards)!=len(base):raise ValueError('Soluciones digitales: conserva las tarjetas existentes.')
+    ids={p['id'] for p in base};seen=set()
+    for p in cards:
+        if not isinstance(p,dict) or set(p)!=CARD_FIELDS:raise ValueError('Soluciones digitales: solo se pueden editar los campos de la tarjeta.')
+        if not isinstance(p['id'],str) or p['id'] not in ids or p['id'] in seen:raise ValueError('Solución digital inválida o duplicada.')
+        seen.add(p['id'])
+        for k in CARD_FIELDS-{'id','features'}:
+            if not isinstance(p[k],str) or not p[k].strip() or len(p[k])>1500:raise ValueError('Completa el campo de la tarjeta: '+k)
+        if len(p['title'])>150 or len(p['subtitle'])>180 or len(p['statusLabel'])>60 or len(p['ctaLabel'])>60:raise ValueError('El título, estado o botón de la tarjeta es demasiado largo.')
+        if not isinstance(p['features'],list) or not 1<=len(p['features'])<=6 or any(not isinstance(x,str) or not x.strip() or len(x)>250 for x in p['features']):raise ValueError('Indica entre uno y seis beneficios breves por tarjeta.')
+        for k in ('image','imageSmall'):
+            url=b.safe_url(p[k])
+            if not url.startswith('https://') and (not url.startswith('assets/') or not (b.ROOT/url).is_file()):raise ValueError('La imagen de la tarjeta no existe.')
+    return cards
+
 def section_photo(data,key,prefix,eager=False):
     photo=data['backgrounds'][key]
     return b.picture(photo['image'],photo['imageSmall'],'',prefix,'digital-section-background',eager).replace('<picture','<picture aria-hidden="true"',1)
@@ -10,14 +33,17 @@ def contact(data,text):
     from urllib.parse import quote
     return data['contactUrl']+'?text='+quote(text)
 
-def render_solutions(programs):
+def render_solutions(programs,cards=None):
     data=json.loads((b.ROOT/'content/solutions.json').read_text(encoding='utf-8'))
+    cards=validate_cards(cards if cards is not None else default_cards())
+    definitions={p['id']:p for p in data['solutions']}
+    catalog=[{**definitions[p['id']],**p} for p in cards]
     outputs={}
     prefix='../'
     main=f'''<section class="digital-catalog-hero digital-photo-section">{section_photo(data,"hero",prefix,True)}<div class="section-container digital-hero-grid"><div><h1>{b.esc(data['title'])}</h1><p>{b.esc(data['description'])}</p><a class="button button-white" href="#simuladores">Explorar soluciones <span aria-hidden="true">↓</span></a></div><div class="digital-product-preview"><img src="{prefix}assets/solutions/simulador-1100.webp" width="1100" height="543" alt="Pantalla real de MALBA Simulator"></div></div></section><section class="digital-catalog digital-photo-section" id="simuladores">{section_photo(data,"catalog",prefix)}<div class="section-container"><div class="digital-heading"><h2>Herramientas para llevar tus proyectos más lejos</h2><p>Elige la experiencia que responde a tu siguiente desafío.</p></div><div class="digital-card-grid">'''
-    for p in data['solutions']:
+    for p in catalog:
         href=p['slug']+'/'
-        main+=f'''<article class="digital-product-card digital-card-{b.esc(p['id'])}"><a href="{href}" class="digital-card-image" tabindex="-1" aria-hidden="true">{b.picture(p['image'],p['imageSmall'],'',prefix)}<span>{b.esc(p['status'])}</span></a><div class="digital-card-copy"><div class="digital-card-title"><span class="digital-card-monogram" aria-hidden="true">{'S' if p['id']=='simulator' else 'R'}</span><div><h3><a href="{href}">{b.esc(p['title'])}</a></h3><p class="digital-card-subtitle">{b.esc(p['subtitle'])}</p></div></div><p>{b.esc(p['description'])}</p><ul class="digital-card-features">{''.join('<li>'+b.esc(x)+'</li>' for x in p['features'])}</ul><a href="{href}" class="button button-purple">Conocer solución <span aria-hidden="true">→</span></a></div></article>'''
+        main+=f'''<article class="digital-product-card digital-card-{b.esc(p['id'])}"><a href="{href}" class="digital-card-image" tabindex="-1" aria-hidden="true">{b.picture(p['image'],p['imageSmall'],p['imageAlt'],prefix)}<span>{b.esc(p['statusLabel'])}</span></a><div class="digital-card-copy"><div class="digital-card-title">{('<img class="digital-card-isotype" src="'+prefix+'assets/solutions/simulator-isotipo.jpg" width="46" height="46" alt="">') if p['id']=='simulator' else '<span class="digital-card-monogram" aria-hidden="true">R</span>'}<div><h3><a href="{href}">{b.esc(p['title'])}</a></h3><p class="digital-card-subtitle">{b.esc(p['subtitle'])}</p></div></div><p>{b.esc(p['description'])}</p><ul class="digital-card-features">{''.join('<li>'+b.esc(x)+'</li>' for x in p['features'])}</ul><a href="{href}" class="button button-purple">{b.esc(p['ctaLabel'])} <span aria-hidden="true">→</span></a></div></article>'''
     main+='</div></div></section>'
     outputs['soluciones-digitales/index.html']=page(data['title'],data['description'],'',main,programs,'digital',data['solutions'][0]['image'])
     for p in data['solutions']:
@@ -39,7 +65,7 @@ def simulator(data,p):
     <section class="saas-section digital-photo-section saas-process-section">'''+section_photo(data,'steps','../../',False)+'''<div class="section-container"><div class="digital-heading centered"><h2>De la decisión al resultado</h2><p>Una experiencia de aprendizaje aplicada, de principio a fin.</p></div><div class="saas-steps">'''
     steps=[('Acceso con licencia','Activa tu acceso personal. Cada licencia está asociada a un correo y permite participar en la experiencia asignada.'),('Toma de decisiones','Revisa el caso y enfrenta decisiones técnicas, económicas y de gestión a lo largo del proyecto.'),('Impacto en resultados','Evalúa cómo tus elecciones afectan el presupuesto, el cronograma, los riesgos y el desempeño.'),('Aprendizaje y certificado','Revisa tus resultados y completa la experiencia para obtener tu certificado digital.')]
     main+=''.join(f'<article><span aria-hidden="true">{i:02}</span><h3>{title}</h3><p>{desc}</p></article>' for i,(title,desc) in enumerate(steps,1))
-    main+='''</div></div></section><section class="saas-section saas-soft digital-photo-section" id="resultados">'''+section_photo(data,'results','../../',False)+'''<div class="section-container saas-result-grid"><div class="digital-heading"><h2>Tus decisiones tienen consecuencias.</h2><p>Más que responder preguntas: analiza restricciones, asigna recursos y toma decisiones sobre un proyecto de construcción eléctrica.</p><div class="saas-benefit"><span aria-hidden="true">↗</span><div><h3>Costos y plazos</h3><p>Comprende cómo una decisión modifica el presupuesto y el calendario del proyecto.</p></div></div><div class="saas-benefit"><span aria-hidden="true">◇</span><div><h3>Riesgos y desempeño</h3><p>Compara resultados y revisa los criterios que utilizaron tú y tu equipo.</p></div></div></div>'''+certificate_image+'''</div></section>
+    main+='''</div></div></section><section class="saas-section saas-soft digital-photo-section" id="resultados">'''+section_photo(data,'results','../../',False)+'''<div class="section-container saas-result-grid"><div class="digital-heading"><h2>Tus decisiones tienen consecuencias.</h2><p>Más que responder preguntas: analiza restricciones, asigna recursos y toma decisiones sobre un proyecto de construcción eléctrica.</p><div class="saas-benefit"><span aria-hidden="true">↗</span><div><h3>Costos y plazos</h3><p>Comprende cómo una decisión modifica el presupuesto y el calendario del proyecto.</p></div></div><div class="saas-benefit"><span aria-hidden="true">◇</span><div><h3>Riesgos y desempeño</h3><p>Compara resultados y revisa los criterios que utilizaron tú y tu equipo.</p></div></div></div><figure class="saas-outcome-image"><img src="../../assets/solutions/simulador-1100.webp" width="1100" height="543" alt="Resultados reales de MALBA Simulator: costos, cronograma y desempeño del proyecto" loading="lazy" decoding="async"><figcaption>Observa el impacto de cada decisión en los resultados del proyecto.</figcaption></figure></div></section>
     <section class="saas-section saas-certificate digital-photo-section" id="certificacion">'''+section_photo(data,'certificate','../../',False)+'''<div class="section-container saas-result-grid"><div class="digital-heading"><h2>Tu desempeño también se certifica</h2><p>Al completar la experiencia recibirás un certificado digital de MALBA PMC que puedes compartir en tu perfil profesional.</p>'''+b.checklist(['Constancia de tu participación en la experiencia','Resultados y aprendizajes de la simulación','Un recurso para compartir tu desarrollo profesional'])+'''</div>'''+certificate_image+'''</div></section>
     <section class="saas-section saas-plans digital-photo-section" id="planes">'''+section_photo(data,'plans','../../',False)+'''<div class="section-container"><div class="digital-heading centered"><h2>Elige tu plan MALBA Simulator</h2><p>Entrena por tu cuenta o lleva la experiencia a tu institución y equipo.</p></div><div class="saas-plan-grid">'''
     for plan in data['plans']:
