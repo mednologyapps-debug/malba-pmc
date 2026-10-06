@@ -131,6 +131,11 @@
       "Fortalece el control del alcance, los costos y los plazos.",
       "Anticipa riesgos y mejora tus decisiones.",
       "Aprende a partir de casos prácticos."
-    ]
+    ],
+    "physicalPrice": null,
+    "digitalPrice": null,
+    "physicalShipping": null,
+    "physicalCheckoutUrl": "",
+    "digitalCheckoutUrl": ""
   }
 }

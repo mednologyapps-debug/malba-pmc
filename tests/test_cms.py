@@ -213,18 +213,34 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertEqual(after['data']['publications']['catalogTitle'],'Revistas privadas')
         self.assertIn('book',after['data']['publications'])
 
+    def test_book_format_prices_and_export_script(self):
+        self.login();current=self.call('/api/content')[1];data=current['data'];book=data['publications']['book']
+        book.update(physicalPrice=80,digitalPrice=50,physicalShipping=12,physicalCheckoutUrl='https://example.com/physical',digitalCheckoutUrl='https://example.com/digital')
+        body={'data':data,'revision':current['revision']}
+        book['digitalPrice']=-1;self.assertEqual(self.call('/api/draft',body)[0],400)
+        book['digitalPrice']=50;book['digitalCheckoutUrl']='javascript:alert(1)';self.assertEqual(self.call('/api/draft',body)[0],400)
+        book['digitalCheckoutUrl']='https://example.com/digital';self.assertEqual(self.call('/api/publish',body)[0],200)
+        page=self.call('/publicaciones/')[1]
+        for text in ['Información de contacto','book_format','billing_email','publicaciones.js','https://example.com/digital']:self.assertIn(text,page)
+        self.assertEqual(self.call('/publicaciones.js')[0],200)
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port);connection.request('GET','/api/export',headers={'Cookie':self.cookie})
+        with zipfile.ZipFile(io.BytesIO(connection.getresponse().read())) as archive:self.assertIn('publicaciones.js',archive.namelist())
+        connection.close()
+
     def test_book_purchase_configuration_and_private_preview(self):
         self.login();current=self.call('/api/content')[1];data=current['data'];book=data['publications']['book']
         catalog=self.call('/publicaciones/')[1]
         self.assertLess(catalog.index('id="book-heading"'),catalog.index('id="revistas"'))
-        self.assertIn('Consultar disponibilidad',catalog)
+        self.assertIn('Selecciona el formato',catalog)
+        self.assertNotIn('Consultar disponibilidad',catalog)
         book['available']=True;body={'data':data,'revision':current['revision']}
         self.assertEqual(self.call('/api/publish',body)[0],400)
         book['price']=80;book['checkoutUrl']='https://example.com/checkout'
+        book['physicalPrice']=80;book['physicalCheckoutUrl']='https://example.com/checkout'
         preview=self.call('/api/preview',body)[1]['url'].replace('academia/','publicaciones/')
-        self.assertIn('Continuar al pago',self.call(preview)[1]);self.assertNotIn('Continuar al pago',self.call('/publicaciones/')[1])
+        self.assertIn('https://example.com/checkout',self.call(preview)[1]);self.assertNotIn('https://example.com/checkout',self.call('/publicaciones/')[1])
         self.assertEqual(self.call('/api/publish',body)[0],200)
-        self.assertIn('href="https://example.com/checkout"',self.call('/publicaciones/')[1])
+        self.assertIn('https://example.com/checkout',self.call('/publicaciones/')[1])
         cms.initialize();self.assertEqual(self.call('/api/content')[1]['data']['publications']['book']['price'],80)
 
     def test_new_solution_requires_url_and_only_creates_card(self):

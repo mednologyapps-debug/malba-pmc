@@ -216,7 +216,7 @@ class Handler(BaseHTTPRequestHandler):
                 outputs=json.loads(pub['outputs'])
                 for name,body in outputs.items():z.writestr(name,body)
                 z.writestr('content/academia.json',dump(renderer.public_content(json.loads(pub['data']))))
-                for name in ['publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
+                for name in ['publicaciones.js','publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
                     z.write(ROOT/name,name)
                 for f in (ROOT/'assets').rglob('*'):
                     if f.is_file():z.write(f,str(f.relative_to(ROOT)))
@@ -240,7 +240,7 @@ class Handler(BaseHTTPRequestHandler):
         if outputs and filename in outputs:
             self.response(outputs[filename],mime='application/xml; charset=utf-8' if filename.endswith('.xml') else 'text/html; charset=utf-8');return
         if path=='/dashboard':self.response('',302,'text/plain',{'Location':'/dashboard/'});return
-        allowed=filename in ['publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
+        allowed=filename in ['publicaciones.js','publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
         target=(ROOT/filename).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file() or filename.startswith('assets/') and not target.is_relative_to((ROOT/'assets').resolve()):self.response('Página no encontrada.',404,'text/plain');return
         mime=mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
