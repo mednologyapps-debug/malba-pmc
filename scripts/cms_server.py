@@ -62,11 +62,14 @@ def initialize(username=None, password=None):
         if 'digitalCards' not in draft:
             draft['digitalCards']=digital.default_cards()
             db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
+        draft['digitalCards']=digital.upgrade_cards(draft['digitalCards'])
+        db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
         latest=db.execute('SELECT id,data FROM publications ORDER BY id DESC LIMIT 1').fetchone()
         if latest:
             published=json.loads(latest['data'])
             published.setdefault('publications',editorial.defaults())
             published.setdefault('digitalCards',digital.default_cards())
+            published['digitalCards']=digital.upgrade_cards(published['digitalCards'])
             # Reconcile previously saved removals after upgrading from draft-only trash.
             removals={p['id']:p.get('visibility') for p in draft['programs'] if p.get('visibility') in ('hidden','deleted')}
             changed=False
@@ -102,6 +105,9 @@ def validate_content(data):
             for v in value:walk(v,key)
         elif isinstance(value,str):
             if len(value)>15000:raise ValueError('Un texto es demasiado largo.')
+            if key=='ctaUrl':
+                digital.validate_target(value)
+                return
             if value and (key.lower().endswith('url') or key in ('image','imageSmall','imageWide','sectionImage')):
                 renderer.safe_url(value)
                 if not value.startswith('https://'):
@@ -317,6 +323,7 @@ class Handler(BaseHTTPRequestHandler):
                     data=json.loads(restored[0])
                     data.setdefault('publications',editorial.defaults())
                     data.setdefault('digitalCards',digital.default_cards())
+                    data['digitalCards']=digital.upgrade_cards(data['digitalCards'])
                     current=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
                     restored_ids={p['id'] for p in data['programs']}
                     for p in current['programs']:

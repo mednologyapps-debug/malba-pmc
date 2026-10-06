@@ -199,9 +199,37 @@ class CMSIntegrationTests(unittest.TestCase):
         cms.initialize();self.assertEqual(self.call('/api/content')[1]['data']['digitalCards'][0]['title'],'Tarjeta digital QA')
         body['revision']=published['revision'];card['plans']=[{'price':0}]
         self.assertEqual(self.call('/api/publish',body)[0],400)
-        del card['plans'];card['id']='unknown-product'
+        del card['plans'];card['id']='INVALID ID'
         self.assertEqual(self.call('/api/publish',body)[0],400)
         self.assertEqual(self.call(detail_path)[1],original_detail)
+
+    def test_new_solution_requires_url_and_only_creates_card(self):
+        self.login();current=self.call('/api/content')[1];data=current['data']
+        original=self.call('/soluciones-digitales/simulador-de-gestion-de-proyectos/')[1]
+        card=dict(data['digitalCards'][0],id='solution-test',title='Nueva solución QA',ctaUrl='https://example.com/solucion')
+        data['digitalCards'].append(card);body={'data':data,'revision':current['revision']}
+        for url in ['', 'javascript:alert(1)', '//example.com', '/%2e%2e/admin', 'http://example.com']:
+            card['ctaUrl']=url
+            self.assertEqual(self.call('/api/draft',body)[0],400,url)
+        card['ctaUrl']='https://example.com/solucion'
+        preview=self.call('/api/preview',body)[1]['url'].replace('academia/','soluciones-digitales/')
+        self.assertIn('Nueva solución QA',self.call(preview)[1])
+        self.assertNotIn('Nueva solución QA',self.call('/soluciones-digitales/')[1])
+        self.assertEqual(self.call('/api/publish',body)[0],200)
+        self.assertIn('href="https://example.com/solucion"',self.call('/soluciones-digitales/')[1])
+        self.assertEqual(self.call('/soluciones-digitales/simulador-de-gestion-de-proyectos/')[1],original)
+        cms.initialize();self.assertEqual(len(self.call('/api/content')[1]['data']['digitalCards']),3)
+
+    def test_existing_card_url_upgrade_preserves_edits(self):
+        self.login();before=self.call('/api/content')[1]
+        with cms.connect() as db:
+            data=before['data'];data['digitalCards'][0]['title']='Título privado conservado'
+            for p in data['digitalCards']:p.pop('ctaUrl')
+            db.execute('UPDATE draft SET data=?',(json.dumps(data),))
+        cms.initialize();after=self.call('/api/content')[1]
+        self.assertEqual(after['revision'],before['revision'])
+        self.assertEqual(after['data']['digitalCards'][0]['title'],'Título privado conservado')
+        self.assertTrue(after['data']['digitalCards'][0]['ctaUrl'].startswith('/soluciones-digitales/'))
 
     def test_digital_cards_upgrade_preserves_private_edits_and_revisions(self):
         self.login();current=self.call('/api/content')[1]

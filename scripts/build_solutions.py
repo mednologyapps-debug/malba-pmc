@@ -1,21 +1,43 @@
 """Digital product catalog and SaaS landing pages, shared MALBA shell."""
 import json
+import re
+from urllib.parse import urlsplit
 import build_academia as b
 
-CARD_FIELDS={'id','title','subtitle','description','image','imageSmall','imageAlt','statusLabel','features','ctaLabel'}
+CARD_FIELDS={'id','title','subtitle','description','image','imageSmall','imageAlt','statusLabel','features','ctaLabel','ctaUrl'}
 
 def default_cards():
     source=json.loads((b.ROOT/'content/solutions.json').read_text(encoding='utf-8'))
-    return [{**{k:p[k] for k in ('id','title','subtitle','description','image','imageSmall','features')},'imageAlt':p['title'],'statusLabel':p['status'],'ctaLabel':'Conocer solución'} for p in source['solutions']]
+    return [{**{k:p[k] for k in ('id','title','subtitle','description','image','imageSmall','features')},'imageAlt':p['title'],'statusLabel':p['status'],'ctaLabel':'Conocer solución','ctaUrl':'/soluciones-digitales/'+p['slug']+'/'} for p in source['solutions']]
+
+def upgrade_cards(cards):
+    defaults={p['id']:p['ctaUrl'] for p in default_cards()}
+    return [{**p, 'ctaUrl':p.get('ctaUrl',defaults.get(p.get('id'),''))} if isinstance(p,dict) else p for p in cards]
+
+def validate_target(url):
+    if not isinstance(url,str) or not url.strip() or url!=url.strip() or len(url)>1500:
+        raise ValueError('Indica la URL de Conocer solución.')
+    if any(c.isspace() or ord(c)<32 for c in url) or '\\' in url:
+        raise ValueError('Usa una URL HTTPS o una ruta interna que empiece por /.')
+    parsed=urlsplit(url)
+    if url.startswith('/') and not url.startswith('//') and not parsed.scheme and not parsed.netloc:
+        from urllib.parse import unquote
+        if any(part in ('.','..') for part in unquote(parsed.path).split('/')) or '\\' in unquote(parsed.path) or unquote(parsed.path).startswith('//'):
+            raise ValueError('Ruta interna inválida.')
+        return url
+    if parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError('Usa una URL HTTPS o una ruta interna que empiece por /.')
+    b.safe_url(url)
+    return url
 
 def validate_cards(cards):
-    base=default_cards()
-    if not isinstance(cards,list) or len(cards)!=len(base):raise ValueError('Soluciones digitales: conserva las tarjetas existentes.')
-    ids={p['id'] for p in base};seen=set()
+    if not isinstance(cards,list) or not 1<=len(cards)<=30:raise ValueError('Puedes configurar entre una y 30 soluciones digitales.')
+    seen=set()
     for p in cards:
         if not isinstance(p,dict) or set(p)!=CARD_FIELDS:raise ValueError('Soluciones digitales: solo se pueden editar los campos de la tarjeta.')
-        if not isinstance(p['id'],str) or p['id'] not in ids or p['id'] in seen:raise ValueError('Solución digital inválida o duplicada.')
+        if not isinstance(p['id'],str) or not re.fullmatch(r'[a-z][a-z0-9-]{0,79}',p['id']) or p['id'] in seen:raise ValueError('Solución digital inválida o duplicada.')
         seen.add(p['id'])
+        validate_target(p['ctaUrl'])
         for k in CARD_FIELDS-{'id','features'}:
             if not isinstance(p[k],str) or not p[k].strip() or len(p[k])>1500:raise ValueError('Completa el campo de la tarjeta: '+k)
         if len(p['title'])>150 or len(p['subtitle'])>180 or len(p['statusLabel'])>60 or len(p['ctaLabel'])>60:raise ValueError('El título, estado o botón de la tarjeta es demasiado largo.')
@@ -35,15 +57,14 @@ def contact(data,text):
 
 def render_solutions(programs,cards=None):
     data=json.loads((b.ROOT/'content/solutions.json').read_text(encoding='utf-8'))
-    cards=validate_cards(cards if cards is not None else default_cards())
-    definitions={p['id']:p for p in data['solutions']}
-    catalog=[{**definitions[p['id']],**p} for p in cards]
+    cards=validate_cards(upgrade_cards(cards) if cards is not None else default_cards())
+    catalog=cards
     outputs={}
     prefix='../'
     main=f'''<section class="digital-catalog-hero digital-photo-section">{section_photo(data,"hero",prefix,True)}<div class="section-container digital-hero-grid"><div><h1>{b.esc(data['title'])}</h1><p>{b.esc(data['description'])}</p><a class="button button-white" href="#simuladores">Explorar soluciones <span aria-hidden="true">↓</span></a></div><div class="digital-product-preview"><img src="{prefix}assets/solutions/simulador-1100.webp" width="1100" height="543" alt="Pantalla real de MALBA Simulator"></div></div></section><section class="digital-catalog digital-photo-section" id="simuladores">{section_photo(data,"catalog",prefix)}<div class="section-container"><div class="digital-heading"><h2>Herramientas para llevar tus proyectos más lejos</h2><p>Elige la experiencia que responde a tu siguiente desafío.</p></div><div class="digital-card-grid">'''
     for p in catalog:
-        href=p['slug']+'/'
-        main+=f'''<article class="digital-product-card digital-card-{b.esc(p['id'])}"><a href="{href}" class="digital-card-image" tabindex="-1" aria-hidden="true">{b.picture(p['image'],p['imageSmall'],p['imageAlt'],prefix)}<span>{b.esc(p['statusLabel'])}</span></a><div class="digital-card-copy"><div class="digital-card-title">{('<img class="digital-card-isotype" src="'+prefix+'assets/solutions/simulator-isotipo.jpg" width="46" height="46" alt="">') if p['id']=='simulator' else '<span class="digital-card-monogram" aria-hidden="true">R</span>'}<div><h3><a href="{href}">{b.esc(p['title'])}</a></h3><p class="digital-card-subtitle">{b.esc(p['subtitle'])}</p></div></div><p>{b.esc(p['description'])}</p><ul class="digital-card-features">{''.join('<li>'+b.esc(x)+'</li>' for x in p['features'])}</ul><a href="{href}" class="button button-purple">{b.esc(p['ctaLabel'])} <span aria-hidden="true">→</span></a></div></article>'''
+        href=b.esc(prefix+p['ctaUrl'].lstrip('/') if p['ctaUrl'].startswith('/') else p['ctaUrl'])
+        main+=f'''<article class="digital-product-card digital-card-{b.esc(p['id'])}"><a href="{href}" class="digital-card-image" tabindex="-1" aria-hidden="true">{b.picture(p['image'],p['imageSmall'],p['imageAlt'],prefix)}<span>{b.esc(p['statusLabel'])}</span></a><div class="digital-card-copy"><div class="digital-card-title">{('<img class="digital-card-isotype" src="'+prefix+'assets/solutions/simulator-isotipo.jpg" width="46" height="46" alt="">') if p['id']=='simulator' else '<span class="digital-card-monogram" aria-hidden="true">'+b.esc(p['title'][0].upper())+'</span>'}<div><h3><a href="{href}">{b.esc(p['title'])}</a></h3><p class="digital-card-subtitle">{b.esc(p['subtitle'])}</p></div></div><p>{b.esc(p['description'])}</p><ul class="digital-card-features">{''.join('<li>'+b.esc(x)+'</li>' for x in p['features'])}</ul><a href="{href}" class="button button-purple">{b.esc(p['ctaLabel'])} <span aria-hidden="true">→</span></a></div></article>'''
     main+='</div></div></section>'
     outputs['soluciones-digitales/index.html']=page(data['title'],data['description'],'',main,programs,'digital',data['solutions'][0]['image'])
     for p in data['solutions']:
