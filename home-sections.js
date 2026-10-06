@@ -114,6 +114,7 @@ document.querySelectorAll('[data-collection]').forEach((controls) => {
     });
   }
   function move(direction) {
+    if (!list.firstElementChild) return;
     const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
     list.scrollBy({left: direction * (list.firstElementChild.getBoundingClientRect().width + gap), behavior: motionPreference.matches ? 'instant' : 'smooth'});
   }

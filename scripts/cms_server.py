@@ -63,12 +63,13 @@ def initialize(username=None, password=None):
             db.execute('DELETE FROM sessions')
 
 def validate_content(data):
-    if not isinstance(data,dict) or len(data.get('programs',[])) not in range(1,31):raise ValueError('Debe haber entre 1 y 30 programas.')
+    if not isinstance(data,dict) or not isinstance(data.get('programs'),list) or not 1<=len(data['programs'])<=150:raise ValueError('Catálogo inválido o papelera llena (máximo 150 registros).')
+    if sum(p.get('visibility')!='deleted' for p in data['programs'] if isinstance(p,dict))>30:raise ValueError('Puedes administrar hasta 30 programas fuera de la papelera.')
     original=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
     ids=set();slugs=set()
     with connect() as db:published=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
     old={p['id']:p['slug'] for p in published['programs']}
-    if set(old)-{p.get('id') for p in data['programs']}:raise ValueError('Los programas publicados se conservan; usa el estado Inscripciones cerradas.')
+    if set(old)-{p.get('id') for p in data['programs']}:raise ValueError('Para eliminar un programa publicado envíalo a la papelera; sus datos se conservan para recuperarlo.')
     def walk(value, key=''):
         if isinstance(value,dict):
             for k,v in value.items():walk(v,k)
@@ -179,7 +180,7 @@ class Handler(BaseHTTPRequestHandler):
             with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED) as z:
                 outputs=json.loads(pub['outputs'])
                 for name,body in outputs.items():z.writestr(name,body)
-                z.writestr('content/academia.json',pub['data'])
+                z.writestr('content/academia.json',dump(renderer.public_content(json.loads(pub['data']))))
                 for name in ['styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
                     z.write(ROOT/name,name)
                 for f in (ROOT/'assets').rglob('*'):
@@ -260,10 +261,11 @@ class Handler(BaseHTTPRequestHandler):
                     restored_ids={p['id'] for p in data['programs']}
                     for p in current['programs']:
                         if p['id'] not in restored_ids:
-                            p['status']='agotado';data['programs'].append(p)
+                            p['status']='agotado';p['visibility']='deleted' if p.get('visibility')=='deleted' else 'hidden';data['programs'].append(p)
                 else:data=body.get('data')
                 outputs=validate_content(data);now=time.time();revision=d['revision']
                 if path=='/api/preview':
+                    outputs=renderer.render_outputs(data,preview=True)
                     token=secrets.token_urlsafe(24)
                     db.execute('DELETE FROM previews WHERE created<?',(now-1800,))
                     db.execute('INSERT INTO previews VALUES(?,?,?,?)',(token,dump(outputs),row['username'],now))

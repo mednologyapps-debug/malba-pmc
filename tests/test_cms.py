@@ -91,6 +91,47 @@ class CMSIntegrationTests(unittest.TestCase):
             now=db.execute('SELECT data,created FROM publications ORDER BY id DESC LIMIT 1').fetchone()
             self.assertEqual(now['data'],latest['data']);self.assertEqual(now['created'],latest['created'])
 
+    def test_visibility_trash_private_preview_and_restore(self):
+        self.login();current=self.call('/api/content')[1];data=current['data'];program=data['programs'][0]
+        slug=program['slug'];title=program['title'];program['visibility']='hidden'
+        body={'data':data,'revision':current['revision']}
+        preview=self.call('/api/preview',body)[1]
+        private_url=preview['url'].removesuffix('academia/')+slug+'/'
+        self.assertIn(title,self.call(private_url)[1])
+        published=self.call('/api/publish',body)[1]
+        for path in ['/academia/','/','/soluciones-digitales/','/sitemap.xml']:
+            self.assertNotIn('href="'+slug+'/',self.call(path)[1])
+        self.assertNotIn(slug+'/',self.call('/sitemap.xml')[1])
+        unavailable=self.call('/'+slug+'/')[1]
+        self.assertIn('Programa no disponible',unavailable)
+        self.assertNotIn(program['checkoutUrl'],unavailable)
+        self.assertNotIn(title,self.call('/academia/')[1])
+        program['visibility']='deleted';body['revision']=published['revision']
+        published=self.call('/api/publish',body)[1]
+        self.assertEqual(self.call('/'+slug+'/')[0],404)
+        cms.initialize();self.assertEqual(self.call('/'+slug+'/')[0],404)
+        self.assertEqual(self.call('/api/content')[1]['data']['programs'][0]['visibility'],'deleted')
+        restored=self.call('/api/restore',{'id':1,'revision':published['revision']})[1]
+        self.assertEqual(self.call('/'+slug+'/')[0],404)
+        self.call('/api/publish',{'data':restored['data'],'revision':restored['revision']})
+        self.assertIn(title,self.call('/'+slug+'/')[1])
+
+    def test_all_programs_can_be_hidden_and_export_omits_private_records(self):
+        self.login();current=self.call('/api/content')[1];data=current['data']
+        for p in data['programs']:p['visibility']='deleted'
+        self.assertEqual(self.call('/api/publish',{'data':data,'revision':current['revision']})[0],200)
+        self.assertIn('Academia',self.call('/academia/')[1])
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port)
+        connection.request('GET','/api/export',headers={'Cookie':self.cookie})
+        exported=connection.getresponse()
+        with zipfile.ZipFile(io.BytesIO(exported.read())) as archive:
+            self.assertEqual(json.loads(archive.read('content/academia.json'))['programs'],[])
+            for p in data['programs']:self.assertNotIn(p['slug']+'/index.html',archive.namelist())
+        connection.close()
+        data['programs'][0]['visibility']='bad-value'
+        revision=self.call('/api/content')[1]['revision']
+        self.assertEqual(self.call('/api/publish',{'data':data,'revision':revision})[0],400)
+
     def test_invalid_publish_does_not_change_publication(self):
         self.login();d=self.call('/api/content')[1];data=d['data'];data['programs'][0]['pricing']['regular']=-1
         self.assertEqual(self.call('/api/publish',{'data':data,'revision':d['revision']})[0],400)

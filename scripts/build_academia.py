@@ -231,6 +231,7 @@ def validate(data):
     if data['version'] != 1:raise ValueError('Unsupported content version')
     seen=set()
     for p in data['programs']:
+        if p.get('visibility','public') not in ('public','hidden','deleted'):raise ValueError('Invalid program visibility')
         theme_style(p,'../')
         groups=p['outcomes']['groups']
         indices=[j for g in groups for j in g['items']]
@@ -253,19 +254,36 @@ def validate(data):
         for group in ['learning','methodology','outcomes']:
             if not p[group]['items'] or any(not x['title'] for x in p[group]['items']):raise ValueError('Empty content cards')
 
-def render_outputs(data, home=None):
+def public_content(data):
+    """Legacy records are public; hidden/trash records never enter public catalogs."""
+    return {**data,'programs':[p for p in data['programs'] if p.get('visibility','public')=='public']}
+
+def unavailable_program(p, programs):
+    main='<section class="section-container academy-catalog"><h1>Programa no disponible</h1><p>Este programa está temporalmente fuera de nuestro catálogo.</p><a class="button button-purple" href="academia/">Explorar la Academia →</a></section>'
+    main=main.replace('href="academia/"','href="../academia/"')
+    return document('Programa no disponible','Explora los programas disponibles de la Academia MALBA.',p['slug']+'/','../',main,programs,'academy',breadcrumbs('Programa no disponible',p['slug']+'/'),p['image'])
+
+def render_outputs(data, home=None, preview=False):
     """Pure publication snapshot, reused by CLI and authenticated CMS."""
     validate(data)
-    outputs={'academia/index.html':academy(data),'academia/proximos/index.html':upcoming(data)}
-    outputs.update({p['slug']+'/index.html':program_page(p,data['programs']) for p in data['programs']})
+    public=public_content(data);programs=public['programs']
+    outputs={'academia/index.html':academy(public),'academia/proximos/index.html':upcoming(public)}
+    outputs.update({p['slug']+'/index.html':program_page(p,programs) for p in programs})
+    hidden={p['slug']+'/index.html' for p in data['programs'] if p.get('visibility')=='hidden'}
+    outputs.update({p['slug']+'/index.html':(program_page(p,programs) if preview else unavailable_program(p,programs)) for p in data['programs'] if p.get('visibility')=='hidden'})
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
-    home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',data['programs']),home,flags=re.S)
-    home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',data['programs']),home,flags=re.S)
+    home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',programs),home,flags=re.S)
+    home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
+    inactive={p['slug']+'/' for p in data['programs'] if p.get('visibility','public')!='public'}
+    home=re.sub(r'<article class="program-card">.*?</article>',lambda m:'' if any(f'href="{slug}"' in m[0] for slug in inactive) else m[0],home,flags=re.S)
+    if not re.search(r'<article class="program-card">',home):
+        empty='<article class="program-card"><div class="program-card-copy"><h3>Próximas convocatorias</h3><p>Estamos preparando nuevas oportunidades de formación.</p><a class="text-link" href="academia/proximos/">Mantenerme informado →</a></div></article>'
+        home=re.sub(r'(<div class="program-grid"[^>]*id="program-list"[^>]*>)',lambda m:m[0]+empty,home,count=1)
     from build_solutions import render_solutions
-    outputs.update(render_solutions(data['programs']))
+    outputs.update(render_solutions(programs))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
-    urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html')]
-    outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{s}</loc></url>\n' for s in urls)+'</urlset>\n'
+    urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html') and name not in hidden]
+    outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{slug}</loc></url>\n' for slug in urls)+'</urlset>\n'
     return outputs
 
 def build():
