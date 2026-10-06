@@ -63,3 +63,11 @@ Cada programa tiene `theme.accent`, `theme.accentDark`, `theme.soft` y `theme.na
 El submenú visual reutiliza `title`, `cardDescription` e `imageSmall` de cada programa. En escritorio se abre con el mouse o teclado; en móvil, con el botón de despliegue.
 
 `curriculum.image` e `imageAlt` controlan la fotografía junto al temario. `outcomes.groups` define las tres pestañas: cada grupo tiene un `title` y una lista `items` de índices (desde cero) de las competencias existentes. El generador exige incluir todas las competencias exactamente una vez. Los beneficios de “Por qué MALBA PMC” se obtienen de `proof.items` y se muestran todos en un panel de lectura, junto al título y las cifras de `proof.stats`. El contenido completo se publica en HTML y sigue visible si JavaScript no está disponible.
+
+### Libro en Publicaciones
+
+La primera vista de `/publicaciones/` presenta el libro; las revistas conservan su sección y sus PDF debajo. En Dashboard → Publicaciones → Libro, compra y revistas se configura `publications.book`: portada, autor, textos, temas, beneficios, muestra, formato, moneda, precio, disponibilidad y enlaces.
+
+Para activar **Continuar al pago**, completa `price`, `checkoutUrl` (HTTPS directo al checkout del libro) y `available`. La validación impide habilitar compras sin precio o destino. `deliveryNote` debe informar las condiciones reales de envío. El importe visual debe coincidir con la tienda: el CMS no cambia precios, stock ni procesa tarjetas. Los datos del comprador se solicitan una sola vez en la tienda. No se habilita formato digital sin un producto real configurado.
+
+La configuración inicial mantiene la compra sin habilitar: la tienda consultada muestra precios inconsistentes y falta de stock. El acceso **Consultar disponibilidad** utiliza `productUrl`. No se inventan importes, envíos gratuitos, reseñas, garantías o disponibilidad. Las migraciones agregan el libro sin borrar las revistas ni cambiar las revisiones guardadas.

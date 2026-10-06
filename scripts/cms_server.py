@@ -59,6 +59,8 @@ def initialize(username=None, password=None):
         if 'publications' not in draft:
             draft['publications']=editorial.defaults()
             db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
+        draft['publications']=editorial.content(draft)
+        db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
         if 'digitalCards' not in draft:
             draft['digitalCards']=digital.default_cards()
             db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
@@ -322,6 +324,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not restored:raise ValueError('Publicación no encontrada.')
                     data=json.loads(restored[0])
                     data.setdefault('publications',editorial.defaults())
+                    data['publications']=editorial.content(data)
                     data.setdefault('digitalCards',digital.default_cards())
                     data['digitalCards']=digital.upgrade_cards(data['digitalCards'])
                     current=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])

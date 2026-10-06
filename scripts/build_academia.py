@@ -276,6 +276,7 @@ def render_outputs(data, home=None, preview=False):
     outputs.update({p['slug']+'/index.html':(program_page(p,programs) if preview else unavailable_program(p,programs)) for p in data['programs'] if p.get('visibility')=='hidden'})
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',programs),home,flags=re.S)
+    home=home.replace('href="https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/"','href="publicaciones/#comprar-libro"').replace('href="https://malba-pmc.com/libro/"','href="publicaciones/"')
     home=home.replace('href="https://malba-pmc.com/libro/">Ver publicaciones','href="publicaciones/">Ver publicaciones')
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
     inactive={p['slug']+'/' for p in data['programs'] if p.get('visibility','public')!='public'}

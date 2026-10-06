@@ -91,5 +91,46 @@
       "pages": 32,
       "visibility": "public"
     }
-  ]
+  ],
+  "book": {
+    "title": "Gestión de Proyectos de Transmisión. Factores Clave.",
+    "subtitle": "Una guía práctica para planificar, controlar y gestionar proyectos de transmisión eléctrica con mayor criterio.",
+    "description": "Convierte la experiencia en decisiones mejor fundamentadas. Miguel Alba reúne más de 200 factores clave y casos prácticos aplicados a proyectos de líneas de transmisión y subestaciones.",
+    "author": "Miguel Alba",
+    "image": "assets/book/libro-3d-960.webp",
+    "imageSmall": "assets/book/libro-3d-600.webp",
+    "imageAlt": "Libro Gestión de Proyectos de Transmisión, Factores Clave de Miguel Alba",
+    "currency": "PEN",
+    "price": null,
+    "available": false,
+    "format": "Libro impreso",
+    "checkoutUrl": "",
+    "productUrl": "https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/",
+    "previewUrl": "https://malba-pmc.com/wp-content/uploads/2026/02/preview_5_paginas_borrosa_sin_texto.pdf",
+    "deliveryNote": "Consulta disponibilidad y costo de envío antes de comprar.",
+    "chapters": [
+      {
+        "title": "El contexto de los proyectos de transmisión",
+        "description": "Comprende su importancia estratégica y los desafíos de la infraestructura eléctrica."
+      },
+      {
+        "title": "Planificación y dirección del proyecto",
+        "description": "Organiza el alcance, los plazos y los recursos con una visión integral."
+      },
+      {
+        "title": "Control y gestión de riesgos",
+        "description": "Identifica factores críticos, anticipa cambios y mejora la toma de decisiones."
+      },
+      {
+        "title": "Factores clave y casos prácticos",
+        "description": "Lleva los aprendizajes a tu proyecto con ejemplos aplicados y sus resoluciones."
+      }
+    ],
+    "benefits": [
+      "Planifica con una visión integral del proyecto.",
+      "Fortalece el control del alcance, los costos y los plazos.",
+      "Anticipa riesgos y mejora tus decisiones.",
+      "Aprende a partir de casos prácticos."
+    ]
+  }
 }

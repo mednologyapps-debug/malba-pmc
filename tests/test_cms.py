@@ -163,12 +163,12 @@ class CMSIntegrationTests(unittest.TestCase):
         raw=(self.root/p['pdfUrl']).read_bytes()
         uploaded=self.call('/api/upload-pdf',{'content':base64.b64encode(raw).decode()})
         self.assertEqual(uploaded[0],200);self.assertEqual((self.root/uploaded[1]['path']).read_bytes(),raw)
-        old_title=section['title'];section['title']='Biblioteca editada desde CMS';p['pdfUrl']=uploaded[1]['path']
+        old_title=section['catalogTitle'];section['catalogTitle']='Biblioteca editada desde CMS';p['pdfUrl']=uploaded[1]['path']
         body={'data':data,'revision':current['revision']}
         preview=self.call('/api/preview',body)[1]['url'].replace('academia/','publicaciones/')
-        self.assertIn(section['title'],self.call(preview)[1]);self.assertIn(old_title,self.call('/publicaciones/')[1])
+        self.assertIn(section['catalogTitle'],self.call(preview)[1]);self.assertIn(old_title,self.call('/publicaciones/')[1])
         result=self.call('/api/publish',body)[1]
-        self.assertIn(section['title'],self.call('/publicaciones/')[1]);self.assertIn(p['pdfUrl'],self.call('/publicaciones/')[1])
+        self.assertIn(section['catalogTitle'],self.call('/publicaciones/')[1]);self.assertIn(p['pdfUrl'],self.call('/publicaciones/')[1])
         lifecycle={'data':data,'revision':result['revision'],'area':'publications','id':p['id'],'visibility':'deleted'}
         deleted=self.call('/api/visibility',lifecycle)[1];self.assertNotIn(p['title'],self.call('/publicaciones/')[1])
         connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port);connection.request('GET','/api/export',headers={'Cookie':self.cookie})
@@ -202,6 +202,30 @@ class CMSIntegrationTests(unittest.TestCase):
         del card['plans'];card['id']='INVALID ID'
         self.assertEqual(self.call('/api/publish',body)[0],400)
         self.assertEqual(self.call(detail_path)[1],original_detail)
+
+    def test_book_migration_preserves_saved_revistas(self):
+        self.login();current=self.call('/api/content')[1]
+        with cms.connect() as db:
+            data=current['data'];data['publications'].pop('book');data['publications']['catalogTitle']='Revistas privadas'
+            db.execute('UPDATE draft SET data=?',(json.dumps(data),))
+        cms.initialize();after=self.call('/api/content')[1]
+        self.assertEqual(after['revision'],current['revision'])
+        self.assertEqual(after['data']['publications']['catalogTitle'],'Revistas privadas')
+        self.assertIn('book',after['data']['publications'])
+
+    def test_book_purchase_configuration_and_private_preview(self):
+        self.login();current=self.call('/api/content')[1];data=current['data'];book=data['publications']['book']
+        catalog=self.call('/publicaciones/')[1]
+        self.assertLess(catalog.index('id="book-heading"'),catalog.index('id="revistas"'))
+        self.assertIn('Consultar disponibilidad',catalog)
+        book['available']=True;body={'data':data,'revision':current['revision']}
+        self.assertEqual(self.call('/api/publish',body)[0],400)
+        book['price']=80;book['checkoutUrl']='https://example.com/checkout'
+        preview=self.call('/api/preview',body)[1]['url'].replace('academia/','publicaciones/')
+        self.assertIn('Continuar al pago',self.call(preview)[1]);self.assertNotIn('Continuar al pago',self.call('/publicaciones/')[1])
+        self.assertEqual(self.call('/api/publish',body)[0],200)
+        self.assertIn('href="https://example.com/checkout"',self.call('/publicaciones/')[1])
+        cms.initialize();self.assertEqual(self.call('/api/content')[1]['data']['publications']['book']['price'],80)
 
     def test_new_solution_requires_url_and_only_creates_card(self):
         self.login();current=self.call('/api/content')[1];data=current['data']
