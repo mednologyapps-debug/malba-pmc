@@ -141,3 +141,11 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Python static page generator
+__pycache__/
+*.py[cod]
+
+# Private CMS database / user images (never commit accounts or sessions)
+.cms-private/
+assets/uploads/

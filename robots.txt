@@ -1,0 +1,5 @@
+# No publicar esta vista incompleta como la web final.
+# El noindex del HTML evita indexación de la vista de revisión.
+User-agent: *
+Allow: /
+Sitemap: https://malba-pmc.com/sitemap.xml

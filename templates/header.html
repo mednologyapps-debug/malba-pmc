@@ -1,0 +1,74 @@
+<header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./" aria-label="MALBA PMC, inicio">
+          <img
+            src="assets/malba-pmc-logo.png"
+            width="1600"
+            height="250"
+            alt="MALBA PMC"
+          />
+        </a>
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="main-navigation"
+          aria-label="Abrir menú"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <nav
+          id="main-navigation"
+          class="main-navigation"
+          aria-label="Navegación principal"
+        >
+          <div class="nav-links">
+            <a class="nav-link{{HOME_CLASS}}" href="./"{{HOME_ARIA}}>Inicio</a>
+            <a class="nav-link" href="https://malba-pmc.com/#consultoria"
+              >Consultoría</a
+            >
+            <div class="nav-academia">
+              <a class="nav-link{{ACADEMY_CLASS}}" href="academia/"{{ACADEMY_ARIA}}>Academia</a>
+              <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="academy-menu" aria-label="Mostrar programas de Academia"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <div class="academy-menu" id="academy-menu" hidden>{{PROGRAM_LINKS}}</div>
+            </div>
+            <div class="nav-academia nav-digital">
+              <a class="nav-link{{DIGITAL_CLASS}}" href="soluciones-digitales/"{{DIGITAL_ARIA}}>Soluciones digitales</a>
+              <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="digital-menu" aria-label="Mostrar soluciones digitales"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <div class="academy-menu" id="digital-menu" hidden>{{SOLUTION_LINKS}}</div>
+            </div>
+            <a class="nav-link{{PUBLICATIONS_CLASS}}" href="publicaciones/"{{PUBLICATIONS_ARIA}}>Publicaciones</a>
+            <a class="nav-link" href="https://malba-pmc.com/quienes-somos"
+              >Nosotros</a
+            >
+            <button class="nav-link" type="button" data-dialog="contact-dialog">
+              Contacto
+            </button>
+          </div>
+          <div class="nav-actions">
+            <button
+              class="button button-purple header-cta"
+              type="button"
+              data-dialog="contact-dialog"
+            >
+              Solicitar información
+            </button>
+            <a class="classroom" href="https://malba-pmc.com/escritorio">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                aria-hidden="true"
+              >
+                <rect x="3" y="4" width="18" height="13" rx="2" />
+                <path d="M8 21h8M12 17v4m-5-10 5-3 5 3-5 3-5-3Z" />
+              </svg>
+              Aula virtual
+            </a>
+          </div>
+        </nav>
+      </div>
+    </header>

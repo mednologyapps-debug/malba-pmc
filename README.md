@@ -1,2 +1,155 @@
-# malba-pmc
-Nueva plataforma web de MALBA PMC
+# MALBA PMC — web y CMS
+
+Primera entrega de la reconstrucción. El repositorio original solo contenía este README, sin el código de Hostinger.
+
+## Probar
+
+No requiere npm ni compilación. Desde la carpeta del repositorio:
+
+```sh
+python -m http.server 8080
+```
+
+Abrir http://localhost:8080. También se puede abrir `index.html` directamente para revisar el diseño. En Windows, si `python` no funciona, utilizar `py -m http.server 8080`.
+
+## Alcance
+
+- Menú sticky, navegación móvil, estados de foco y cierre con Escape.
+- Banner responsive, título HTML real y dos acciones.
+- Logo original, Outfit alojada localmente y colores dominantes del logo: azul `#073F7C`, morado `#544595`, más blanco y transparencias de estos colores. Sin degradados.
+- Fotografía ilustrativa generada para esta entrega, no representa un proyecto de un cliente. Banner panorámico con WebP a 960 y 1672 px con `srcset`, sin ampliación artificial de la imagen nativa.
+- Sin framework, APIs, dependencias de producción, analítica, cookies ni solicitudes de fuentes externas.
+
+## Botones y enlaces
+
+Inicio vuelve a la portada. Consultoría, Academy, Nosotros y Aula virtual enlazan a los destinos extraídos del HTML de la web actual:
+
+- https://malba-pmc.com/#consultoria
+- https://malba-pmc.com/proximos-cursos
+- https://malba-pmc.com/quienes-somos
+- https://malba-pmc.com/escritorio
+
+Soluciones digitales y Publicaciones abren vistas informativas provisionales basadas en la referencia. No son páginas de catálogo ni ofrecen compra. Explorar soluciones abre un selector de consultoría y soluciones digitales. Contacto y Solicitar información abren un selector de programas/consultoría de la web actual: **todavía no capturan ni envían consultas**. No se inventaron correo ni teléfono. Al construir esas secciones, reemplazar estos botones por enlaces a las páginas definitivas y conectar el contacto al canal que confirme el propietario.
+
+## SEO preparado
+
+HTML estático, una etiqueta H1, title, description, canonical, Open Graph, datos JSON-LD Organization/WebSite, favicon, dimensiones de imágenes, carga prioritaria de la imagen principal, sitemap y robots. Los metadatos usan el dominio previsto https://malba-pmc.com/. No se añadieron valoraciones, certificaciones ni métricas sin verificación.
+
+**Esta primera vista usa `noindex, follow`** para evitar que se indexe como web final. Cuando toda la web esté lista, retirar la etiqueta noindex, confirmar el dominio canónico y los recursos de Open Graph, ampliar el sitemap con las páginas reales, preservar/redireccionar las URLs actuales y enviar el sitemap a Search Console. No sustituir la web de producción con esta entrega parcial. La posición en Google no está garantizada por el código.
+
+## Hostinger
+
+Para revisión, subir `index.html`, `styles.css`, `home-sections.css`, `app.js`, `home-sections.js` y `assets/` a una carpeta o subdominio de pruebas. Mantener la web actual y su WordPress intactos. No copiar reglas de reescritura ni reemplazar el `.htaccess` actual. `robots.txt` y `sitemap.xml` están preparados para el futuro lanzamiento en la raíz del dominio, no para sobrescribir los del sitio actual en esta etapa.
+
+## Imagen y tipografía
+
+Prompt de la imagen actual: fotografía editorial panorámica de torres de transmisión eléctrica entre montañas de Perú, torre principal en el tercio derecho, mitad izquierda despejada para el texto, iluminación diurna suave, colores fríos azul y morado, metal nítido, sin personas, texto, logos ni elementos de interfaz. Se solicitó 3840×2160; la herramienta entregó 1672×941 y se conserva esa resolución nativa, sin hacerla pasar por 4K. Generada con la herramienta integrada de imágenes, optimizada en WebP sin aumentar artificialmente su resolución. La imagen original suministrada del logo conserva sus proporciones. Outfit distribuida bajo SIL Open Font License; licencia en `assets/fonts/OFL.txt`.
+
+## Validación
+
+Revisado en Chromium en 320, 390, 768, 1280 y 1440 px: sin scroll horizontal, recursos faltantes ni excepciones JavaScript. Menú, diálogos, Escape y retorno de foco comprobados. Capturas y alcance de validación en `docs/`.
+
+## Ajuste del banner
+
+Foto de fondo en toda la sección, sin panel azul separado ni etiqueta sobre la imagen. Capa azul uniforme con la opacidad 0.54 ajustada por el propietario en styles.css. El contenido permanece visible en pantallas táctiles. Título abreviado en tres líneas: “Conocimiento que / transforma proyectos / eléctricos.” La descripción mantiene “infraestructura eléctrica”. Capturas actualizadas en `docs/`.
+
+
+## Portada: carrusel, ecosistema y programas
+
+Orden actual: banner con dos vistas (presentación de MALBA y libro), Nuestro ecosistema y Programas destacados. El carrusel empieza en MALBA y cambia por flechas, puntos, teclado, deslizamiento táctil o scroll horizontal del trackpad. No avanza automáticamente ni intercepta el scroll vertical de la página. Ajusta la altura al contenido de cada vista y desactiva los enlaces de la vista que no está visible. Respeta la preferencia de movimiento reducido.
+
+El ecosistema contiene Consultoría, Academy, Soluciones digitales y Publicaciones. Los tres programas son Dirección de Proyectos de Transmisión Eléctrica, Gestión de Riesgos en Proyectos de Transmisión Eléctrica y Diseño, Implementación y Mejora de PMO. Enlaces de programas, libro y compra llevan al sitio actual; no se creó un checkout nuevo. No se publicaron precios ni fechas de cohortes.
+
+`home-sections.css` y `home-sections.js` contienen estas nuevas secciones. `styles.css` no se modifica en esta entrega para respetar los ajustes locales hechos por el propietario. La opacidad del primer banner se controla directamente en `styles.css`; se retiraron las reglas de `home-sections.css` que anulaban el ajuste manual del propietario (0.54).
+
+La imagen de libro que publica hoy el sitio dice MOCKUP. Por eso la nueva imagen 3D es una **propuesta de portada**, no la cubierta oficial de una edición. Debe sustituirse por la cubierta aprobada antes del lanzamiento. Título y autor contrastados en https://malba-pmc.com/libro/. Compra: https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/. Fuentes de los programas: páginas actuales del sitio enlazadas en cada tarjeta.
+
+Mockup creado con la herramienta integrada de imágenes a partir del logo suministrado. Prompt: libro de tapa dura aislado con transparencia, vista en tres cuartos mostrando portada y borde de páginas, azul #073F7C, lomo morado #544595, texto blanco, título GESTIÓN DE PROYECTOS DE TRANSMISIÓN, subtítulo FACTORES CLAVE, autor MIGUEL ALBA, detalle de torres en azul, sin etiquetas ni degradados impresos. Original generado: 1374×1145; archivos de proyecto `assets/book/libro-3d-600.webp` y `assets/book/libro-3d-960.webp`, conservando transparencia y proporción.
+
+Referencia adicional revisada: https://lilianabuchtik.com/, especialmente la presentación de servicios y libros en distintas vistas del banner. Se mantiene el branding propio de MALBA.
+
+
+## Presentación visual del libro
+
+La segunda vista añade un fondo de infraestructura eléctrica con opacidad 0.23, un círculo morado y un aro fino detrás del libro, y un mockup más grande. No hay degradados ni nuevos recursos externos. El libro entra con una oscilación suave de 4.5 segundos, una sola vez por entrada a esa vista; el texto aparece en 0.65 segundos. No hay movimiento continuo. Todo el movimiento se desactiva con `prefers-reduced-motion`.
+
+
+## Programas, soluciones y ciclo de conocimiento
+
+Se sustituyen los iconos de Programas destacados por fotografías con carga diferida y tamaños adaptables. Dirección reutiliza la foto de infraestructura de MALBA. Riesgos y PMO usan fotografías ilustrativas generadas con la herramienta integrada; no representan al equipo real de MALBA. Archivos: `assets/programs/riesgos-{480,960}.webp` y `assets/programs/pmo-{480,960}.webp`. Originales: 1672×941; versiones WebP reducidas conservan la proporción.
+
+Prompts: (Riesgos) fotografía editorial panorámica de dos profesionales latinoamericanos revisando planos en una sala de control con infraestructura eléctrica al fondo, ropa azul y blanca, luz natural, composición despejada, sin textos, iconos ni logotipos; (PMO) tres profesionales latinoamericanos trabajando con cronogramas y un portátil alrededor de una mesa en oficina moderna, ropa azul, morada y blanca, fotografía editorial natural sin texto ni logos.
+
+Nuestras soluciones tiene dos columnas: título, descripción y espacio de video a la izquierda; MALBA Simulator y Método RAC a la derecha. El botón Ver todas abre un catálogo con Simulator, Risk, RAC y LMS. Los enlaces existentes llevan al sitio MALBA; para productos sin URL oficial proporcionada se ofrece información, sin inventar páginas o funcionalidades. La captura de Simulator es real, descargada del recurso publicado `https://malba-pmc.com/wp-content/uploads/2026/02/IMG1-MALBA.png` (1600×789) y guardada localmente como WebP.
+
+**Video pendiente:** la página actual del simulador contiene `VIDEO_ID_AQUI`, no un video reproducible. No se reutiliza ese enlace. El espacio muestra una captura y “Video de presentación · Próximamente”, sin falso botón de reproducción. Para integrar un MP4, guardar el archivo en `assets/solutions/` y completar `data-video-src` en la figura `.solutions-video` de `index.html`, por ejemplo `data-video-src="assets/solutions/presentacion.mp4"`. El código lo convierte en un reproductor nativo con controles, `playsinline`, póster y `preload="none"`. Si se facilita un enlace de YouTube, sustituir este espacio por su embed oficial.
+
+El ciclo reproduce las siete etapas de la referencia. Aparecen progresivamente al entrar en pantalla; cada botón selecciona una explicación y mueve el acento orbital y la línea de progreso. Flechas y teclas izquierda/derecha, Home y End permiten recorrerlo. No hay avance automático. Las animaciones respetan movimiento reducido. En móvil, ecosistema, programas, soluciones y etapas se recorren horizontalmente dentro de sus secciones: la página no se desborda horizontalmente y no apila todos los contenidos.
+
+## Presentación de Miguel Alba (versión actual)
+
+La sección situada después de Programas destacados ahora sigue la composición editorial de la referencia: información de Miguel Alba a la izquierda, retrato real al centro y tres accesos a la derecha. Se titula Experiencia aplicada. Nuestra academia lleva a Programas destacados, Soluciones que ofrecemos abre el catálogo completo y Publicaciones lleva al libro. Reemplaza la anterior sección de ejemplos y video; la configuración de video descrita arriba corresponde a la versión previa y ya no está activa. El ancla `#soluciones` se conserva para el menú y el banner.
+
+La biografía y las credenciales provienen de la ficha docente oficial del programa PMO: `https://malba-pmc.com/diseno-implementacion-y-mejora-de-pmo/`. La fotografía original es `https://malba-pmc.com/wp-content/uploads/2026/05/MiguelAlba-png.png`, guardada como `assets/people/miguel-alba.webp`. No se generó ni se alteró la identidad de Miguel. El archivo original tiene 264×396 px; se respeta su resolución nativa y la vista nunca lo amplía por encima de 264 px. Para una foto de mayor tamaño será necesario sustituirlo por un original de alta resolución.
+
+Fondo de palabras con opacidad tenue, azul y morado MALBA, sin degradados. En móvil el retrato acompaña al nombre y las opciones se presentan en filas compactas. Se mantiene el resto de la portada y la opacidad del banner.
+
+## Aprende con MALBA
+
+Se añade después del ciclo de conocimiento: presentación a la izquierda y colección horizontal de videos a la derecha, con flechas, teclado y deslizamiento táctil. Fondo azul MALBA, texto blanco y acento morado, sin degradados. En móvil se muestra una tarjeta principal y parte de la siguiente, evitando apilar todos los videos.
+
+Se usan tres videos reales del canal `https://www.youtube.com/@malbapmc2563`:
+
+- `WPikCuHg2q8`: ¿Dónde empiezan los retrasos en los proyectos de transmisión eléctrica?
+- `RRj4MDh8rNQ`: Errores críticos en proyectos de transmisión eléctrica.
+- `NrEJvAJ7NGo`: Contratación de ingeniería sin recopilación de requerimientos de interesados.
+
+Autor y títulos verificados en el oEmbed oficial de YouTube. Enlaces localizados en publicaciones públicas de MALBA y Miguel Alba. Las portadas originales de `https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg` se descargaron y optimizaron a WebP de 960×540, disponibles en `assets/videos/`. No son portadas generadas ni videos de ejemplo.
+
+Al pulsar una portada o Ver video se abre un diálogo centrado con iframe `youtube-nocookie.com`. No se carga ningún reproductor al abrir la página. Cerrar con el botón, Escape o el fondo elimina el iframe y detiene el video, devolviendo el foco al control que lo abrió. Se bloquea el scroll del fondo mientras está abierto. El diálogo incluye un enlace directo a YouTube y permite pantalla completa. No hay reproducción automática.
+
+Para cambiar videos, editar `data-youtube-id`, `data-video-title`, el título y la portada de cada tarjeta en `index.html`; los IDs deben tener 11 caracteres válidos. Conservar `data-dialog="video-dialog"` para compartir el comportamiento de los popups existentes. No requiere una API ni clave de YouTube.
+
+## Home final: tarjetas y footer
+
+Orden actual: banner, Nuestro ecosistema, Programas destacados, Aprende con MALBA, presentación de Miguel Alba, ciclo de conocimiento y footer. Aprende con MALBA queda inmediatamente debajo de Programas destacados. Las tarjetas de video tienen fondo blanco, portada superior, título azul y acceso morado; mantienen el scroll horizontal y el popup.
+
+Footer en todo el ancho con logotipo, descripción, LinkedIn y YouTube oficiales, accesos a ecosistema, academia, soluciones, publicaciones, nosotros y aula virtual. Solicitar información abre el diálogo existente. El cierre incluye derechos reservados con año actualizado automáticamente y Volver al inicio. No se publican datos de contacto o enlaces legales de ejemplo. Las columnas se reorganizan en móvil y los enlaces conservan áreas táctiles cómodas.
+
+Capturas completas actuales: `docs/home-desktop.png` y `docs/home-mobile.png`. Footer: `docs/footer-desktop.png` y `docs/footer-mobile.png`. Las capturas de Aprende se actualizaron con las tarjetas blancas.
+
+### Ajuste visual: redes y Aprende con MALBA
+
+Iconos blancos originales descargados de [LinkedIn](https://brand.linkedin.com/downloads) y [YouTube](https://brand.youtube/youtube-icon/), sin modificar sus formas. Se sirven localmente en `assets/social/`. La sección de videos reutiliza la fotografía de infraestructura, con una capa azul uniforme al 90 % en `.learn-section::before`, sin degradados. En celular carga la variante de 960 px.
+
+### Academia y páginas de programas
+
+El menú ahora abre **Academia** en `academia/`, con accesos a Gestión de proyectos, Gestión de riesgos, Especialización en PMO y Próximos programas. El catálogo tiene cuatro tarjetas; la última abre las convocatorias con fechas por confirmar. Cada programa tiene una página local con el contenido de los adjuntos, temario desplegable, docentes, metodología, aplicaciones y resultados.
+
+Los datos editables están en `content/academia.json`; se publican con `py scripts/build_academia.py`. El contrato y el alcance de la futura integración con `dashboard.malba-pmc.com` están en [content/README.md](content/README.md). El dashboard todavía no se ha desarrollado.
+
+Las nuevas páginas incluyen título, descripción, canonical, Open Graph, datos estructurados de cursos y breadcrumbs, y sitemap actualizado. Mantienen `noindex, follow` durante esta revisión. Outfit se sirve localmente. No se cambió la capa `.54` del banner del home.
+
+Validación del contenido: `py -m unittest discover -s tests -v`. En navegador se comprobaron las cinco páginas a 1920, 1440, 1024, 768, 390 y 320 px, navegación home → Academia → programa, submenu, temarios, popup de información, precios vencidos y enlaces locales. Brochures y WhatsApp apuntan a los destinos originales; no se enviaron mensajes ni se hicieron compras.
+
+### Composición del catálogo de Academia
+
+La presentación se agrupa en un panel de la paleta MALBA y el texto del catálogo queda junto a su título. Cada tarjeta sitúa el estado en la parte superior de la imagen y la duración/sesiones en etiquetas independientes al pie de la foto. Los resúmenes se editan mediante `cardDescription`; el texto completo del programa se conserva. Precios y botones se alinean, con un CTA morado de ancho completo. Próximos programas sigue la misma composición.
+
+## CMS de Academia
+
+Panel con autenticación, edición de programas, imágenes, borradores, vista previa privada, publicación e historial. Para probarlo, reemplaza el servidor estático por:
+
+```sh
+py scripts/cms_server.py
+```
+
+La primera ejecución solicita el usuario y la contraseña. Panel: http://localhost:8080/dashboard/. Web de prueba: http://localhost:8080/. Requiere Python 3.10 o superior. Guarda los cambios en una base privada y publica el HTML desde el mismo backend; no sobrescribe tu web actual de Hostinger. Guía completa, persistencia, exportación y requisitos de alojamiento: [docs/CMS.md](docs/CMS.md).
+
+## Soluciones digitales y CMS por áreas
+
+El dashboard abre Academia como área de la web; el centro permite editar la portada, convocatorias y cada programa. Las demás áreas permanecen preparadas para próximas etapas. Consulta `docs/CMS.md` para iniciar el servidor y conservar tus borradores al actualizar.
+
+El catálogo público está en `/soluciones-digitales/`, con submenú visual y fichas de MALBA Simulator y MALBA Risk. El simulador incluye presentación SaaS, pasos, resultados, certificado ilustrativo y planes con selección de licencias. La solicitud de acceso se prepara por WhatsApp; las tarifas y el video definitivo están pendientes. No incluye cobros, activación de licencias ni modificaciones al motor de simulación.
+
+Los textos de esta sección se encuentran en `content/solutions.json`; el generador de páginas se ejecuta con `py scripts/build_academia.py` y usa UTF-8 explícito para Windows.
