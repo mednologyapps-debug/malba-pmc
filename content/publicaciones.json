@@ -132,8 +132,8 @@
       "Anticipa riesgos y mejora tus decisiones.",
       "Aprende a partir de casos prácticos."
     ],
-    "physicalPrice": null,
-    "digitalPrice": null,
+    "physicalPrice": 150,
+    "digitalPrice": 80,
     "physicalShipping": null,
     "physicalCheckoutUrl": "",
     "digitalCheckoutUrl": ""

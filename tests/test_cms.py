@@ -213,6 +213,19 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertEqual(after['data']['publications']['catalogTitle'],'Revistas privadas')
         self.assertIn('book',after['data']['publications'])
 
+    def test_book_price_upgrade_fills_empty_but_preserves_configured_prices(self):
+        self.login();current=self.call('/api/content')[1]
+        with cms.connect() as db:
+            data=current['data'];data['publications']['book'].update(physicalPrice=None,digitalPrice=None)
+            db.execute('UPDATE draft SET data=?',(json.dumps(data),))
+        cms.initialize();after=self.call('/api/content')[1];book=after['data']['publications']['book']
+        self.assertEqual((book['physicalPrice'],book['digitalPrice']),(150,80));self.assertEqual(after['revision'],current['revision'])
+        with cms.connect() as db:
+            book.update(physicalPrice=190,digitalPrice=95)
+            db.execute('UPDATE draft SET data=?',(json.dumps(after['data']),))
+        cms.initialize();book=self.call('/api/content')[1]['data']['publications']['book']
+        self.assertEqual((book['physicalPrice'],book['digitalPrice']),(190,95))
+
     def test_book_format_prices_and_export_script(self):
         self.login();current=self.call('/api/content')[1];data=current['data'];book=data['publications']['book']
         book.update(physicalPrice=80,digitalPrice=50,physicalShipping=12,physicalCheckoutUrl='https://example.com/physical',digitalCheckoutUrl='https://example.com/digital')
