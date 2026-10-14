@@ -101,7 +101,7 @@ class CMSIntegrationTests(unittest.TestCase):
         published=self.call('/api/publish',body)[1]
         for path in ['/academia/','/','/soluciones-digitales/','/sitemap.xml']:
             self.assertNotIn('href="'+slug+'/',self.call(path)[1])
-        self.assertNotIn(slug+'/',self.call('/sitemap.xml')[1])
+        self.assertNotIn('<loc>https://malba-pmc.com/'+slug+'/</loc>',self.call('/sitemap.xml')[1])
         unavailable=self.call('/'+slug+'/')[1]
         self.assertIn('Programa no disponible',unavailable)
         self.assertNotIn(program['checkoutUrl'],unavailable)
@@ -202,6 +202,33 @@ class CMSIntegrationTests(unittest.TestCase):
         del card['plans'];card['id']='INVALID ID'
         self.assertEqual(self.call('/api/publish',body)[0],400)
         self.assertEqual(self.call(detail_path)[1],original_detail)
+
+    def test_consulting_routes_navigation_preview_and_export(self):
+        from html.parser import HTMLParser
+        class Check(HTMLParser):
+            def __init__(self):super().__init__();self.h1=0;self.details=0;self.form=False
+            def handle_starttag(self,tag,attrs):
+                self.h1+=tag=='h1';self.details+=tag=='details' and 'consult-service' in dict(attrs).get('class','').split()
+                if tag=='form' and 'data-consult-contact' in dict(attrs):self.form=True
+        from build_consulting import defaults
+        services=defaults()['services']
+        self.login();current=self.call('/api/content')[1];body={'data':current['data'],'revision':current['revision']}
+        for p in services:
+            route='/'+p['slug']+'/';status,page=self.call(route)[:2]
+            self.assertEqual(status,200);parser=Check();parser.feed(page)
+            self.assertEqual(parser.h1,1);self.assertEqual(parser.details,len(p['services']));self.assertTrue(parser.form)
+            self.assertIn('https://malba-pmc.com'+route,page);self.assertIn('"@type": "Service"',page)
+            self.assertIn('<loc>https://malba-pmc.com'+route+'</loc>',self.call('/sitemap.xml')[1])
+        home=self.call('/')[1];self.assertIn('id="consulting-menu"',home);self.assertNotIn('https://malba-pmc.com/#consultoria',home)
+        preview=self.call('/api/preview',body)[1]['url'].replace('academia/','consultoria/')
+        self.assertEqual(self.call(preview)[0],200)
+        self.assertEqual(self.call('/consultoria.css')[0],200);self.assertEqual(self.call('/consultoria.js')[0],200)
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port);connection.request('GET','/api/export',headers={'Cookie':self.cookie})
+        with zipfile.ZipFile(io.BytesIO(connection.getresponse().read())) as archive:
+            for name in ['consultoria/index.html','consultoria.css','consultoria.js']+[p['slug']+'/index.html' for p in services]:self.assertIn(name,archive.namelist())
+        connection.close()
+        body['data']['programs'][0]['slug']='consultoria'
+        self.assertEqual(self.call('/api/draft',body)[0],400)
 
     def test_book_migration_preserves_saved_revistas(self):
         self.login();current=self.call('/api/content')[1]

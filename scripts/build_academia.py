@@ -115,12 +115,15 @@ def shared(template, prefix, active, programs):
         menu += ''.join(f'<a class="academy-menu-program" href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p.get("cardDescription",p["description"]))}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in programs)
         menu += '</div><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
 
+        from build_consulting import menu as consulting_menu
+        s=s.replace('{{CONSULTING_LINKS}}',consulting_menu(active)).replace('{{CONSULTING_CLASS}}',' current' if active.startswith('consulting') else '').replace('{{CONSULTING_ARIA}}',' aria-current="page"' if active=='consulting' else '')
         digital=json.loads((ROOT/'content/solutions.json').read_text(encoding='utf-8'))
         digital_menu='<div class="academy-menu-heading"><div><strong>Soluciones digitales</strong><p>Entrena y mejora tus decisiones.</p></div><a href="soluciones-digitales/">Ver todas las soluciones →</a></div><div class="academy-menu-programs digital-menu-programs">'
         digital_menu+=''.join(f'<a class="academy-menu-program" href="soluciones-digitales/{esc(p["slug"])}/"><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p["description"])}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in digital['solutions'])+'</div>'
         is_academy=active in ['academy','upcoming']+[p['id'] for p in programs]
         s=s.replace('{{SOLUTION_LINKS}}',digital_menu).replace('{{DIGITAL_CLASS}}',' current' if active.startswith('digital') else '').replace('{{DIGITAL_ARIA}}',' aria-current="page"' if active=='digital' else '')
         s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if is_academy else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
+    s=s.replace('https://malba-pmc.com/#consultoria','consultoria/')
     s=s.replace('{{PUBLICATIONS_CLASS}}',' current' if active=='publications' else '').replace('{{PUBLICATIONS_ARIA}}',' aria-current="page"' if active=='publications' else '')
     def resolve(match):
         attr, url = match.group(1), match.group(2)
@@ -276,6 +279,7 @@ def render_outputs(data, home=None, preview=False):
     outputs.update({p['slug']+'/index.html':(program_page(p,programs) if preview else unavailable_program(p,programs)) for p in data['programs'] if p.get('visibility')=='hidden'})
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',programs),home,flags=re.S)
+    home=home.replace('https://malba-pmc.com/#consultoria','consultoria/')
     home=home.replace('href="https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/"','href="publicaciones/#comprar-libro"').replace('href="https://malba-pmc.com/libro/"','href="publicaciones/"')
     home=home.replace('href="https://malba-pmc.com/libro/">Ver publicaciones','href="publicaciones/">Ver publicaciones')
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
@@ -288,6 +292,8 @@ def render_outputs(data, home=None, preview=False):
     outputs.update(render_publications(content(data),programs))
     from build_solutions import render_solutions
     outputs.update(render_solutions(programs,data.get('digitalCards')))
+    from build_consulting import render_consulting
+    outputs.update(render_consulting(programs))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
     urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html') and name not in hidden]
     outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{slug}</loc></url>\n' for slug in urls)+'</urlset>\n'

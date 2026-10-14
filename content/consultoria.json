@@ -1,0 +1,151 @@
+{
+  "title": "Consultoría para dirigir proyectos con mayor claridad.",
+  "description": "Experiencia aplicada a proyectos de transmisión eléctrica. Te acompañamos en la gestión del proyecto y sus riesgos para conectar la planificación con mejores decisiones.",
+  "contactUrl": "https://wa.me/51932563293",
+  "services": [
+    {
+      "id": "projects",
+      "slug": "consultoria-en-gestion-de-proyectos-de-transmision-electrica",
+      "title": "Consultoría en gestión de proyectos de transmisión eléctrica",
+      "name": "Gestión de proyectos",
+      "headline": "Gestiona tus proyectos con una visión integral.",
+      "description": "Integra planificación, control y estrategia para dirigir proyectos de transmisión eléctrica con mayor claridad y anticipar desviaciones en costo y plazo.",
+      "image": "assets/banner-transmision-1672.webp",
+      "imageSmall": "assets/banner-transmision-960.webp",
+      "imageAlt": "Líneas de transmisión eléctrica en un entorno de alta montaña",
+      "introTitle": "Conecta la estrategia con la ejecución.",
+      "intro": "Acompañamos proyectos de construcción, ampliación y reconfiguración de líneas y subestaciones. Integramos alcance, cronograma, costos, contratos y conocimiento para fortalecer la gestión en cada etapa.",
+      "highlights": [
+        "Planificación y control",
+        "Contratos y gobernanza",
+        "Aprendizaje organizacional"
+      ],
+      "benefits": [
+        "Mayor visibilidad del avance y las desviaciones.",
+        "Mejor coordinación entre ingeniería, construcción y contratos.",
+        "Información organizada para decidir con oportunidad."
+      ],
+      "when": [
+        "Tu proyecto reúne alta complejidad técnica y múltiples contratos.",
+        "Los desvíos de costo o plazo se repiten y necesitas identificar sus causas.",
+        "Tu organización necesita procesos y reportes de gestión consistentes."
+      ],
+      "services": [
+        {
+          "title": "Planificación y control de proyectos",
+          "summary": "Conecta alcance, cronograma, costos y recursos.",
+          "description": "Establecemos líneas base y herramientas de seguimiento para evaluar la ejecución y reconocer desviaciones. Integramos cronogramas valorizados para apoyar las decisiones en cada etapa.",
+          "deliverable": "Líneas base, cronograma valorizado y herramientas de control."
+        },
+        {
+          "title": "Estrategia de contrataciones y diseño de contratos",
+          "summary": "Alinea contratos, responsabilidades y riesgos.",
+          "description": "Definimos estrategias de contratación de bienes y servicios con una asignación de riesgos coherente con el proyecto. Estructuramos criterios para reducir conflictos y mejorar la coordinación contractual.",
+          "deliverable": "Estrategia de contratación y criterios para estructurar los contratos."
+        },
+        {
+          "title": "Lecciones aprendidas",
+          "summary": "Convierte la experiencia en conocimiento reutilizable.",
+          "description": "Capturamos y organizamos aprendizajes de los proyectos para apoyar la mejora continua y evitar la repetición de errores. Conectamos ese conocimiento con las necesidades de futuros equipos.",
+          "deliverable": "Lecciones estructuradas y criterios para su aplicación."
+        },
+        {
+          "title": "Acompañamiento en proyectos",
+          "summary": "Cuenta con soporte para decisiones críticas.",
+          "description": "Aportamos soporte experto en situaciones específicas del proyecto, evaluando alternativas y riesgos pendientes de gestión para mantener el foco en los objetivos.",
+          "deliverable": "Recomendaciones de gestión adaptadas a la situación del proyecto."
+        },
+        {
+          "title": "Oficinas de gestión de proyectos (PMO)",
+          "summary": "Fortalece procesos, gobernanza y decisiones con datos.",
+          "description": "Evaluamos la madurez de gestión y diseñamos o implementamos una PMO adaptada a la organización. Articulamos procesos, herramientas y reportes con roles y mecanismos de seguimiento claros.",
+          "deliverable": "Evaluación de madurez, diseño de PMO y lineamientos de implementación."
+        },
+        {
+          "title": "Diseño de la planificación",
+          "summary": "Ordena fases, hitos, entregables y restricciones.",
+          "description": "Desarrollamos una planificación integral considerando recursos, dependencias y rutas críticas. La conectamos con una base de seguimiento para controlar la ejecución.",
+          "deliverable": "Planificación integrada del proyecto y sus hitos de control."
+        },
+        {
+          "title": "Análisis de causas raíz",
+          "summary": "Entiende el origen de los problemas de ejecución.",
+          "description": "Analizamos desviaciones, retrasos y sobrecostos para distinguir sus causas y definir acciones correctivas orientadas a prevenir su recurrencia.",
+          "deliverable": "Análisis de causas y recomendaciones de acciones correctivas."
+        }
+      ],
+      "outcomeTitle": "Más claridad para dirigir. Más criterio para decidir.",
+      "outcomeDescription": "Buscamos fortalecer el control y la coordinación del proyecto. El alcance del acompañamiento se define según sus necesidades y nivel de complejidad.",
+      "sourceUrl": "https://malba-pmc.com/consultoria-en-gestion-de-proyectos-de-transmision-electrica/"
+    },
+    {
+      "id": "risks",
+      "slug": "consultoria-en-gestion-de-riesgos-de-proyectos-de-transmision-electrica",
+      "title": "Consultoría en gestión de riesgos",
+      "name": "Gestión de riesgos",
+      "headline": "Anticipa escenarios. Decide con más información.",
+      "description": "Identifica, analiza y gestiona los riesgos de tus proyectos de transmisión eléctrica con un enfoque estructurado durante todo su ciclo de vida.",
+      "image": "assets/programs/riesgos-1672.webp",
+      "imageSmall": "assets/programs/riesgos-960.webp",
+      "imageAlt": "Profesionales analizando la planificación y los riesgos de un proyecto",
+      "introTitle": "Haz del riesgo una parte de tus decisiones.",
+      "intro": "Integramos la gestión de riesgos en la dirección del proyecto para mejorar la previsibilidad. Diferenciamos causas y consecuencias, priorizamos la exposición y diseñamos respuestas con responsables y seguimiento.",
+      "highlights": [
+        "Identificación y valoración",
+        "Análisis cuantitativo",
+        "Respuesta y seguimiento"
+      ],
+      "benefits": [
+        "Visión priorizada de la exposición del proyecto.",
+        "Respuestas con acciones y responsables definidos.",
+        "Seguimiento de los cambios en el perfil de riesgos."
+      ],
+      "when": [
+        "Necesitas identificar y priorizar los riesgos de un proyecto.",
+        "Debes evaluar contingencias de costo o plazo.",
+        "Requieres revisar riesgos de licitación, contratos o ejecución."
+      ],
+      "services": [
+        {
+          "title": "Identificación y valoración de riesgos",
+          "summary": "Reconoce qué puede afectar los objetivos.",
+          "description": "Estructuramos los riesgos por categorías, diferenciando sus causas y consecuencias. Valoramos probabilidad e impacto en costo y plazo para priorizar la atención del equipo.",
+          "deliverable": "Registro priorizado de riesgos y mapa de calor."
+        },
+        {
+          "title": "Diseño de planes de respuesta",
+          "summary": "Transforma el análisis en acciones concretas.",
+          "description": "Definimos acciones, responsables y recursos o reservas de contingencia. Revisamos controles existentes y nuevas medidas para fortalecer la respuesta del proyecto.",
+          "deliverable": "Planes de respuesta con acciones y responsables."
+        },
+        {
+          "title": "Estimación de contingencias del proyecto",
+          "summary": "Evalúa incertidumbre en costo y plazo.",
+          "description": "Aplicamos análisis cuantitativos, incluidas simulaciones Monte Carlo, para estimar contingencias. Modelamos la exposición sobre el caso de negocio, el cronograma o el presupuesto de inversión (CAPEX), según el alcance acordado.",
+          "deliverable": "Análisis cuantitativo y estimación de reservas de contingencia."
+        },
+        {
+          "title": "Acompañamiento en la gestión de riesgos",
+          "summary": "Profundiza el análisis cuando el proyecto lo necesita.",
+          "description": "Apoyamos la evaluación de riesgos específicos con herramientas y metodologías adaptadas al contexto. Mejoramos la organización de la información para sustentar decisiones.",
+          "deliverable": "Análisis y recomendaciones sobre riesgos específicos."
+        },
+        {
+          "title": "Monitoreo y actualización de riesgos",
+          "summary": "Mantén vigente el perfil de exposición.",
+          "description": "Reevaluamos riesgos críticos y verificamos la efectividad de las respuestas. Revisamos cambios en probabilidad e impacto para mantener una visión actualizada durante el ciclo de vida.",
+          "deliverable": "Perfil de riesgos actualizado y seguimiento de las respuestas."
+        },
+        {
+          "title": "Riesgos en procesos de licitación",
+          "summary": "Considera los riesgos desde los pliegos y contratos.",
+          "description": "Identificamos y valoramos riesgos en la documentación de licitación y contratación. Proponemos planes de respuesta y adecuaciones contractuales para mejorar su asignación y reducir conflictos en ejecución.",
+          "deliverable": "Perfil de riesgos de la licitación y recomendaciones contractuales."
+        }
+      ],
+      "outcomeTitle": "Decisiones que consideran la incertidumbre.",
+      "outcomeDescription": "La gestión de riesgos permite reconocer escenarios y priorizar respuestas. Su aplicación se adapta a la información disponible y a los objetivos del proyecto.",
+      "sourceUrl": "https://malba-pmc.com/consultoria-en-gestion-de-riesgos-de-proyectos-de-transmision-electrica/"
+    }
+  ]
+}

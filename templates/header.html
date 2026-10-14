@@ -24,9 +24,11 @@
         >
           <div class="nav-links">
             <a class="nav-link{{HOME_CLASS}}" href="./"{{HOME_ARIA}}>Inicio</a>
-            <a class="nav-link" href="https://malba-pmc.com/#consultoria"
-              >Consultoría</a
-            >
+            <div class="nav-academia nav-consulting">
+              <a class="nav-link{{CONSULTING_CLASS}}" href="consultoria/"{{CONSULTING_ARIA}}>Consultoría</a>
+              <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="consulting-menu" aria-label="Mostrar especialidades de consultoría"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
+              <div class="academy-menu" id="consulting-menu" hidden>{{CONSULTING_LINKS}}</div>
+            </div>
             <div class="nav-academia">
               <a class="nav-link{{ACADEMY_CLASS}}" href="academia/"{{ACADEMY_ARIA}}>Academia</a>
               <button class="academy-menu-toggle" type="button" aria-expanded="false" aria-controls="academy-menu" aria-label="Mostrar programas de Academia"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5"/></svg></button>
