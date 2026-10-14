@@ -203,6 +203,26 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertEqual(self.call('/api/publish',body)[0],400)
         self.assertEqual(self.call(detail_path)[1],original_detail)
 
+    def test_global_contact_form_and_header_actions(self):
+        from html.parser import HTMLParser
+        class Header(HTMLParser):
+            def __init__(self):super().__init__();self.contact_forms=0;self.classroom_icons=0;self.classroom=False;self.fields=[]
+            def handle_starttag(self,tag,attrs):
+                attrs=dict(attrs)
+                if tag=='a' and attrs.get('class')=='classroom':self.classroom=True
+                if tag=='svg' and self.classroom:self.classroom_icons+=1
+                if tag=='form' and attrs.get('id')=='quick-contact-form':self.contact_forms+=1
+                if attrs.get('name','').startswith('contact_'):self.fields.append(attrs['name'])
+            def handle_endtag(self,tag):
+                if tag=='a':self.classroom=False
+        for route in ['/','/academia/','/publicaciones/','/consultoria/','/quienes-somos/','/soluciones-digitales/malba-risk/']:
+            page=self.call(route)[1];parser=Header();parser.feed(page)
+            self.assertEqual(parser.contact_forms,1,route);self.assertEqual(parser.classroom_icons,0,route)
+            self.assertEqual(parser.fields,['contact_name','contact_email','contact_message'],route)
+            self.assertNotIn('{{CONTACT_URL}}',page);self.assertIn('data-contact-url="https://wa.me/51932563293"',page)
+            header=page.split('</header>')[0]
+            self.assertNotIn('Solicitar información',header);self.assertEqual(header.count('data-dialog="contact-dialog"'),1)
+
     def test_about_navigation_preview_export_and_route_reservation(self):
         self.login();current=self.call('/api/content')[1];body={'data':current['data'],'revision':current['revision']}
         status,page=self.call('/quienes-somos/')[:2];self.assertEqual(status,200)

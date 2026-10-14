@@ -61,3 +61,31 @@ document.querySelectorAll("dialog").forEach((dialog) => {
     if (!document.querySelector("dialog[open]")) dialogOpener?.focus();
   });
 });
+
+// Three-field contact modal, shared by all contact entry points.
+const quickContact = document.querySelector('#quick-contact-form');
+if (quickContact) {
+  quickContact.querySelector('[type="submit"]').disabled = false;
+  quickContact.addEventListener('submit', event => {
+    event.preventDefault();
+    for (const input of quickContact.querySelectorAll('[required]')) {
+      if (!input.value.trim()) {
+        input.setCustomValidity('Completa este campo.');
+        input.addEventListener('input', () => input.setCustomValidity(''), {once: true});
+      }
+    }
+    if (!quickContact.reportValidity()) return;
+    const destination = new URL(quickContact.dataset.contactUrl);
+    if (destination.protocol !== 'https:' || destination.hostname !== 'wa.me') return;
+    const fields = new FormData(quickContact);
+    destination.searchParams.set('text', [
+      'Hola, MALBA PMC. Quisiera información.',
+      'Nombre: ' + fields.get('contact_name').trim(),
+      'Correo: ' + fields.get('contact_email').trim(),
+      'Consulta: ' + fields.get('contact_message').trim()
+    ].join('\n'));
+    const popup = window.open(destination.href, '_blank');
+    if (popup) popup.opener = null;
+    else window.location.assign(destination.href);
+  });
+}

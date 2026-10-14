@@ -51,31 +51,16 @@
             <a class="nav-link" href="../../quienes-somos/"
               >Nosotros</a
             >
-            <button class="nav-link" type="button" data-dialog="contact-dialog">
-              Contacto
-            </button>
           </div>
           <div class="nav-actions">
             <button
               class="button button-purple header-cta"
               type="button"
-              data-dialog="contact-dialog"
+              data-dialog="contact-dialog" aria-haspopup="dialog" aria-controls="contact-dialog"
             >
-              Solicitar información
+              Contacto
             </button>
             <a class="classroom" href="https://malba-pmc.com/escritorio">
-              <svg
-                width="17"
-                height="17"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                aria-hidden="true"
-              >
-                <rect x="3" y="4" width="18" height="13" rx="2" />
-                <path d="M8 21h8M12 17v4m-5-10 5-3 5 3-5 3-5-3Z" />
-              </svg>
               Aula virtual
             </a>
           </div>
@@ -101,31 +86,18 @@
         </div>
         <div class="footer-bottom"><p>© <span id="footer-year">2026</span> MALBA PMC. Todos los derechos reservados.</p><a href="#contenido">Volver al inicio <span aria-hidden="true">↑</span></a></div>
       </div>
-    </footer><dialog id="contact-dialog" aria-labelledby="contact-title">
-      <div class="dialog-heading">
-        <h2 id="contact-title">¿Cómo podemos ayudarte?</h2>
-        <button type="button" class="dialog-close" aria-label="Cerrar">
-          ×
-        </button>
-      </div>
-      <p>Elige lo que necesitas conocer de MALBA PMC.</p>
-      <div class="dialog-links">
-        <a href="../../academia/"
-          ><strong>Formación ejecutiva</strong
-          ><span
-            >Conoce los programas de Academia MALBA
-            <b aria-hidden="true">↗</b></span
-          ></a
-        >
-        <a href="../../consultoria/"
-          ><strong>Consultoría para tu organización</strong
-          ><span
-            >Explora nuestros servicios de consultoría
-            <b aria-hidden="true">↗</b></span
-          ></a
-        >
-      </div>
-    </dialog>
+    </footer><dialog id="contact-dialog" aria-labelledby="contact-title" aria-describedby="contact-description">
+  <div class="dialog-heading"><h2 id="contact-title">Conversemos</h2><button type="button" class="dialog-close" aria-label="Cerrar contacto">×</button></div>
+  <p id="contact-description">Cuéntanos qué necesitas. Completa estos tres campos para iniciar la conversación.</p>
+  <form id="quick-contact-form" method="post" data-contact-url="https://wa.me/51932563293">
+    <label for="quick-contact-name">Nombre completo</label><input id="quick-contact-name" name="contact_name" autocomplete="name" required maxlength="120" placeholder="Tu nombre y apellidos" autofocus>
+    <label for="quick-contact-email">Correo electrónico</label><input id="quick-contact-email" name="contact_email" type="email" autocomplete="email" required maxlength="254" placeholder="nombre@correo.com">
+    <label for="quick-contact-message">¿Cómo podemos ayudarte?</label><textarea id="quick-contact-message" name="contact_message" rows="3" required maxlength="1500" placeholder="Escribe brevemente tu consulta."></textarea>
+    <button class="button button-purple" type="submit" disabled>Continuar por WhatsApp</button>
+    <p class="quick-contact-note">Se abrirá WhatsApp con tu mensaje listo para enviar.</p>
+    <noscript><p>También puedes <a href="https://wa.me/51932563293" target="_blank" rel="noopener noreferrer">escribirnos directamente por WhatsApp</a>.</p></noscript>
+  </form>
+</dialog>
 <dialog id="publications-dialog" aria-labelledby="publications-title">
       <div class="dialog-heading">
         <h2 id="publications-title">Publicaciones</h2>

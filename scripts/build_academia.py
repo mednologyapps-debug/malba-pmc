@@ -123,6 +123,9 @@ def shared(template, prefix, active, programs):
         is_academy=active in ['academy','upcoming']+[p['id'] for p in programs]
         s=s.replace('{{SOLUTION_LINKS}}',digital_menu).replace('{{DIGITAL_CLASS}}',' current' if active.startswith('digital') else '').replace('{{DIGITAL_ARIA}}',' aria-current="page"' if active=='digital' else '')
         s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if is_academy else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
+    if '{{CONTACT_URL}}' in s:
+        contact_url=json.loads((ROOT/'content/solutions.json').read_text(encoding='utf-8'))['contactUrl']
+        s=s.replace('{{CONTACT_URL}}',esc(safe_url(contact_url)))
     s=s.replace('{{ABOUT_CLASS}}',' current' if active=='about' else '').replace('{{ABOUT_ARIA}}',' aria-current="page"' if active=='about' else '')
     s=s.replace('https://malba-pmc.com/quienes-somos','quienes-somos/')
     s=s.replace('https://malba-pmc.com/#consultoria','consultoria/')
@@ -285,6 +288,8 @@ def render_outputs(data, home=None, preview=False):
     home=home.replace('href="https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/"','href="publicaciones/#comprar-libro"').replace('href="https://malba-pmc.com/libro/"','href="publicaciones/"')
     home=home.replace('href="https://malba-pmc.com/libro/">Ver publicaciones','href="publicaciones/">Ver publicaciones')
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
+    contact_dialog=re.search(r'<dialog id="contact-dialog".*?</dialog>',shared('dialogs.html','','home',programs),flags=re.S).group(0)
+    home=re.sub(r'<dialog id="contact-dialog".*?</dialog>',lambda _:contact_dialog,home,flags=re.S)
     inactive={p['slug']+'/' for p in data['programs'] if p.get('visibility','public')!='public'}
     home=re.sub(r'<article class="program-card">.*?</article>',lambda m:'' if any(f'href="{slug}"' in m[0] for slug in inactive) else m[0],home,flags=re.S)
     if not re.search(r'<article class="program-card">',home):
