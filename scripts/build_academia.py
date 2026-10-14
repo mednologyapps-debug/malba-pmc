@@ -117,7 +117,7 @@ def shared(template, prefix, active, programs):
     if template == 'header.html':
         menu = '<div class="academy-menu-heading"><div><strong>Academia MALBA</strong><p>Elige tu próxima especialización.</p></div><a href="academia/">Ver todos los programas <span aria-hidden="true">→</span></a></div><div class="academy-menu-programs">'
         menu += ''.join(f'<a class="academy-menu-program" href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p.get("cardDescription",p["description"]))}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in programs)
-        menu += '</div><a class="academy-classroom-link" href="https://malba-pmc.com/escritorio">Aula virtual</a><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
+        menu += '</div><a class="academy-classroom-link" href="aula-virtual/">Aula virtual</a><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
 
         from build_consulting import menu as consulting_menu
         s=s.replace('{{CONSULTING_LINKS}}',consulting_menu(active,(SITE_CONTENT.get() or {}).get("consulting"))).replace('{{CONSULTING_CLASS}}',' current' if active.startswith('consulting') else '').replace('{{CONSULTING_ARIA}}',' aria-current="page"' if active=='consulting' else '')
@@ -186,7 +186,7 @@ def catalog_controls():
 def academy(data):
     a, ps, prefix = data['academy'], data['programs'], '../'
     forthcoming = data['upcoming']
-    main = hero(a,prefix,actions='<a class="button button-white academy-classroom-cta" href="https://malba-pmc.com/escritorio">Aula virtual</a>')
+    main = hero(a,prefix,actions='<a class="button button-white academy-classroom-cta" href="../aula-virtual/">Aula virtual</a>')
     main += f'<section class="academy-catalog section-container" id="programas" aria-labelledby="programs-title"><div class="academy-catalog-heading"><h2 id="programs-title">{esc(a["programsTitle"])}</h2><p>{esc(a["programsText"])}</p></div><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'
     main += ''.join(card(p,prefix) for p in ps)
     main += f'''<article class="academy-program-card academy-upcoming-card"><div class="academy-card-media"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}</a><span class="academy-card-status">Nuevas convocatorias</span>{image_badges(['Fechas por confirmar'])}</div><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming.get('cardDescription',forthcoming['description']))}</p><div class="academy-card-bottom"><div class="academy-card-price"><span>Tu próxima especialización</span></div><a class="button button-purple academy-card-button" href="proximos/">Explorar programas <span class="academy-button-arrow" aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
@@ -296,6 +296,7 @@ def _render_outputs(data, home=None, preview=False):
     outputs.update({p['slug']+'/index.html':(program_page(p,programs) if preview else unavailable_program(p,programs)) for p in data['programs'] if p.get('visibility')=='hidden'})
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',programs),home,flags=re.S)
+    home=home.replace('https://malba-pmc.com/escritorio','aula-virtual/')
     home=home.replace('https://malba-pmc.com/quienes-somos','quienes-somos/').replace('https://malba-pmc.com/#consultoria','consultoria/')
     home=home.replace('href="https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/"','href="publicaciones/#comprar-libro"').replace('href="https://malba-pmc.com/libro/"','href="publicaciones/"')
     home=home.replace('href="https://malba-pmc.com/libro/">Ver publicaciones','href="publicaciones/">Ver publicaciones')

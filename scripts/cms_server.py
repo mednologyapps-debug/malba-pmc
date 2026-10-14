@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """MALBA CMS: authenticated drafts, previews and atomic static HTML publication.
-Python 3.10+, stdlib only. Local: py scripts/cms_server.py
+Python 3.10+, ReportLab for LMS certificate PDFs. Local: py scripts/cms_server.py
 Production requires a Python-capable server and an HTTPS reverse proxy.
 """
 import argparse, base64, collections, getpass, hashlib, hmac, io, json, mimetypes
@@ -13,6 +13,8 @@ import build_academia as renderer
 import build_publications as editorial
 import build_solutions as digital
 import site_content
+import lms
+import sys
 
 ROOT = renderer.ROOT
 STATE = ROOT / '.cms-private'
@@ -21,7 +23,7 @@ ATTEMPTS = collections.defaultdict(collections.deque)
 MAX_BODY = 29 * 1024 * 1024
 SESSION_IDLE = 1800
 SESSION_MAX = 28800
-RESERVED = {'quienes-somos','consultoria','consultoria-en-gestion-de-proyectos-de-transmision-electrica','consultoria-en-gestion-de-riesgos-de-proyectos-de-transmision-electrica','academia','publicaciones','soluciones-digitales','dashboard','assets','content','scripts','tests','cms-preview','api','docs'}
+RESERVED = {'aula-virtual','verificar-certificado','quienes-somos','consultoria','consultoria-en-gestion-de-proyectos-de-transmision-electrica','consultoria-en-gestion-de-riesgos-de-proyectos-de-transmision-electrica','academia','publicaciones','soluciones-digitales','dashboard','assets','content','scripts','tests','cms-preview','api','docs'}
 
 @contextmanager
 def connect():
@@ -48,6 +50,7 @@ def initialize(username=None, password=None):
         CREATE TABLE IF NOT EXISTS publications (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, outputs TEXT NOT NULL, username TEXT NOT NULL, created REAL NOT NULL);
         CREATE TABLE IF NOT EXISTS previews (id TEXT PRIMARY KEY, outputs TEXT NOT NULL, username TEXT NOT NULL, created REAL NOT NULL);
         ''')
+        lms.initialize(db)
         if not db.execute('SELECT 1 FROM draft').fetchone():
             data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
             data['publications']=editorial.defaults()
@@ -169,11 +172,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Referrer-Policy','same-origin')
         self.send_header('X-Frame-Options','SAMEORIGIN')
         if mime.startswith(('text/html','application/xml')):self.send_header('Cache-Control','no-store')
-        if self.path.startswith(('/api/','/dashboard','/cms-preview')):
+        if self.path.startswith(('/api/','/dashboard','/cms-preview','/aula-virtual','/verificar-certificado')):
             self.send_header('Cache-Control','no-store')
             self.send_header('X-Robots-Tag','noindex, nofollow')
         if self.path.startswith('/dashboard'):
             self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob:; connect-src 'self'; frame-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'")
+        if self.path.startswith(('/aula-virtual','/verificar-certificado')):
+            self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https:; media-src 'self' https:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'")
         for k,v in (headers or {}).items():self.send_header(k,v)
         self.end_headers()
         if self.command!='HEAD':self.wfile.write(body)
@@ -205,6 +210,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):self.do_GET()
     def do_GET(self):
         path=unquote(urlsplit(self.path).path)
+        if lms.handle(self,sys.modules[__name__],'GET',path):return
         if path=='/api/session':
             row=self.session();self.response({'authenticated':bool(row),'username':row['username'] if row else None,'csrf':row['csrf'] if row else None});return
         if path in ('/api/content','/api/history','/api/export'):
@@ -221,7 +227,7 @@ class Handler(BaseHTTPRequestHandler):
                 outputs=json.loads(pub['outputs'])
                 for name,body in outputs.items():z.writestr(name,body)
                 z.writestr('content/academia.json',dump(renderer.public_content(json.loads(pub['data']))))
-                for name in ['nosotros.css','consultoria.css','consultoria.js','publicaciones.js','publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
+                for name in ['aula-virtual/index.html','aula-virtual/aula.css','aula-virtual/aula.js','verificar-certificado/index.html','verificar-certificado/verify.js','nosotros.css','consultoria.css','consultoria.js','publicaciones.js','publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt']:
                     z.write(ROOT/name,name)
                 for f in (ROOT/'assets').rglob('*'):
                     if f.is_file():z.write(f,str(f.relative_to(ROOT)))
@@ -245,7 +251,7 @@ class Handler(BaseHTTPRequestHandler):
         if outputs and filename in outputs:
             self.response(outputs[filename],mime='application/xml; charset=utf-8' if filename.endswith('.xml') else 'text/html; charset=utf-8');return
         if path=='/dashboard':self.response('',302,'text/plain',{'Location':'/dashboard/'});return
-        allowed=filename in ['nosotros.css','consultoria.css','consultoria.js','publicaciones.js','publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js'] or filename.startswith('assets/')
+        allowed=filename in ['nosotros.css','consultoria.css','consultoria.js','publicaciones.js','publicaciones.css','styles.css','home-sections.css','home-sections.js','academia.css','academia.js','soluciones.css','soluciones.js','app.js','robots.txt'] or filename in ['dashboard/index.html','dashboard/cms.css','dashboard/cms.js','dashboard/lms-admin.js','dashboard/lms.css','aula-virtual/aula.css','aula-virtual/aula.js','verificar-certificado/verify.js'] or filename.startswith('assets/')
         target=(ROOT/filename).resolve()
         if not allowed or not target.is_relative_to(ROOT) or not target.is_file() or filename.startswith('assets/') and not target.is_relative_to((ROOT/'assets').resolve()):self.response('Página no encontrada.',404,'text/plain');return
         mime=mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
@@ -258,6 +264,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Sec-Fetch-Site')=='cross-site':self.response({'error':'Origen no permitido.'},403);return
         path=urlsplit(self.path).path
         try:
+            if lms.handle(self,sys.modules[__name__],'POST',path):return
             body=self.body()
             if not isinstance(body,dict):raise ValueError('Solicitud inválida.')
             if path=='/api/login':
@@ -370,6 +377,7 @@ def main():
     parser.add_argument('--state-dir',type=Path)
     parser.add_argument('--secure-cookie',action='store_true',help='Obligatorio detrás de HTTPS en producción')
     parser.add_argument('--reset-admin',action='store_true')
+    parser.add_argument('--demo-lms',action='store_true',help='Crear un curso y alumno de demostración, solo en localhost')
     args=parser.parse_args()
     global STATE
     if args.state_dir:STATE=args.state_dir.resolve()
@@ -382,6 +390,11 @@ def main():
         if password!=getpass.getpass('Repite la contraseña: '):raise SystemExit('Las contraseñas no coinciden.')
         try:initialize(username,password)
         except ValueError as e:raise SystemExit(str(e))
+    if args.demo_lms:
+        if args.host not in ('127.0.0.1','localhost'):raise SystemExit('La demostración solo puede crearse en localhost.')
+        temporary=lms.seed_demo(sys.modules[__name__])
+        if temporary:print('Alumno de prueba: alumno.demo@malba.test\nContraseña temporal: '+temporary+'\nCámbiala en el primer ingreso. No se enviaron correos.')
+        else:print('El alumno de demostración ya existe. Puedes restablecer su contraseña desde el panel.')
     server=ThreadingHTTPServer((args.host,args.port),Handler);server.secure_cookie=args.secure_cookie
     print(f'Panel: http://localhost:{args.port}/dashboard/\nWeb de prueba: http://localhost:{args.port}/\nCtrl+C para detener.')
     try:server.serve_forever()

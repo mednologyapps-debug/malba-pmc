@@ -1,6 +1,6 @@
 # CMS de MALBA PMC
 
-Panel funcional para Academia, sus programas, Publicaciones, tarjetas de Soluciones digitales, Nosotros y Consultoría, con el diseño MALBA y Outfit local. Backend Python 3.10 o superior, sin dependencias de producción externas. Base SQLite privada; publicación del HTML en una transacción, sin consultas del navegador al CMS al visitar Academia.
+Panel funcional para Academia, sus programas, Publicaciones, tarjetas de Soluciones digitales, Nosotros y Consultoría, con el diseño MALBA y Outfit local. Backend Python 3.10 o superior, ReportLab para certificados PDF del LMS. Base SQLite privada; publicación del HTML en una transacción, sin consultas del navegador al CMS al visitar Academia.
 
 ## Probar en Windows / VS Code
 
@@ -122,3 +122,7 @@ En el menú lateral, **Nosotros** abre accesos separados a Banner, Quiénes somo
 Ambas áreas usan Guardar borrador, Vista previa, Publicar e Historial. La vista previa abre la sección seleccionada; no cambia la web pública. Al actualizar una instalación existente se incorporan las nuevas áreas sin reiniciar programas, cuentas ni revisiones, y sin publicar otras ediciones privadas. Las exportaciones incluyen sus contenidos e imágenes.
 
 Aula virtual aparece dentro del desplegable de Academia y en su portada; Contacto es la única acción destacada del encabezado. El menú móvil distribuye las opciones en filas completas y los desplegables en tarjetas compactas.
+
+## Aula virtual
+
+El menú **Aula virtual** incorpora un LMS inicial con cursos, alumnos, matrículas, materiales, avance y certificados. Tiene borradores/publicación propios y no modifica los borradores comerciales. Instala primero `py -m pip install -r requirements.txt` para los certificados PDF. Consulta [LMS.md](LMS.md) para la prueba local, administración, archivos privados y alcance.

@@ -1,0 +1,110 @@
+"""LMS integration: real HTTP, disposable DB, private resources and certificate eligibility."""
+import copy,http.client,io,json,sys,unittest
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+import cms_server as cms
+import lms
+import test_cms as cms_tests
+
+class LMSIntegrationTests(unittest.TestCase):
+    setUp=cms_tests.CMSIntegrationTests.setUp
+    tearDown=cms_tests.CMSIntegrationTests.tearDown
+    call=cms_tests.CMSIntegrationTests.call
+    login=cms_tests.CMSIntegrationTests.login
+    def fixture(self):
+        self.login();self.admin=(self.cookie,self.csrf);password=lms.seed_demo(cms)
+        with cms.connect() as db:
+            self.student=dict(db.execute('SELECT * FROM lms_students').fetchone());self.course=json.loads(db.execute('SELECT published FROM lms_courses').fetchone()[0])
+        self.cookie='';self.csrf=''
+        status,_,headers=self.call('/api/lms/login',{'email':'ALUMNO.DEMO@MALBA.TEST','password':password});self.assertEqual(status,200)
+        self.cookie=headers['Set-Cookie'].split(';')[0];self.csrf=self.call('/api/lms/session')[1]['csrf']
+        self.assertEqual(self.call('/api/lms/me')[0],403)
+        status,result,_=self.call('/api/lms/password',{'currentPassword':password,'password':'My-personal-password-2026!'});self.assertEqual(status,200,result)
+        self.learner=(self.cookie,self.csrf)
+    def as_admin(self):self.cookie,self.csrf=self.admin
+    def as_student(self):self.cookie,self.csrf=self.learner
+    def raw(self,path,body=None,headers=None):
+        c=http.client.HTTPConnection('127.0.0.1',self.server.server_port)
+        request_headers={'Cookie':self.cookie,'X-CSRF-Token':self.csrf,**(headers or {})}
+        c.request('GET' if body is None else 'POST',path,body,request_headers);r=c.getresponse();data=r.read();result=(r.status,data,dict(r.getheaders()));c.close();return result
+    def complete(self):
+        result=None
+        for lesson in lms.lessons(self.course):
+            status,result,_=self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':lesson['id'],'completed':True});self.assertEqual(status,200,result)
+        return result
+    def test_access_progress_pdf_verification_and_immutable_certificate(self):
+        self.assertEqual(self.call('/api/lms/me')[0],401);self.fixture()
+        first=lms.lessons(self.course)[0]
+        self.assertEqual(self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':first['id'],'completed':True},csrf=False)[0],403)
+        first_result=self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':first['id'],'completed':True})[1]
+        self.assertEqual(first_result['progress']['percent'],50);self.assertIsNone(first_result['certificate'])
+        completed=self.complete();self.assertEqual(completed['progress']['percent'],100);code=completed['certificate']['id']
+        self.assertEqual(self.complete()['certificate']['id'],code)
+        status,pdf,_=self.raw('/api/lms/certificate/'+code+'.pdf');self.assertEqual(status,200);self.assertTrue(pdf.startswith(b'%PDF-'))
+        from pypdf import PdfReader
+        content=PdfReader(io.BytesIO(pdf)).pages[0].extract_text();self.assertIn('Alumno de demostración',content);self.assertIn('Curso de demostración',content)
+        self.as_admin();records=self.call('/api/lms/admin')[1];course=records['courses'][0];course['draft']['title']='Curso con título actualizado'
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':course['draft'],'revision':course['revision'],'publish':True})[0],200)
+        self.as_student();_,after,_=self.raw('/api/lms/certificate/'+code+'.pdf');self.assertIn('Curso de demostración',PdfReader(io.BytesIO(after)).pages[0].extract_text())
+        self.cookie='';status,verified,_=self.call('/api/lms/verify?code='+code);self.assertEqual(status,200);self.assertNotIn('email',verified)
+        self.assertEqual(self.raw('/api/lms/certificate/'+code+'.pdf')[0],401)
+        self.as_admin();self.call('/api/lms/admin/certificate/revoke',{'id':code});self.assertEqual(self.call('/api/lms/verify?code='+code)[0],404)
+    def test_private_materials_drafts_range_and_enrollment_revocation(self):
+        self.fixture();self.as_admin();course=self.call('/api/lms/admin')[1]['courses'][0]
+        raw=b'%PDF-1.4\nPrivate lesson material\n%%EOF';headers={'X-Course-Id':self.course['id'],'X-File-Name':'Material.pdf','Content-Type':'application/octet-stream'}
+        status,result,_=self.raw('/api/lms/admin/upload',raw,headers);self.assertEqual(status,200,result);file=json.loads(result)
+        course['draft']['modules'][0]['lessons'][0]['resources'].append({'fileId':file['fileId'],'name':'Material privado','url':''})
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':course['draft'],'revision':course['revision']})[0],200)
+        self.as_student();fileurl='/api/lms/files/'+file['fileId'];self.assertEqual(self.raw(fileurl)[0],403)
+        self.assertFalse(self.call('/api/lms/me')[1]['courses'][0]['course']['modules'][0]['lessons'][0]['resources'])
+        self.as_admin();self.assertIn('Material privado',self.call('/api/lms/admin/preview?course='+self.course['id'])[1]['course']['modules'][0]['lessons'][0]['resources'][0]['name'])
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':course['draft'],'revision':course['revision'],'publish':True})[0],409)
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':course['draft'],'revision':course['revision']+1,'publish':True})[0],200)
+        self.as_student();status,download,h=self.raw(fileurl);self.assertEqual(status,200);self.assertEqual(download,raw);self.assertIn('no-store',h['Cache-Control'])
+        status,partial,h=self.raw(fileurl,headers={'Range':'bytes=0-4'});self.assertEqual(status,206);self.assertEqual(partial,b'%PDF-');self.assertEqual(h['Content-Range'],f'bytes 0-4/{len(raw)}')
+        self.assertEqual(self.raw(fileurl,headers={'Range':'bytes=999999-'})[0],416)
+        self.assertEqual(self.call('/api/lms/admin')[0],401)
+        self.as_admin();self.call('/api/lms/admin/enroll',{'studentId':self.student['id'],'courseId':self.course['id'],'active':False})
+        self.as_student();self.assertEqual(self.raw(fileurl)[0],403);self.assertEqual(self.call('/api/lms/me')[1]['courses'],[])
+        self.assertEqual(self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':lms.lessons(self.course)[0]['id'],'completed':True})[0],403)
+        self.cookie='';self.assertEqual(self.raw(fileurl)[0],401)
+    def test_student_isolation_expiry_and_temporal_password_reset(self):
+        self.fixture();self.as_admin();other=self.call('/api/lms/admin/student',{'name':'Otro alumno','email':'otro@example.com','password':'Other-password-2026!','active':True})[1]['id']
+        self.assertEqual(self.call('/api/lms/admin/student',{'name':'Duplicado','email':'OTRO@example.com','password':'Other-password-2026!'})[0],400)
+        self.call('/api/lms/admin/enroll',{'studentId':self.student['id'],'courseId':self.course['id'],'expires':'2000-01-01','active':True})
+        self.as_student();self.assertFalse(self.call('/api/lms/me')[1]['courses'])
+        self.as_admin();self.call('/api/lms/admin/enroll',{'studentId':self.student['id'],'courseId':self.course['id'],'active':True});self.as_student();code=self.complete()['certificate']['id']
+        self.cookie='';status,_,headers=self.call('/api/lms/login',{'email':'otro@example.com','password':'Other-password-2026!'});self.cookie=headers['Set-Cookie'].split(';')[0];self.csrf=self.call('/api/lms/session')[1]['csrf'];self.call('/api/lms/password',{'currentPassword':'Other-password-2026!','password':'Another-new-password-2026!'})
+        self.assertEqual(self.raw('/api/lms/certificate/'+code+'.pdf')[0],403)
+        self.assertEqual(self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':lms.lessons(self.course)[0]['id'],'completed':True})[0],403)
+        self.as_admin();self.call('/api/lms/admin/student',{'id':self.student['id'],'name':self.student['name'],'email':self.student['email'],'active':True,'password':'Reset-password-2026!'})
+        self.as_student();self.assertFalse(self.call('/api/lms/session')[1]['authenticated'])
+    def test_private_mp4_streaming_and_certificates_survive_course_expiry(self):
+        self.fixture();self.as_admin();record=self.call('/api/lms/admin')[1]['courses'][0]
+        data=b'\x00\x00\x00\x18ftypmp42'+b'\x00'*64
+        headers={'X-Course-Id':self.course['id'],'X-File-Name':'clase.mp4','Content-Type':'application/octet-stream'}
+        status,raw,_=self.raw('/api/lms/admin/upload',data,headers);self.assertEqual(status,200,raw);fid=json.loads(raw)['fileId']
+        record['draft']['modules'][0]['lessons'][0].update(type='video',videoFileId=fid)
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':record['draft'],'revision':record['revision'],'publish':True})[0],200)
+        self.as_student();status,chunk,h=self.raw('/api/lms/files/'+fid,headers={'Range':'bytes=-8'})
+        self.assertEqual(status,206);self.assertEqual(chunk,data[-8:]);self.assertEqual(h['Content-Type'],'video/mp4')
+        code=self.complete()['certificate']['id']
+        self.as_admin();self.call('/api/lms/admin/enroll',{'studentId':self.student['id'],'courseId':self.course['id'],'expires':'2000-01-01','active':True})
+        self.as_student();me=self.call('/api/lms/me')[1];self.assertFalse(me['courses']);self.assertEqual(me['certificates'][0]['id'],code)
+        self.assertEqual(self.raw('/api/lms/certificate/'+code+'.pdf')[0],200)
+        self.assertEqual(self.raw('/api/lms/files/'+fid)[0],403)
+
+    def test_validation_preview_publish_and_restart_preserve_learning_records(self):
+        self.fixture();self.as_admin();record=self.call('/api/lms/admin')[1]['courses'][0];draft=copy.deepcopy(record['draft']);draft['modules'][0]['lessons'][0].update(type='video',videoUrl='javascript:alert(1)')
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':draft,'revision':record['revision'],'publish':True})[0],400)
+        draft['modules'][0]['lessons'][0]['videoUrl']='';self.assertEqual(self.call('/api/lms/admin/course/save',{'course':draft,'revision':record['revision'],'publish':True})[0],400)
+        # Incomplete media can be saved privately while the published text remains accessible.
+        self.assertEqual(self.call('/api/lms/admin/course/save',{'course':draft,'revision':record['revision']})[0],200)
+        self.as_student();self.assertEqual(self.call('/api/lms/me')[1]['courses'][0]['course']['modules'][0]['lessons'][0]['type'],'text')
+        lid=lms.lessons(self.course)[0]['id'];self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':lid,'completed':True});cms.initialize()
+        self.assertEqual(self.call('/api/lms/me')[1]['courses'][0]['progress']['percent'],50)
+        self.assertEqual(self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':'made-up-lesson-id','completed':True})[0],400)
+        self.as_admin();status,pdf,_=self.raw('/api/lms/admin/certificate-preview?course='+self.course['id']);self.assertEqual(status,200);self.assertTrue(pdf.startswith(b'%PDF'))
+        self.assertEqual(self.call('/.cms-private/lms-files/anything.pdf')[0],404)
+
+if __name__=='__main__':unittest.main()

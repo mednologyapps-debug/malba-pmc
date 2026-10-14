@@ -1,0 +1,2 @@
+# PDF certificates; the website/CMS otherwise use Python's standard library.
+reportlab>=4.4.9,<5
