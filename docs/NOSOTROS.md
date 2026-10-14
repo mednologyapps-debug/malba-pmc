@@ -4,7 +4,9 @@ La página `/quienes-somos/` conserva la ruta del sitio anterior. Sigue la captu
 
 El contenido se encuentra en `content/nosotros.json` y lo renderiza `scripts/build_about.py`. La página se incorpora al build general, a la vista previa, a la exportación y al sitemap. Nosotros aparece activo en el menú; los enlaces anteriores del home, menú, pie y diálogos apuntan a la página local. Su ruta queda reservada frente a nuevos programas. La edición de Nosotros no forma parte del dashboard en esta entrega.
 
-Diseño: Outfit, colores MALBA, fotografías WebP locales con capas de color y una ilustración 3D ya existente, sin degradados. La foto real de Miguel Alba se presenta sin ampliarla por encima de su tamaño original; el archivo de origen publicado por MALBA conserva la misma resolución de 264 × 396 que el recurso local. En móvil se prioriza el texto del banner, las credenciales se ordenan en filas legibles y las tarjetas se convierten en una lista compacta.
+Diseño: Outfit, colores MALBA, fotografías WebP locales con capas de color, sin degradados. El banner mantiene libre el espacio derecho y no incorpora la torre 3D. El texto de apoyo de la sección de metodología se eliminó. El enlace del perfil es ahora un botón morado con texto blanco y sin flecha. Los accesos a Consultoría, Academia y Soluciones digitales tienen fotografías, fondos de marca y un destino claro; en móvil pasan a una composición compacta de imagen y texto.
+
+La foto real de Miguel Alba se presenta sin ampliarla por encima de su tamaño original; el archivo de origen publicado por MALBA conserva la misma resolución de 264 × 396 que el recurso local. En móvil se prioriza el texto del banner, las credenciales se ordenan en filas legibles y las tarjetas se convierten en una lista compacta.
 
 La solicitud permite elegir consultoría, academia o soluciones digitales. Se prepara un borrador de WhatsApp; el visitante debe enviarlo. El saludo se adapta al contexto de Nosotros y no clasifica una solicitud de formación como consultoría. No hay envíos automáticos ni registro de leads en un backend.
 
