@@ -91,7 +91,7 @@ class LMSIntegrationTests(unittest.TestCase):
         self.assertEqual(quiz['quiz']['lastAttempt']['score'],100)
         for q in quiz['quiz']['questions']:self.assertNotIn('correct',q);self.assertNotIn('explanation',q)
         materials=[r for l in lms.lessons(demo['course']) for r in l['resources']]
-        self.assertEqual(len(materials),4)
+        self.assertEqual(len(materials),5)
         for r in materials:
             status,content,_=self.raw('/api/lms/files/'+r['fileId']);self.assertEqual(status,200)
             if r['name'].endswith('.pdf'):self.assertTrue(content.startswith(b'%PDF-'))
@@ -113,6 +113,67 @@ class LMSIntegrationTests(unittest.TestCase):
             if lesson['type']!='quiz':self.call('/api/lms/progress',{'courseId':COURSE_ID,'lessonId':lesson['id'],'completed':True})
         complete=next(x for x in self.call('/api/lms/me')[1]['courses'] if x['course']['id']==COURSE_ID)
         self.assertEqual(complete['progress']['percent'],100);self.assertIsNotNone(complete['certificate'])
+
+    def test_material_previews_are_private_and_demo_upgrade_preserves_changes(self):
+        from lms_demo import seed,COURSE_ID,OLD_BODIES
+        self.fixture();seed(cms)
+        courses=self.call('/api/lms/me')[1]['courses'];demo=next(x for x in courses if x['course']['id']==COURSE_ID)
+        self.assertIn('alcance',demo['course']['introduction'])
+        materials=[r for l in lms.lessons(demo['course']) for r in l['resources']]
+        for kind in ['pdf','image']:
+            material=next(r for r in materials if r['previewKind']==kind)
+            path='/api/lms/files/'+material['fileId']
+            status,body,headers=self.raw(path+'?preview=1');self.assertEqual(status,200)
+            self.assertTrue(headers['Content-Disposition'].startswith('inline;'))
+            self.assertEqual(headers['X-Frame-Options'],'SAMEORIGIN')
+            self.assertIn('no-store',headers['Cache-Control'])
+            self.assertTrue(self.raw(path)[2]['Content-Disposition'].startswith('attachment;'))
+            if kind=='pdf':
+                rendered,png,png_headers=self.raw(path+'?render=1&page=1')
+                self.assertEqual(rendered,200);self.assertTrue(png.startswith(b'\x89PNG'));self.assertEqual(png_headers['X-PDF-Pages'],'1')
+                self.assertEqual(self.raw(path+'?render=1&page=2')[0],400)
+                self.assertTrue(self.raw(path+'?render=1&page=1&thumb=1')[1].startswith(b'\x89PNG'))
+            cookie=self.cookie;self.cookie='';self.assertEqual(self.raw(path+'?preview=1')[0],401);self.assertEqual(self.raw(path+'?render=1&page=1')[0],401);self.cookie=cookie
+        # Mimic the earlier installed demo. Update only its shipped text, not admin changes.
+        with cms.connect() as db:
+            row=db.execute('SELECT draft,published,revision FROM lms_courses WHERE id=?',(COURSE_ID,)).fetchone()
+            draft=json.loads(row['draft']);published=json.loads(row['published'])
+            for c in [draft,published]:
+                c.pop('introduction',None)
+                for lesson in lms.lessons(c):
+                    if lesson['id']=='demo-lesson-bienvenida':
+                        lesson['body']=OLD_BODIES[lesson['id']];lesson['resources']=[r for r in lesson['resources'] if not r['name'].endswith('.webp')]
+            draft['description']='Descripción privada del administrador';draft['modules'][1]['lessons'][0]['body']='Introducción personalizada del administrador'
+            db.execute('UPDATE lms_courses SET draft=?,published=? WHERE id=?',(cms.dump(draft),cms.dump(published),COURSE_ID))
+        seed(cms)
+        with cms.connect() as db:
+            upgraded=db.execute('SELECT * FROM lms_courses WHERE id=?',(COURSE_ID,)).fetchone();d=json.loads(upgraded['draft'])
+            self.assertEqual(d['description'],'Descripción privada del administrador');self.assertEqual(d['modules'][1]['lessons'][0]['body'],'Introducción personalizada del administrador')
+            self.assertTrue(d['introduction']);self.assertNotEqual(d['modules'][0]['lessons'][0]['body'],OLD_BODIES['demo-lesson-bienvenida'])
+            revision=upgraded['revision']
+        seed(cms)
+        with cms.connect() as db:self.assertEqual(db.execute('SELECT revision FROM lms_courses WHERE id=?',(COURSE_ID,)).fetchone()[0],revision)
+        after=next(x for x in self.call('/api/lms/me')[1]['courses'] if x['course']['id']==COURSE_ID)
+        self.assertEqual(after['progress']['percent'],100);self.assertEqual(after['certificate']['id'],demo['certificate']['id'])
+        self.as_admin();self.call('/api/lms/admin/enroll',{'studentId':self.student['id'],'courseId':COURSE_ID,'active':False})
+        self.as_student();self.assertEqual(self.raw('/api/lms/files/'+materials[0]['fileId']+'?preview=1')[0],403)
+
+    def test_pdf_preview_pagination_and_private_image_upload(self):
+        self.fixture();self.as_admin();record=self.call('/api/lms/admin')[1]['courses'][0]
+        from reportlab.pdfgen import canvas
+        stream=io.BytesIO();pdf=canvas.Canvas(stream);pdf.drawString(50,700,'Primera pagina');pdf.showPage();pdf.drawString(50,700,'Segunda pagina');pdf.save()
+        headers={'X-Course-Id':self.course['id'],'X-File-Name':'dos-paginas.pdf','Content-Type':'application/octet-stream'}
+        status,result,_=self.raw('/api/lms/admin/upload',stream.getvalue(),headers);self.assertEqual(status,200);file_id=json.loads(result)['fileId']
+        image=(cms.ROOT/'assets/programs/pmo-960.webp').read_bytes()
+        status,result,_=self.raw('/api/lms/admin/upload',image,{**headers,'X-File-Name':'imagen.webp'});self.assertEqual(status,200);image_id=json.loads(result)['fileId']
+        self.assertEqual(self.raw('/api/lms/admin/upload',b'not-an-image',{**headers,'X-File-Name':'imagen.jpg'})[0],400)
+        record['draft']['modules'][0]['lessons'][0]['resources']=[{'name':'Documento sin extensión en el nombre','fileId':file_id,'url':''},{'name':'Fotografía de apoyo','fileId':image_id,'url':''}]
+        self.call('/api/lms/admin/course/save',{'course':record['draft'],'revision':record['revision'],'publish':True})
+        self.as_student();resources=self.call('/api/lms/me')[1]['courses'][0]['course']['modules'][0]['lessons'][0]['resources']
+        self.assertEqual(resources[0]['previewKind'],'pdf');self.assertEqual(resources[1]['previewKind'],'image')
+        status,content,headers=self.raw('/api/lms/files/'+file_id+'?render=1&page=2');self.assertEqual(status,200);self.assertTrue(content.startswith(b'\x89PNG'));self.assertEqual(headers['X-PDF-Pages'],'2');self.assertEqual(headers['X-PDF-Page'],'2')
+        self.assertEqual(self.raw('/api/lms/files/'+file_id+'?render=1&page=3')[0],400)
+        self.assertTrue(self.raw('/api/lms/files/'+image_id+'?preview=1')[2]['Content-Disposition'].startswith('inline;'))
 
     def test_private_mp4_streaming_and_certificates_survive_course_expiry(self):
         self.fixture();self.as_admin();record=self.call('/api/lms/admin')[1]['courses'][0]

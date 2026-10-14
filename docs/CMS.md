@@ -125,4 +125,4 @@ Aula virtual aparece dentro del desplegable de Academia y en su portada; Contact
 
 ## Aula virtual
 
-El menú **Aula virtual** incorpora un LMS inicial con cursos, alumnos, matrículas, materiales, avance y certificados. Tiene borradores/publicación propios y no modifica los borradores comerciales. Instala primero `py -m pip install -r requirements.txt` para los certificados PDF. Consulta [LMS.md](LMS.md) para la prueba local, administración, archivos privados y alcance.
+El menú **Aula virtual** incorpora un LMS inicial con cursos, alumnos, matrículas, materiales, avance y certificados. Tiene borradores/publicación propios y no modifica los borradores comerciales. Instala primero `py -m pip install -r requirements.txt` para los certificados y las vistas previas de PDF. Consulta [LMS.md](LMS.md) para la prueba local, administración, archivos privados y alcance.

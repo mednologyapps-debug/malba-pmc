@@ -1,5 +1,5 @@
 """Private initial LMS: separate student identities, enrolments and immutable certificates."""
-import hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid
+import hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid,threading
 from copy import deepcopy
 from datetime import datetime,timezone,timedelta
 LIMA=timezone(timedelta(hours=-5))
@@ -8,6 +8,7 @@ from urllib.parse import urlsplit,parse_qs,quote
 
 MAX_UPLOAD=100*1024*1024
 COOKIE='malba_student'
+PDF_RENDER_LOCK=threading.Lock()
 
 def initialize(db):
     db.executescript('''
@@ -41,7 +42,7 @@ def lessons(course):return [l for m in course['modules'] for l in m['lessons']]
 
 def validate_course(c,db,publish=False):
     if not isinstance(c,dict):raise ValueError('Curso inválido.')
-    ident(c['id']);text(c['title'],180,True);text(c.get('description',''),5000);text(c.get('instructor',''),180);text(c.get('sourceProgramId',''),100)
+    ident(c['id']);text(c['title'],180,True);text(c.get('description',''),5000);text(c.get('introduction',''),10000);text(c.get('instructor',''),180);text(c.get('sourceProgramId',''),100)
     cover=text(c.get('image',''),2000)
     if cover and not (cover.startswith('assets/') and '..' not in cover and '\\' not in cover):url(cover)
     hours=c.get('hours',0)
@@ -119,13 +120,24 @@ def progress(db,student,course):
     completed=sum(x in done for x in required)
     return dict(done=list(done),completed=completed,total=len(required),percent=(100 if completed==len(required) else int(completed/len(required)*100)) if required else 0)
 
+def material_metadata(course,db):
+    safe=deepcopy(course)
+    for lesson in lessons(safe):
+        for resource in lesson['resources']:
+            # Derive metadata from the stored file, even if its display name has no extension.
+            for key in ['previewKind','fileName','size']:resource.pop(key,None)
+            if resource.get('fileId'):
+                file=db.execute('SELECT ext,name,size FROM lms_files WHERE id=? AND course_id=?',(resource['fileId'],course['id'])).fetchone()
+                if file:resource.update(previewKind='pdf' if file['ext']=='.pdf' else 'image' if file['ext'] in ['.png','.jpg','.jpeg','.webp'] else 'file',fileName=file['name'],size=file['size'])
+    return safe
+
 def student_view(db,student):
     courses=[]
     for e in db.execute('SELECT * FROM lms_enrollments WHERE student_id=? AND active=1',(student,)).fetchall():
         try:c=accessible(db,student,e['course_id'])
         except PermissionError:continue
         p=progress(db,student,c);cert=db.execute('SELECT id,issued FROM lms_certificates WHERE student_id=? AND course_id=? AND revoked=0',(student,c['id'])).fetchone()
-        safe=deepcopy(c)
+        safe=material_metadata(c,db)
         for lesson in lessons(safe):
             if lesson['type']=='quiz':
                 for q in lesson['quiz']['questions']:q.pop('correct',None);q.pop('explanation',None)
@@ -198,7 +210,38 @@ def certificate_pdf(snapshot,code,issued,root):
     if code!='VISTA-PREVIA':c.linkURL('https://malba-pmc.com/verificar-certificado/?codigo='+code,(60,32,w-60,58),relative=0)
     c.showPage();c.save();return stream.getvalue()
 
-def stream_file(h,cms,f):
+def render_pdf_page(h,cms,file,query):
+    if file['ext']!='.pdf':raise ValueError('Solo los PDF admiten vista por páginas.')
+    source=cms.STATE/'lms-files'/(file['id']+file['ext'])
+    if not source.is_file():raise ValueError('El documento no está disponible.')
+    page_number=int(query.get('page',['1'])[0]);width=640 if query.get('thumb')==['1'] else 1300
+    if not 1<=page_number<=5000:raise ValueError('Página no válida.')
+    stat=source.stat();version=hashlib.sha256(f"{stat.st_mtime_ns}-{stat.st_size}".encode()).hexdigest()[:16]
+    cache=cms.STATE/'lms-previews';cache.mkdir(exist_ok=True)
+    stem=file['id']+'-'+version;metadata=cache/(stem+'.json');target=cache/f'{stem}-{page_number}-{width}.png'
+    # PDFium must never be called concurrently, even for different documents.
+    with PDF_RENDER_LOCK:
+        if target.is_file() and metadata.is_file():pages=json.loads(metadata.read_text(encoding='utf-8'))['pages']
+        else:
+            try:import pypdfium2 as pdfium
+            except ImportError:raise ValueError('Instala la vista PDF: py -m pip install -r requirements.txt')
+            try:
+                with pdfium.PdfDocument(source) as document:
+                    pages=len(document)
+                    if not 1<=page_number<=pages:raise ValueError('La página no existe en este documento.')
+                    page=document[page_number-1]
+                    try:
+                        w,hgt=page.get_size();scale=min(width/max(w,1),1800/max(hgt,1))
+                        bitmap=page.render(scale=scale)
+                        try:
+                            im=bitmap.to_pil();temp=target.with_suffix('.tmp');im.save(temp,format='PNG');im.close();temp.replace(target)
+                        finally:bitmap.close()
+                    finally:page.close()
+                metadata.write_text(json.dumps({'pages':pages}),encoding='utf-8')
+            except pdfium.PdfiumError:raise ValueError('No se puede previsualizar este PDF. Descárgalo para abrirlo en tu equipo.')
+    h.response(target.read_bytes(),mime='image/png',headers={'Content-Disposition':'inline; filename="pagina.pdf.png"','Cache-Control':'private, no-store','X-PDF-Pages':str(pages),'X-PDF-Page':str(page_number)})
+
+def stream_file(h,cms,f,preview=False):
     path=cms.STATE/'lms-files'/(f['id']+f['ext'])
     if not path.is_file():h.response({'error':'Archivo no disponible.'},404);return
     size=f['size'];start=0;end=size-1;status=200
@@ -211,8 +254,9 @@ def stream_file(h,cms,f):
         if start>end or start>=size:h.response('',416,headers={'Content-Range':f'bytes */{size}'});return
         status=206
     h.send_response(status);h.send_header('Content-Type',mimetypes.guess_type('file'+f['ext'])[0] or 'application/octet-stream');h.send_header('Content-Length',str(end-start+1));h.send_header('Accept-Ranges','bytes');h.send_header('Cache-Control','private, no-store');h.send_header('X-Content-Type-Options','nosniff')
-    h.send_header('Content-Disposition',('inline' if f['ext']=='.mp4' else 'attachment')+"; filename*=UTF-8''"+quote(f['name']))
+    h.send_header('Content-Disposition',('inline' if f['ext']=='.mp4' or preview and f['ext'] in ['.pdf','.png','.jpg','.jpeg','.webp'] else 'attachment')+"; filename*=UTF-8''"+quote(f['name']))
     if status==206:h.send_header('Content-Range',f'bytes {start}-{end}/{size}')
+    h.send_header('X-Frame-Options','SAMEORIGIN');h.send_header('Referrer-Policy','same-origin')
     h.end_headers()
     if h.command=='HEAD':return
     with path.open('rb') as source:
@@ -260,7 +304,7 @@ def handle(h,cms,method,path):
                         snapshot={k:c[k] for k in ['title','hours','certificate']};snapshot['name']='Alumno de ejemplo';snapshot['certificate']={**snapshot['certificate'],'title':'VISTA PREVIA · '+snapshot['certificate']['title']}
                         with cms.LOCK:pdf=certificate_pdf(snapshot,'VISTA-PREVIA',time.time(),cms.ROOT)
                         h.response(pdf,mime='application/pdf',headers={'Content-Disposition':'inline; filename="Vista-previa-certificado.pdf"'})
-                    else:h.response({'course':c})
+                    else:h.response({'course':material_metadata(c,db)})
                     return True
                 if path=='/api/lms/admin':h.response(admin_data(db));return True
                 if path=='/api/lms/me':
@@ -275,7 +319,10 @@ def handle(h,cms,method,path):
                         course=accessible(db,actor['student_id'],f['course_id'])
                         linked=any(l.get('videoFileId')==fid or any(x.get('fileId')==fid for x in l['resources']) for l in lessons(course))
                         if not linked:raise PermissionError('Este archivo no está publicado en tu curso.')
-                    stream_file(h,cms,f);return True
+                    query=parse_qs(urlsplit(h.path).query)
+                    if query.get('render')==['1']:render_pdf_page(h,cms,f,query)
+                    else:stream_file(h,cms,f,query.get('preview')==['1'])
+                    return True
                 if path.startswith('/api/lms/certificate/'):
                     code=path.rsplit('/',1)[-1].removesuffix('.pdf');cert=db.execute('SELECT * FROM lms_certificates WHERE id=? AND revoked=0',(code,)).fetchone()
                     if not cert:h.response({'error':'Certificado no encontrado.'},404);return True
@@ -288,7 +335,7 @@ def handle(h,cms,method,path):
                 course_id=ident(h.headers.get('X-Course-Id',''));name=text(h.headers.get('X-File-Name','material'),200,True);name=Path(name.replace('\\','/')).name
                 from urllib.parse import unquote
                 name=unquote(name);ext=Path(name).suffix.lower();size=int(h.headers.get('Content-Length','0'))
-                if ext not in ['.pdf','.docx','.xlsx','.pptx','.zip','.txt','.mp4'] or not 0<size<=MAX_UPLOAD:raise ValueError('Usa PDF, Office, ZIP, TXT o MP4 de hasta 100 MB.')
+                if ext not in ['.pdf','.docx','.xlsx','.pptx','.zip','.txt','.mp4','.png','.jpg','.jpeg','.webp'] or not 0<size<=MAX_UPLOAD:raise ValueError('Usa PDF, imágenes, Office, ZIP, TXT o MP4 de hasta 100 MB.')
                 with cms.connect() as db:
                     if not db.execute('SELECT 1 FROM lms_courses WHERE id=?',(course_id,)).fetchone():raise ValueError('Guarda primero los datos generales del curso.')
                 folder=cms.STATE/'lms-files';folder.mkdir(exist_ok=True);fid=uuid.uuid4().hex;dest=folder/(fid+ext)
@@ -300,7 +347,7 @@ def handle(h,cms,method,path):
                             if not chunk:raise ValueError('La carga se interrumpió.')
                             target.write(chunk);remaining-=len(chunk)
                     with dest.open('rb') as source:head=source.read(32)
-                    valid=ext=='.pdf' and head.startswith(b'%PDF-') or ext in ['.docx','.xlsx','.pptx','.zip'] and head.startswith(b'PK') or ext=='.mp4' and head[4:8]==b'ftyp' or ext=='.txt' and b'\0' not in head
+                    valid=ext=='.pdf' and head.startswith(b'%PDF-') or ext in ['.docx','.xlsx','.pptx','.zip'] and head.startswith(b'PK') or ext=='.mp4' and head[4:8]==b'ftyp' or ext=='.txt' and b'\0' not in head or ext=='.png' and head.startswith(b'\x89PNG\r\n\x1a\n') or ext in ['.jpg','.jpeg'] and head.startswith(b'\xff\xd8\xff') or ext=='.webp' and head[:4]==b'RIFF' and head[8:12]==b'WEBP'
                     if not valid:raise ValueError('El contenido no coincide con el tipo del archivo.')
                     with cms.connect() as db:db.execute('INSERT INTO lms_files VALUES(?,?,?,?,?,?)',(fid,course_id,name,ext,size,time.time()))
                 except Exception:
