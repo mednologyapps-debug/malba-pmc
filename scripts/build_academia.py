@@ -123,6 +123,8 @@ def shared(template, prefix, active, programs):
         is_academy=active in ['academy','upcoming']+[p['id'] for p in programs]
         s=s.replace('{{SOLUTION_LINKS}}',digital_menu).replace('{{DIGITAL_CLASS}}',' current' if active.startswith('digital') else '').replace('{{DIGITAL_ARIA}}',' aria-current="page"' if active=='digital' else '')
         s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if is_academy else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
+    s=s.replace('{{ABOUT_CLASS}}',' current' if active=='about' else '').replace('{{ABOUT_ARIA}}',' aria-current="page"' if active=='about' else '')
+    s=s.replace('https://malba-pmc.com/quienes-somos','quienes-somos/')
     s=s.replace('https://malba-pmc.com/#consultoria','consultoria/')
     s=s.replace('{{PUBLICATIONS_CLASS}}',' current' if active=='publications' else '').replace('{{PUBLICATIONS_ARIA}}',' aria-current="page"' if active=='publications' else '')
     def resolve(match):
@@ -279,7 +281,7 @@ def render_outputs(data, home=None, preview=False):
     outputs.update({p['slug']+'/index.html':(program_page(p,programs) if preview else unavailable_program(p,programs)) for p in data['programs'] if p.get('visibility')=='hidden'})
     home = home if home is not None else (ROOT/'index.html').read_text(encoding='utf-8')
     home=re.sub(r'<header class="site-header">.*?</header>',lambda _:shared('header.html','','home',programs),home,flags=re.S)
-    home=home.replace('https://malba-pmc.com/#consultoria','consultoria/')
+    home=home.replace('https://malba-pmc.com/quienes-somos','quienes-somos/').replace('https://malba-pmc.com/#consultoria','consultoria/')
     home=home.replace('href="https://malba-pmc.com/producto/gestion-de-proyectos-1ra-edicion/"','href="publicaciones/#comprar-libro"').replace('href="https://malba-pmc.com/libro/"','href="publicaciones/"')
     home=home.replace('href="https://malba-pmc.com/libro/">Ver publicaciones','href="publicaciones/">Ver publicaciones')
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
@@ -294,6 +296,8 @@ def render_outputs(data, home=None, preview=False):
     outputs.update(render_solutions(programs,data.get('digitalCards')))
     from build_consulting import render_consulting
     outputs.update(render_consulting(programs))
+    from build_about import render_about
+    outputs.update(render_about(programs))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
     urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html') and name not in hidden]
     outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{slug}</loc></url>\n' for slug in urls)+'</urlset>\n'

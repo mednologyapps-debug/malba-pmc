@@ -203,6 +203,22 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertEqual(self.call('/api/publish',body)[0],400)
         self.assertEqual(self.call(detail_path)[1],original_detail)
 
+    def test_about_navigation_preview_export_and_route_reservation(self):
+        self.login();current=self.call('/api/content')[1];body={'data':current['data'],'revision':current['revision']}
+        status,page=self.call('/quienes-somos/')[:2];self.assertEqual(status,200)
+        for text in ['Miguel Alba','Director académico','ISO 31000','PMP','RMP','"@type": "AboutPage"','"@type": "Person"']:self.assertIn(text,page)
+        self.assertEqual(page.count('<h1>'),1);self.assertRegex(page,r'aria-current="page"\s*>\s*Nosotros')
+        for route in ['/','/academia/','/consultoria/']:
+            html=self.call(route)[1];self.assertIn('quienes-somos/',html);self.assertNotIn('https://malba-pmc.com/quienes-somos',html)
+        preview=self.call('/api/preview',body)[1]['url'].replace('academia/','quienes-somos/')
+        self.assertEqual(self.call(preview)[0],200);self.assertEqual(self.call('/nosotros.css')[0],200)
+        self.assertIn('<loc>https://malba-pmc.com/quienes-somos/</loc>',self.call('/sitemap.xml')[1])
+        connection=http.client.HTTPConnection('127.0.0.1',self.server.server_port);connection.request('GET','/api/export',headers={'Cookie':self.cookie})
+        with zipfile.ZipFile(io.BytesIO(connection.getresponse().read())) as archive:
+            self.assertIn('quienes-somos/index.html',archive.namelist());self.assertIn('nosotros.css',archive.namelist())
+        connection.close();body['data']['programs'][0]['slug']='quienes-somos'
+        self.assertEqual(self.call('/api/draft',body)[0],400)
+
     def test_consulting_routes_navigation_preview_and_export(self):
         from html.parser import HTMLParser
         class Check(HTMLParser):
