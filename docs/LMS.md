@@ -14,13 +14,13 @@ py scripts/cms_server.py --demo-lms
 - Administrador: `http://localhost:8080/dashboard/`, opción **Aula virtual**. Se mantienen las credenciales del CMS.
 - Verificación: `http://localhost:8080/verificar-certificado/`.
 
-`--demo-lms` es opcional y funciona únicamente en localhost. La primera vez crea un curso claramente identificado como demostración, con dos lecciones y un alumno `alumno.demo@malba.test`. Imprime una contraseña temporal aleatoria una sola vez; el alumno debe cambiarla al ingresar. No crea usuarios ni cursos al iniciar normalmente. Si el alumno de prueba ya existe, conserva sus datos: restablece su contraseña desde el dashboard si la necesitas.
+`--demo-lms` es opcional y funciona únicamente en localhost. La primera vez crea un curso claramente identificado como demostración, con tres módulos, seis lecciones, dos videos incrustados, cuatro descargables y un test de cuatro preguntas, además de un alumno `alumno.demo@malba.test`. Imprime una contraseña temporal aleatoria una sola vez; el alumno debe cambiarla al ingresar. El curso nuevo se matricula al 100% para la cuenta de demostración, con un intento aprobado y un certificado explícitamente simulado. Si la cuenta ya existía, mantiene su contraseña. La operación es idempotente y conserva cursos y avances existentes. No crea usuarios ni cursos al iniciar normalmente. Si el alumno de prueba ya existe, conserva sus datos: restablece su contraseña desde el dashboard si la necesitas.
 
 ## Administrador
 
 1. En **Cursos**, crea un curso independiente o vincúlalo a un programa de Academia para precargar nombre, presentación, portada y horas. La ficha comercial y las lecciones privadas se editan por separado.
 2. El editor tiene cuatro pasos: **Datos del curso → Contenido → Certificado → Revisión**. Se puede guardar y retomar un borrador. La vista previa muestra la experiencia del alumno sin generar avance ni certificados.
-3. Añade módulos y lecciones de texto, video o sesión en vivo. Cambia su orden, marca lecciones obligatorias/complementarias y adjunta recursos. Los videos admiten YouTube, Vimeo, MP4 HTTPS o archivos privados MP4. Las sesiones en vivo abren el enlace de Zoom, Meet u otro proveedor; las instrucciones y horario se colocan en el contenido.
+3. Añade módulos y lecciones de texto, video, sesión en vivo o test rápido. Cambia su orden, marca lecciones obligatorias/complementarias y adjunta recursos. Los videos admiten YouTube, Vimeo, MP4 HTTPS o archivos privados MP4. Las sesiones en vivo abren el enlace de Zoom, Meet u otro proveedor; las instrucciones y horario se colocan en el contenido.
 4. Materiales privados: PDF, DOCX, XLSX, PPTX, ZIP y TXT; videos MP4, hasta 100 MB por archivo. Las portadas y firmas admiten PNG, JPG o WebP de hasta 5 MB. Para videos mayores usa un proveedor de streaming y conserva sus permisos de acceso. Los enlaces externos mantienen la privacidad configurada en el proveedor.
 5. Personaliza título, texto, responsable, cargo y firma opcional del certificado. Descarga una prueba PDF identificada como vista previa.
 6. Publica la edición. El servidor verifica el contenido obligatorio; guardar borrador no cambia el curso visible. Deshabilitar el curso suspende el acceso y conserva matrículas/avance. Las revisiones impiden sobrescribir una edición concurrente.
@@ -31,7 +31,7 @@ Los cambios del aula tienen sus propios botones Guardar/Publicar. No se mezclan 
 
 ## Alumno
 
-El alumno ingresa con su correo, cambia su contraseña temporal y ve únicamente sus cursos publicados con matrícula vigente. Puede buscar/filtrar, retomar la última lección, consultar videos, descargar recursos y marcar lecciones como completadas. El avance básico es una declaración explícita de finalización de cada lección; no comprueba tiempo de reproducción ni califica exámenes. La pantalla lo indica.
+El alumno ingresa con su correo, cambia su contraseña temporal y ve únicamente sus cursos publicados con matrícula vigente. Puede buscar/filtrar, retomar la última lección, consultar videos, descargar recursos y marcar lecciones como completadas. El avance de texto y video se declara al marcar la lección; no comprueba tiempo de reproducción. Los tests rápidos se corrigen en el servidor, guardan intentos y requieren la nota mínima para completar su lección. Las respuestas correctas no se envían en el catálogo del alumno.
 
 Completar todas las lecciones obligatorias de un curso con certificación habilita un certificado. Las complementarias no bloquean el curso. El certificado incluye el nombre del alumno, programa, horas académicas, fecha en Perú, responsable y código verificable. Se conserva una instantánea de los datos de emisión: editar el curso o perfil posteriormente no cambia un certificado ya emitido. Los certificados válidos permanecen en **Mis certificados** incluso si vence una matrícula. Para invalidar uno, el administrador usa Revocar.
 
@@ -45,8 +45,14 @@ La composición del certificado toma como referencia el adjunto `CertiMalba.webp
 - La verificación pública requiere el código aleatorio del documento y muestra únicamente nombre, curso y fecha. La descarga exige sesión del titular o administrador.
 - Para respaldar, detén el servidor y copia la carpeta privada completa y `assets/uploads/`. Nunca la subas a GitHub ni a un directorio público. Las portadas y firmas se guardan en la carpeta de imágenes del sitio; no uses esa carpeta para materiales privados.
 - El ZIP de **Descargar web publicada** sigue siendo una exportación estática de la web y las pantallas del aula. No contiene alumnos, sesiones, matrículas, materiales privados ni el backend; no funciona como LMS en un hosting que solo sirva HTML. El LMS requiere ejecutar este backend Python con almacenamiento persistente y HTTPS. No se ha desplegado esta entrega en Hostinger ni migrado usuarios de Tutor LMS.
-- No se han conectado pagos/Izipay, matriculación automática, correo transaccional, exámenes, tareas calificadas o migración de WordPress. Las matrículas de esta versión las gestiona el administrador.
+- No se han conectado pagos/Izipay, matriculación automática, correo transaccional, banco avanzado de exámenes, tareas calificadas o migración de WordPress. Las matrículas de esta versión las gestiona el administrador.
 
 ## Verificación
 
 `py -m unittest discover -s tests` ejecuta pruebas con sitio y base desechables: roles, contraseñas, CSRF, acceso por matrícula, borradores, publicación, avances, PDFs, verificación, suspensión y persistencia. La revisión de navegador cubre creación/publicación, materiales, videos, matrícula, primer ingreso, avance, reanudación y certificados, además de tamaños de 320 px a escritorio.
+
+## Prueba completa
+
+Al ejecutar `--demo-lms`, busca **Gestión de proyectos: planificación, riesgos y control · Demo completa** con la cuenta `alumno.demo@malba.test`. Desde **Mis certificados** puedes descargar el certificado inmediatamente. En **Repasar curso** puedes descargar la guía PDF, el caso resuelto PDF, el paquete ZIP de plantillas y la lista TXT; ver los dos videos y repetir el test (70% mínimo). El resultado inicial al 100% es una simulación explícita para validar el flujo, sin validez académica. No se modifica una cuenta real ni se restablecen contraseñas existentes.
+
+En el editor, el tipo **Test rápido** permite añadir hasta 20 preguntas, de 2 a 6 opciones por pregunta, seleccionar una respuesta correcta, redactar una explicación y definir la nota mínima. Los alumnos ven **Mis cursos**, **Mis certificados** y **Cerrar sesión**. El cambio de contraseña se mantiene únicamente en el primer ingreso obligatorio.

@@ -392,9 +392,12 @@ def main():
         except ValueError as e:raise SystemExit(str(e))
     if args.demo_lms:
         if args.host not in ('127.0.0.1','localhost'):raise SystemExit('La demostración solo puede crearse en localhost.')
-        temporary=lms.seed_demo(sys.modules[__name__])
+        from lms_demo import seed
+        try:temporary=seed(sys.modules[__name__])
+        except ImportError:raise SystemExit('Instala los certificados PDF: py -m pip install -r requirements.txt')
         if temporary:print('Alumno de prueba: alumno.demo@malba.test\nContraseña temporal: '+temporary+'\nCámbiala en el primer ingreso. No se enviaron correos.')
-        else:print('El alumno de demostración ya existe. Puedes restablecer su contraseña desde el panel.')
+        else:print('Se conserva la cuenta alumno.demo@malba.test y su contraseña. Puedes restablecerla desde el panel.')
+        print('Demo completa: /aula-virtual/ · Materiales, videos, test rápido y certificado. Los datos de prueba existentes se conservan.')
     server=ThreadingHTTPServer((args.host,args.port),Handler);server.secure_cookie=args.secure_cookie
     print(f'Panel: http://localhost:{args.port}/dashboard/\nWeb de prueba: http://localhost:{args.port}/\nCtrl+C para detener.')
     try:server.serve_forever()

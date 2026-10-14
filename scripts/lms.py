@@ -1,5 +1,6 @@
 """Private initial LMS: separate student identities, enrolments and immutable certificates."""
 import hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid
+from copy import deepcopy
 from datetime import datetime,timezone,timedelta
 LIMA=timezone(timedelta(hours=-5))
 from pathlib import Path
@@ -17,6 +18,8 @@ def initialize(db):
     CREATE TABLE IF NOT EXISTS lms_progress(student_id TEXT NOT NULL,course_id TEXT NOT NULL,lesson_id TEXT NOT NULL,completed REAL NOT NULL,PRIMARY KEY(student_id,course_id,lesson_id));
     CREATE TABLE IF NOT EXISTS lms_files(id TEXT PRIMARY KEY,course_id TEXT NOT NULL,name TEXT NOT NULL,ext TEXT NOT NULL,size INTEGER NOT NULL,created REAL NOT NULL);
     CREATE TABLE IF NOT EXISTS lms_certificates(id TEXT PRIMARY KEY,student_id TEXT NOT NULL,course_id TEXT NOT NULL,snapshot TEXT NOT NULL,issued REAL NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,UNIQUE(student_id,course_id));
+    CREATE TABLE IF NOT EXISTS lms_quiz_attempts(id TEXT PRIMARY KEY,student_id TEXT NOT NULL,course_id TEXT NOT NULL,lesson_id TEXT NOT NULL,answers TEXT NOT NULL,score INTEGER NOT NULL,passed INTEGER NOT NULL,created REAL NOT NULL);
+    CREATE INDEX IF NOT EXISTS lms_quiz_student ON lms_quiz_attempts(student_id,course_id,lesson_id);
     CREATE INDEX IF NOT EXISTS lms_enrollment_course ON lms_enrollments(course_id);
     ''')
 
@@ -63,8 +66,17 @@ def validate_course(c,db,publish=False):
             ident(l['id']);text(l['title'],180,True)
             if l['id'] in seen:raise ValueError('Hay identificadores repetidos.')
             seen.add(l['id']);text(l.get('body',''),30000);url(l.get('videoUrl',''));url(l.get('meetingUrl',''))
-            if l.get('type') not in ['text','video','live'] or not isinstance(l.get('required'),bool):raise ValueError('Tipo de lección inválido.')
+            if l.get('type') not in ['text','video','live','quiz'] or not isinstance(l.get('required'),bool):raise ValueError('Tipo de lección inválido.')
             if not isinstance(l.get('minutes'),int) or not 0<=l['minutes']<=3000:raise ValueError('Duración de la lección inválida.')
+            if l['type']=='quiz':
+                quiz=l.get('quiz',{});questions=quiz.get('questions')
+                if not isinstance(quiz.get('passPercent'),int) or isinstance(quiz['passPercent'],bool) or not 1<=quiz['passPercent']<=100:raise ValueError('La nota mínima del test debe estar entre 1 y 100.')
+                if not isinstance(questions,list) or not 1<=len(questions)<=20:raise ValueError('El test debe contener entre 1 y 20 preguntas.')
+                for q in questions:
+                    text(q.get('question'),500,True);text(q.get('explanation',''),1000)
+                    if not isinstance(q.get('options'),list) or not 2<=len(q['options'])<=6:raise ValueError('Cada pregunta necesita entre 2 y 6 opciones.')
+                    for option in q['options']:text(option,400,True)
+                    if isinstance(q.get('correct'),bool) or not isinstance(q.get('correct'),int) or not 0<=q['correct']<len(q['options']):raise ValueError('Selecciona una respuesta correcta por pregunta.')
             resources=l.get('resources')
             if not isinstance(resources,list) or len(resources)>30:raise ValueError('Máximo 30 materiales por lección.')
             for resource in resources:
@@ -113,8 +125,22 @@ def student_view(db,student):
         try:c=accessible(db,student,e['course_id'])
         except PermissionError:continue
         p=progress(db,student,c);cert=db.execute('SELECT id,issued FROM lms_certificates WHERE student_id=? AND course_id=? AND revoked=0',(student,c['id'])).fetchone()
-        courses.append({'course':c,'progress':p,'lastLesson':e['last_lesson'],'expires':e['expires'],'certificate':dict(cert) if cert else None})
+        safe=deepcopy(c)
+        for lesson in lessons(safe):
+            if lesson['type']=='quiz':
+                for q in lesson['quiz']['questions']:q.pop('correct',None);q.pop('explanation',None)
+                latest=db.execute('SELECT score,passed,created FROM lms_quiz_attempts WHERE student_id=? AND course_id=? AND lesson_id=? ORDER BY created DESC LIMIT 1',(student,c['id'],lesson['id'])).fetchone()
+                lesson['quiz']['lastAttempt']=dict(latest) if latest else None
+        courses.append({'course':safe,'progress':p,'lastLesson':e['last_lesson'],'expires':e['expires'],'certificate':dict(cert) if cert else None})
     return courses
+
+def issue_certificate(db,cms,actor,course):
+    p=progress(db,actor['student_id'],course)
+    if p['total'] and p['completed']==p['total'] and course['certificate']['enabled']:
+        snapshot={k:course[k] for k in ['title','hours','certificate']};snapshot['name']=actor['name']
+        db.execute('INSERT OR IGNORE INTO lms_certificates VALUES(?,?,?,?,?,0)',(secrets.token_hex(16),actor['student_id'],course['id'],cms.dump(snapshot),time.time()))
+    cert=db.execute('SELECT id,issued FROM lms_certificates WHERE student_id=? AND course_id=? AND revoked=0',(actor['student_id'],course['id'])).fetchone()
+    return {'progress':p,'certificate':dict(cert) if cert else None}
 
 def admin_data(db):
     courses=[]
@@ -337,19 +363,30 @@ def handle(h,cms,method,path):
                     db.execute('INSERT INTO lms_enrollments VALUES(?,?,?,?,?,?) ON CONFLICT(student_id,course_id) DO UPDATE SET active=excluded.active,expires=excluded.expires',(student,course,int(bool(body.get('active',True))),expires,'',time.time()));h.response({'ok':True});return True
                 if path=='/api/lms/admin/certificate/revoke':
                     db.execute('UPDATE lms_certificates SET revoked=1 WHERE id=?',(body['id'],));h.response({'ok':True});return True
+                if path=='/api/lms/quiz':
+                    course=accessible(db,actor['student_id'],ident(body['courseId']));lesson=next((x for x in lessons(course) if x['id']==ident(body['lessonId'])),None)
+                    if not lesson or lesson['type']!='quiz':raise ValueError('Test no encontrado.')
+                    qs=lesson['quiz']['questions'];answers=body.get('answers')
+                    if not isinstance(answers,list) or len(answers)!=len(qs):raise ValueError('Responde todas las preguntas antes de enviar.')
+                    for answer,q in zip(answers,qs):
+                        if isinstance(answer,bool) or not isinstance(answer,int) or not 0<=answer<len(q['options']):raise ValueError('Selecciona una opción válida en cada pregunta.')
+                    score=int(sum(a==q['correct'] for a,q in zip(answers,qs))*100/len(qs));passed=score>=lesson['quiz']['passPercent'];now=time.time()
+                    db.execute('INSERT INTO lms_quiz_attempts VALUES(?,?,?,?,?,?,?,?)',(uuid.uuid4().hex,actor['student_id'],course['id'],lesson['id'],cms.dump(answers),score,int(passed),now))
+                    if passed:db.execute('INSERT OR IGNORE INTO lms_progress VALUES(?,?,?,?)',(actor['student_id'],course['id'],lesson['id'],now))
+                    db.execute('UPDATE lms_enrollments SET last_lesson=? WHERE student_id=? AND course_id=?',(lesson['id'],actor['student_id'],course['id']))
+                    result=issue_certificate(db,cms,actor,course)
+                    result.update(score=score,passed=passed,feedback=[{'correct':a==q['correct'],'explanation':q.get('explanation','')} for a,q in zip(answers,qs)])
+                    h.response(result);return True
                 if path=='/api/lms/progress':
                     c=accessible(db,actor['student_id'],ident(body['courseId']));lid=ident(body['lessonId']);lesson=next((x for x in lessons(c) if x['id']==lid),None)
                     if not lesson:raise ValueError('Lección no encontrada.')
+                    if lesson['type']=='quiz' and body.get('completed') is True:raise ValueError('Aprueba el test para completar esta lección.')
                     if 'completed' in body:
                         if not isinstance(body['completed'],bool):raise ValueError('Avance inválido.')
                         if body['completed']:db.execute('INSERT OR IGNORE INTO lms_progress VALUES(?,?,?,?)',(actor['student_id'],c['id'],lid,time.time()))
                         else:db.execute('DELETE FROM lms_progress WHERE student_id=? AND course_id=? AND lesson_id=?',(actor['student_id'],c['id'],lid))
                     db.execute('UPDATE lms_enrollments SET last_lesson=? WHERE student_id=? AND course_id=?',(lid,actor['student_id'],c['id']))
-                    p=progress(db,actor['student_id'],c)
-                    if p['total'] and p['completed']==p['total'] and c['certificate']['enabled']:
-                        snapshot={k:c[k] for k in ['title','hours','certificate']};snapshot['name']=actor['name']
-                        db.execute('INSERT OR IGNORE INTO lms_certificates VALUES(?,?,?,?,?,0)',(secrets.token_hex(16),actor['student_id'],c['id'],cms.dump(snapshot),time.time()))
-                    cert=db.execute('SELECT id,issued FROM lms_certificates WHERE student_id=? AND course_id=? AND revoked=0',(actor['student_id'],c['id'])).fetchone();h.response({'progress':p,'certificate':dict(cert) if cert else None});return True
+                    h.response(issue_certificate(db,cms,actor,c));return True
         h.response({'error':'Ruta no encontrada.'},404)
     except PermissionError as e:h.response({'error':str(e)},403)
     except (ValueError,KeyError,TypeError,OverflowError) as e:h.response({'error':str(e)[:250]},400)

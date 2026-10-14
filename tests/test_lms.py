@@ -79,6 +79,41 @@ class LMSIntegrationTests(unittest.TestCase):
         self.assertEqual(self.call('/api/lms/progress',{'courseId':self.course['id'],'lessonId':lms.lessons(self.course)[0]['id'],'completed':True})[0],403)
         self.as_admin();self.call('/api/lms/admin/student',{'id':self.student['id'],'name':self.student['name'],'email':self.student['email'],'active':True,'password':'Reset-password-2026!'})
         self.as_student();self.assertFalse(self.call('/api/lms/session')[1]['authenticated'])
+    def test_full_demo_materials_quiz_and_certificate_are_ready_without_resetting_account(self):
+        from lms_demo import seed,COURSE_ID
+        self.fixture()
+        with cms.connect() as db:before=db.execute('SELECT hash FROM lms_students WHERE id=?',(self.student['id'],)).fetchone()[0]
+        self.assertIsNone(seed(cms));self.assertIsNone(seed(cms))
+        with cms.connect() as db:self.assertEqual(before,db.execute('SELECT hash FROM lms_students WHERE id=?',(self.student['id'],)).fetchone()[0])
+        courses=self.call('/api/lms/me')[1]['courses'];demo=next(c for c in courses if c['course']['id']==COURSE_ID)
+        self.assertEqual(demo['progress']['percent'],100);self.assertEqual(demo['progress']['total'],6);self.assertIsNotNone(demo['certificate'])
+        quiz=next(l for l in lms.lessons(demo['course']) if l['type']=='quiz')
+        self.assertEqual(quiz['quiz']['lastAttempt']['score'],100)
+        for q in quiz['quiz']['questions']:self.assertNotIn('correct',q);self.assertNotIn('explanation',q)
+        materials=[r for l in lms.lessons(demo['course']) for r in l['resources']]
+        self.assertEqual(len(materials),4)
+        for r in materials:
+            status,content,_=self.raw('/api/lms/files/'+r['fileId']);self.assertEqual(status,200)
+            if r['name'].endswith('.pdf'):self.assertTrue(content.startswith(b'%PDF-'))
+            elif r['name'].endswith('.zip'):self.assertTrue(content.startswith(b'PK'))
+        status,content,_=self.raw('/api/lms/certificate/'+demo['certificate']['id']+'.pdf');self.assertEqual(status,200)
+        from pypdf import PdfReader
+        self.assertIn('sin validez académica',' '.join(PdfReader(io.BytesIO(content)).pages[0].extract_text().split()))
+        self.assertEqual(self.call('/api/lms/progress',{'courseId':COURSE_ID,'lessonId':quiz['id'],'completed':True})[0],400)
+        # A fresh enrolment cannot bypass the graded test using a claimed percentage.
+        self.as_admin();body={'name':'Alumno del test','email':'quiz@example.com','password':'Quiz-temporary-2026!','active':True}
+        student_id=self.call('/api/lms/admin/student',body)[1]['id'];self.call('/api/lms/admin/enroll',{'studentId':student_id,'courseId':COURSE_ID,'active':True})
+        self.cookie='';self.csrf='';_,_,headers=self.call('/api/lms/login',{'email':body['email'],'password':body['password']});self.cookie=headers['Set-Cookie'].split(';')[0];self.csrf=self.call('/api/lms/session')[1]['csrf']
+        self.call('/api/lms/password',{'currentPassword':body['password'],'password':'Quiz-personal-2026!'})
+        payload={'courseId':COURSE_ID,'lessonId':quiz['id'],'answers':[2,2,0,1],'score':100,'passed':True}
+        result=self.call('/api/lms/quiz',payload)[1];self.assertEqual(result['score'],0);self.assertFalse(result['passed']);self.assertEqual(result['progress']['percent'],0)
+        self.assertEqual(self.call('/api/lms/quiz',{**payload,'answers':[0]})[0],400)
+        result=self.call('/api/lms/quiz',{**payload,'answers':[0,1,2,0]})[1];self.assertTrue(result['passed']);self.assertIsNone(result['certificate'])
+        for lesson in lms.lessons(demo['course']):
+            if lesson['type']!='quiz':self.call('/api/lms/progress',{'courseId':COURSE_ID,'lessonId':lesson['id'],'completed':True})
+        complete=next(x for x in self.call('/api/lms/me')[1]['courses'] if x['course']['id']==COURSE_ID)
+        self.assertEqual(complete['progress']['percent'],100);self.assertIsNotNone(complete['certificate'])
+
     def test_private_mp4_streaming_and_certificates_survive_course_expiry(self):
         self.fixture();self.as_admin();record=self.call('/api/lms/admin')[1]['courses'][0]
         data=b'\x00\x00\x00\x18ftypmp42'+b'\x00'*64
