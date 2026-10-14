@@ -5,6 +5,10 @@ from pathlib import Path
 from html import escape
 from urllib.parse import urlparse
 import json, re, math
+from contextvars import ContextVar
+
+# Each concurrent preview owns its navigation snapshot.
+SITE_CONTENT = ContextVar("site_content", default=None)
 
 ROOT = Path(__file__).resolve().parents[1]
 ORIGIN = 'https://malba-pmc.com/'
@@ -113,10 +117,10 @@ def shared(template, prefix, active, programs):
     if template == 'header.html':
         menu = '<div class="academy-menu-heading"><div><strong>Academia MALBA</strong><p>Elige tu próxima especialización.</p></div><a href="academia/">Ver todos los programas <span aria-hidden="true">→</span></a></div><div class="academy-menu-programs">'
         menu += ''.join(f'<a class="academy-menu-program" href="{esc(p["slug"]+"/")}"'+ (' aria-current="page"' if active == p['id'] else '') + f'><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p.get("cardDescription",p["description"]))}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in programs)
-        menu += '</div><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
+        menu += '</div><a class="academy-classroom-link" href="https://malba-pmc.com/escritorio">Aula virtual</a><a class="academy-menu-upcoming" href="academia/proximos/">Próximas convocatorias <span aria-hidden="true">→</span></a>'
 
         from build_consulting import menu as consulting_menu
-        s=s.replace('{{CONSULTING_LINKS}}',consulting_menu(active)).replace('{{CONSULTING_CLASS}}',' current' if active.startswith('consulting') else '').replace('{{CONSULTING_ARIA}}',' aria-current="page"' if active=='consulting' else '')
+        s=s.replace('{{CONSULTING_LINKS}}',consulting_menu(active,(SITE_CONTENT.get() or {}).get("consulting"))).replace('{{CONSULTING_CLASS}}',' current' if active.startswith('consulting') else '').replace('{{CONSULTING_ARIA}}',' aria-current="page"' if active=='consulting' else '')
         digital=json.loads((ROOT/'content/solutions.json').read_text(encoding='utf-8'))
         digital_menu='<div class="academy-menu-heading"><div><strong>Soluciones digitales</strong><p>Entrena y mejora tus decisiones.</p></div><a href="soluciones-digitales/">Ver todas las soluciones →</a></div><div class="academy-menu-programs digital-menu-programs">'
         digital_menu+=''.join(f'<a class="academy-menu-program" href="soluciones-digitales/{esc(p["slug"])}/"><img src="{esc(p["imageSmall"])}" width="240" height="135" alt="" loading="lazy"><span><strong>{esc(p["title"])}</strong><small>{esc(p["description"])}</small></span><span class="academy-menu-arrow" aria-hidden="true">↗</span></a>' for p in digital['solutions'])+'</div>'
@@ -124,7 +128,7 @@ def shared(template, prefix, active, programs):
         s=s.replace('{{SOLUTION_LINKS}}',digital_menu).replace('{{DIGITAL_CLASS}}',' current' if active.startswith('digital') else '').replace('{{DIGITAL_ARIA}}',' aria-current="page"' if active=='digital' else '')
         s = s.replace('{{PROGRAM_LINKS}}', menu).replace('{{HOME_CLASS}}', ' current' if active == 'home' else '').replace('{{HOME_ARIA}}', ' aria-current="page"' if active == 'home' else '').replace('{{ACADEMY_CLASS}}', ' current' if is_academy else '').replace('{{ACADEMY_ARIA}}', ' aria-current="page"' if active == 'academy' else '')
     if '{{CONTACT_URL}}' in s:
-        contact_url=json.loads((ROOT/'content/solutions.json').read_text(encoding='utf-8'))['contactUrl']
+        contact_url=(SITE_CONTENT.get() or {}).get('consulting',{}).get('contactUrl') or json.loads((ROOT/'content/solutions.json').read_text(encoding='utf-8'))['contactUrl']
         s=s.replace('{{CONTACT_URL}}',esc(safe_url(contact_url)))
     s=s.replace('{{ABOUT_CLASS}}',' current' if active=='about' else '').replace('{{ABOUT_ARIA}}',' aria-current="page"' if active=='about' else '')
     s=s.replace('https://malba-pmc.com/quienes-somos','quienes-somos/')
@@ -146,7 +150,7 @@ def document(title, description, slug, prefix, main, programs, active, schema, i
 <html lang="es-PE"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)} | MALBA PMC</title><meta name="description" content="{esc(description)}">
 <link rel="canonical" href="{esc(canonical)}"><meta name="robots" content="noindex, follow"><meta name="theme-color" content="#073F7C">
-<meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="MALBA PMC"><meta property="og:title" content="{esc(title)} | MALBA PMC"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(canonical)}"><meta property="og:image" content="{esc(ORIGIN+image)}"><meta property="og:image:alt" content="{esc(image_alt)}"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="website"><meta property="og:locale" content="es_PE"><meta property="og:site_name" content="MALBA PMC"><meta property="og:title" content="{esc(title)} | MALBA PMC"><meta property="og:description" content="{esc(description)}"><meta property="og:url" content="{esc(canonical)}"><meta property="og:image" content="{esc(image if image.startswith('https://') else ORIGIN+image)}"><meta property="og:image:alt" content="{esc(image_alt)}"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{prefix}assets/favicon.png"><link rel="preload" href="{prefix}assets/fonts/outfit-semibold.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="{prefix}styles.css"><link rel="stylesheet" href="{prefix}home-sections.css"><link rel="stylesheet" href="{prefix}academia.css"><link rel="stylesheet" href="{prefix}soluciones.css"><link rel="stylesheet" href="{prefix}publicaciones.css">
 <script src="{prefix}app.js" defer></script><script src="{prefix}academia.js" defer></script><script src="{prefix}soluciones.js" defer></script><script type="application/ld+json">{data}</script></head>
@@ -173,8 +177,8 @@ def theme_style(program, prefix):
     if not re.fullmatch(r'[a-zA-Z0-9_./-]+',image):raise ValueError('Section image must be a local asset path')
     return esc(f"--course-accent:{t['accent']};--purple:{t['accentDark']};--purple-soft:{t['soft']};--blue-soft:{t['soft']};--blue:{t['navy']};--course-navy-rgb:{rgb};--course-photo:url('{image}')")
 
-def hero(data, prefix, title=None, desc=None):
-    return f'''<section class="academy-hero" aria-labelledby="academy-title">{picture(data['image'],data['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="section-container academy-hero-layout"><div class="academy-hero-copy"><h1 id="academy-title">{esc(title or data['title'])}</h1><p>{esc(desc or data.get('subtitle',data.get('description')))}</p></div>{academy_features(data['features']) if data.get('features') else ''}</div></section>'''
+def hero(data, prefix, title=None, desc=None, actions=""):
+    return f'''<section class="academy-hero" aria-labelledby="academy-title">{picture(data['image'],data['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="section-container academy-hero-layout"><div class="academy-hero-copy"><h1 id="academy-title">{esc(title or data['title'])}</h1><p>{esc(desc or data.get('subtitle',data.get('description')))}</p>{actions}</div>{academy_features(data['features']) if data.get('features') else ''}</div></section>'''
 
 def catalog_controls():
     return '<div class="academy-navigation"><p>Explora los programas <span aria-hidden="true">→</span></p><div><button type="button" data-program-step="-1" aria-label="Programas anteriores">←</button><button type="button" data-program-step="1" aria-label="Programas siguientes">→</button></div></div>'
@@ -182,7 +186,7 @@ def catalog_controls():
 def academy(data):
     a, ps, prefix = data['academy'], data['programs'], '../'
     forthcoming = data['upcoming']
-    main = hero(a,prefix)
+    main = hero(a,prefix,actions='<a class="button button-white academy-classroom-cta" href="https://malba-pmc.com/escritorio">Aula virtual</a>')
     main += f'<section class="academy-catalog section-container" id="programas" aria-labelledby="programs-title"><div class="academy-catalog-heading"><h2 id="programs-title">{esc(a["programsTitle"])}</h2><p>{esc(a["programsText"])}</p></div><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'
     main += ''.join(card(p,prefix) for p in ps)
     main += f'''<article class="academy-program-card academy-upcoming-card"><div class="academy-card-media"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}</a><span class="academy-card-status">Nuevas convocatorias</span>{image_badges(['Fechas por confirmar'])}</div><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming.get('cardDescription',forthcoming['description']))}</p><div class="academy-card-bottom"><div class="academy-card-price"><span>Tu próxima especialización</span></div><a class="button button-purple academy-card-button" href="proximos/">Explorar programas <span class="academy-button-arrow" aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
@@ -275,6 +279,14 @@ def unavailable_program(p, programs):
     return document('Programa no disponible','Explora los programas disponibles de la Academia MALBA.',p['slug']+'/','../',main,programs,'academy',breadcrumbs('Programa no disponible',p['slug']+'/'),p['image'])
 
 def render_outputs(data, home=None, preview=False):
+    from site_content import upgrade, validate as validate_site
+    snapshot=upgrade(data)
+    validate_site(snapshot)
+    token=SITE_CONTENT.set(snapshot)
+    try:return _render_outputs(snapshot,home,preview)
+    finally:SITE_CONTENT.reset(token)
+
+def _render_outputs(data, home=None, preview=False):
     """Pure publication snapshot, reused by CLI and authenticated CMS."""
     validate(data)
     public=public_content(data);programs=public['programs']
@@ -300,9 +312,9 @@ def render_outputs(data, home=None, preview=False):
     from build_solutions import render_solutions
     outputs.update(render_solutions(programs,data.get('digitalCards')))
     from build_consulting import render_consulting
-    outputs.update(render_consulting(programs))
+    outputs.update(render_consulting(programs,data["consulting"]))
     from build_about import render_about
-    outputs.update(render_about(programs))
+    outputs.update(render_about(programs,data["about"],data["consulting"]))
     outputs['index.html']=re.sub(r'</header>\s+<main', '</header>\n    <main', home)
     urls=['']+[name.removesuffix('index.html') for name in outputs if name!='index.html' and name.endswith('index.html') and name not in hidden]
     outputs['sitemap.xml']='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+''.join(f'  <url><loc>{ORIGIN}{slug}</loc></url>\n' for slug in urls)+'</urlset>\n'

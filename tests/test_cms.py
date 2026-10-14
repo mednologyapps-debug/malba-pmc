@@ -60,6 +60,63 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertNotEqual(restored['data']['academy']['title'],'CMS publicación de prueba')
         self.assertIn('CMS publicación de prueba',self.call('/academia/')[1])
         self.assertEqual(self.call('/api/export')[0],200)
+    def test_company_content_draft_preview_publish_restore_and_migration(self):
+        self.login();current=self.call('/api/content')[1];data=current['data']
+        data['about']['title']='Identidad privada MALBA <equipo>'
+        data['about']['director']['name']='Director de prueba'
+        data['about']['heroMedia']['image']='assets/programs/pmo-1672.webp'
+        service=data['consulting']['services'][0];route='/'+service['slug']+'/'
+        service['name']='Especialidad CMS privada';service['services'][0]['deliverable']='Entregable configurable desde CMS'
+        data['consulting']['contactUrl']='https://wa.me/51999999999'
+        status,saved,_=self.call('/api/draft',{'data':data,'revision':current['revision']});self.assertEqual(status,200,saved)
+        body={'data':data,'revision':saved['revision']}
+        status,preview,_=self.call('/api/preview',body);self.assertEqual(status,200,preview)
+        base=preview['url'].removesuffix('academia/')
+        private=self.call(base+'quienes-somos/')[1]
+        self.assertIn('Identidad privada MALBA &lt;equipo&gt;',private);self.assertIn('Director de prueba',private)
+        self.assertIn('Entregable configurable desde CMS',self.call(base+route.lstrip('/'))[1])
+        self.assertIn('Especialidad CMS privada',self.call(base)[1])
+        self.assertNotIn('Especialidad CMS privada',self.call('/')[1])
+        self.assertNotIn('Identidad privada MALBA',self.call('/quienes-somos/')[1])
+        # A restart upgrades public and draft independently; it cannot publish a private edit.
+        cms.initialize();self.assertNotIn('Especialidad CMS privada',self.call('/')[1])
+        self.assertEqual(self.call('/api/content')[1]['revision'],saved['revision'])
+        status,published,_=self.call('/api/publish',body);self.assertEqual(status,200,published)
+        for path in ['/','/academia/','/quienes-somos/',route]:
+            text=self.call(path)[1];self.assertIn('Especialidad CMS privada',text);self.assertIn('data-contact-url="https://wa.me/51999999999"',text)
+        self.assertIn('Identidad privada MALBA &lt;equipo&gt;',self.call('/quienes-somos/')[1])
+        # Old history entries without the new areas recover defaults only into the draft.
+        with cms.connect() as db:
+            first=json.loads(db.execute('SELECT data FROM publications WHERE id=1').fetchone()[0])
+            first.pop('about');first.pop('consulting')
+            db.execute('UPDATE publications SET data=? WHERE id=1',(cms.dump(first),))
+        status,restored,_=self.call('/api/restore',{'id':1,'revision':published['revision']});self.assertEqual(status,200,restored)
+        self.assertIn('about',restored['data']);self.assertIn('consulting',restored['data'])
+        self.assertNotEqual(restored['data']['about']['title'],data['about']['title'])
+        self.assertIn('Identidad privada MALBA',self.call('/quienes-somos/')[1])
+        # Existing installations missing the areas retain other saved edits and revisions.
+        with cms.connect() as db:
+            draft=json.loads(db.execute('SELECT data FROM draft').fetchone()[0]);draft.pop('about');draft.pop('consulting');draft['academy']['title']='Academia privada conservada'
+            db.execute('UPDATE draft SET data=?',(cms.dump(draft),))
+        cms.initialize();upgraded=self.call('/api/content')[1]
+        self.assertEqual(upgraded['revision'],restored['revision']);self.assertEqual(upgraded['data']['academy']['title'],'Academia privada conservada')
+        self.assertIn('about',upgraded['data']);self.assertNotIn('Academia privada conservada',self.call('/academia/')[1])
+
+    def test_company_validation_rejects_broken_routes_assets_and_empty_services(self):
+        self.login();current=self.call('/api/content')[1]
+        for change in [
+            lambda d:d['consulting']['services'][0].update(slug='changed-route'),
+            lambda d:d['consulting']['services'][0].update(services=[]),
+            lambda d:d['about']['heroMedia'].update(image='assets/nonexistent.webp'),
+            lambda d:d['about']['director'].update(image='javascript:alert(1)'),
+            lambda d:d['about']['destinations'].pop(),
+            lambda d:d['consulting'].update(contactUrl='https://example.com'),
+        ]:
+            data=copy.deepcopy(current['data']);change(data)
+            status,result,_=self.call('/api/draft',{'data':data,'revision':current['revision']})
+            self.assertEqual(status,400,result)
+        self.assertEqual(self.call('/api/content')[1]['revision'],current['revision'])
+
     def test_upgrade_refreshes_routes_preserving_draft_and_publication(self):
         self.login();current=self.call('/api/content')[1]
         data=current['data'];data['academy']['title']='Borrador conservado después de actualizar'

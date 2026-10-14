@@ -12,6 +12,7 @@ from urllib.parse import urlsplit, unquote
 import build_academia as renderer
 import build_publications as editorial
 import build_solutions as digital
+import site_content
 
 ROOT = renderer.ROOT
 STATE = ROOT / '.cms-private'
@@ -51,6 +52,7 @@ def initialize(username=None, password=None):
             data=json.loads((ROOT/'content/academia.json').read_text(encoding='utf-8'))
             data['publications']=editorial.defaults()
             data['digitalCards']=digital.default_cards()
+            data=site_content.upgrade(data)
             db.execute('INSERT INTO draft VALUES(1,?,1,?)',(dump(data),time.time()))
             db.execute('INSERT INTO publications(data,outputs,username,created) VALUES(?,?,?,?)',(dump(data),dump(renderer.render_outputs(data)),'Inicial',time.time()))
         # Add the editorial area without resetting saved programs, revisions or accounts.
@@ -65,6 +67,7 @@ def initialize(username=None, password=None):
             draft['digitalCards']=digital.default_cards()
             db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
         draft['digitalCards']=digital.upgrade_cards(draft['digitalCards'])
+        draft=site_content.upgrade(draft)
         db.execute('UPDATE draft SET data=? WHERE id=1',(dump(draft),))
         latest=db.execute('SELECT id,data FROM publications ORDER BY id DESC LIMIT 1').fetchone()
         if latest:
@@ -72,6 +75,7 @@ def initialize(username=None, password=None):
             published.setdefault('publications',editorial.defaults())
             published.setdefault('digitalCards',digital.default_cards())
             published['digitalCards']=digital.upgrade_cards(published['digitalCards'])
+            published=site_content.upgrade(published)
             # Reconcile previously saved removals after upgrading from draft-only trash.
             removals={p['id']:p.get('visibility') for p in draft['programs'] if p.get('visibility') in ('hidden','deleted')}
             changed=False
@@ -116,6 +120,7 @@ def validate_content(data):
                     if not value.startswith('assets/') or not (ROOT/value).is_file():raise ValueError('La imagen local no existe: '+value)
                     if key.lower().endswith('url') and key not in ('brochureUrl','pdfUrl'):raise ValueError('Usa un enlace HTTPS.')
     walk(data)
+    site_content.validate(data)
     editorial.validate(editorial.content(data))
     digital.validate_cards(data.get('digitalCards',digital.default_cards()))
     def shape(template,value,path):
@@ -327,6 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                     data['publications']=editorial.content(data)
                     data.setdefault('digitalCards',digital.default_cards())
                     data['digitalCards']=digital.upgrade_cards(data['digitalCards'])
+                    data=site_content.upgrade(data)
                     current=json.loads(db.execute('SELECT data FROM publications ORDER BY id DESC LIMIT 1').fetchone()[0])
                     restored_ids={p['id'] for p in data['programs']}
                     for p in current['programs']:

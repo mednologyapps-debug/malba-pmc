@@ -45,5 +45,66 @@
       }
     ]
   },
-  "sourceUrl": "https://malba-pmc.com/quienes-somos/"
+  "sourceUrl": "https://malba-pmc.com/quienes-somos/",
+  "heroMedia": {
+    "image": "assets/banner-transmision-1672.webp",
+    "imageSmall": "assets/banner-transmision-960.webp",
+    "imageAlt": ""
+  },
+  "introMedia": {
+    "image": "assets/programs/pmo-1672.webp",
+    "imageSmall": "assets/programs/pmo-960.webp",
+    "imageAlt": "Equipo de profesionales revisando información y planificación de un proyecto"
+  },
+  "methodMedia": {
+    "image": "assets/solutions/fondo-aprendizaje-digital-1672.webp",
+    "imageSmall": "assets/solutions/fondo-aprendizaje-digital-960.webp",
+    "imageAlt": ""
+  },
+  "methodTitle": "Un enfoque conectado con la realidad del proyecto.",
+  "directorCta": "Conoce cómo puede apoyar a tu organización",
+  "ecosystemTitle": "Una experiencia. Tres formas de acompañarte.",
+  "ecosystemText": "Encuentra la propuesta que responde a las necesidades de tu equipo.",
+  "destinations": [
+    {
+      "id": "consulting",
+      "title": "Consultoría",
+      "description": "Acompañamiento en gestión de proyectos y riesgos.",
+      "ctaLabel": "Explorar consultoría",
+      "image": "assets/banner-transmision-1672.webp",
+      "imageSmall": "assets/banner-transmision-960.webp",
+      "imageAlt": ""
+    },
+    {
+      "id": "academy",
+      "title": "Academia",
+      "description": "Formación especializada y aprendizaje aplicado.",
+      "ctaLabel": "Ver programas",
+      "image": "assets/academia/academia-1672.webp",
+      "imageSmall": "assets/academia/academia-960.webp",
+      "imageAlt": ""
+    },
+    {
+      "id": "digital",
+      "title": "Soluciones digitales",
+      "description": "Herramientas para entrenar y apoyar la toma de decisiones.",
+      "ctaLabel": "Conocer soluciones",
+      "image": "assets/solutions/fondo-soluciones-digitales-1672.webp",
+      "imageSmall": "assets/solutions/fondo-soluciones-digitales-960.webp",
+      "imageAlt": ""
+    }
+  ],
+  "contact": {
+    "title": "Conversemos sobre tu proyecto.",
+    "description": "Cuéntanos qué necesitas fortalecer. El primer paso es entender tu contexto y definir la forma de acompañarte.",
+    "steps": [
+      "Comparte tu necesidad",
+      "Revisamos el contexto del proyecto",
+      "Definimos una propuesta a medida"
+    ],
+    "formTitle": "Solicita una conversación",
+    "image": "assets/hero/fondo-arquitectura-1536.webp",
+    "imageSmall": "assets/hero/fondo-arquitectura-800.webp",
+    "imageAlt": ""
+  }
 }

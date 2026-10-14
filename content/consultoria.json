@@ -76,7 +76,25 @@
       ],
       "outcomeTitle": "Más claridad para dirigir. Más criterio para decidir.",
       "outcomeDescription": "Buscamos fortalecer el control y la coordinación del proyecto. El alcance del acompañamiento se define según sus necesidades y nivel de complejidad.",
-      "sourceUrl": "https://malba-pmc.com/consultoria-en-gestion-de-proyectos-de-transmision-electrica/"
+      "sourceUrl": "https://malba-pmc.com/consultoria-en-gestion-de-proyectos-de-transmision-electrica/",
+      "introMedia": {
+        "image": "assets/solutions/fondo-aprendizaje-digital-1672.webp",
+        "imageSmall": "assets/solutions/fondo-aprendizaje-digital-960.webp",
+        "imageAlt": "Revisión de información para la toma de decisiones del proyecto"
+      },
+      "servicesMedia": {
+        "image": "assets/solutions/fondo-soluciones-digitales-1672.webp",
+        "imageSmall": "assets/solutions/fondo-soluciones-digitales-960.webp",
+        "imageAlt": ""
+      },
+      "servicesImage": {
+        "image": "assets/programs/pmo-1672.webp",
+        "imageSmall": "assets/programs/pmo-960.webp",
+        "imageAlt": "Análisis y coordinación de proyectos por un equipo de profesionales"
+      },
+      "servicesTitle": "¿Cómo te apoyamos?",
+      "servicesText": "Explora cada servicio para conocer su enfoque. Definimos el alcance contigo, según la etapa y las necesidades de tu proyecto.",
+      "whenTitle": "¿Cuándo necesitas este apoyo?"
     },
     {
       "id": "risks",
@@ -145,7 +163,52 @@
       ],
       "outcomeTitle": "Decisiones que consideran la incertidumbre.",
       "outcomeDescription": "La gestión de riesgos permite reconocer escenarios y priorizar respuestas. Su aplicación se adapta a la información disponible y a los objetivos del proyecto.",
-      "sourceUrl": "https://malba-pmc.com/consultoria-en-gestion-de-riesgos-de-proyectos-de-transmision-electrica/"
+      "sourceUrl": "https://malba-pmc.com/consultoria-en-gestion-de-riesgos-de-proyectos-de-transmision-electrica/",
+      "introMedia": {
+        "image": "assets/solutions/fondo-aprendizaje-digital-1672.webp",
+        "imageSmall": "assets/solutions/fondo-aprendizaje-digital-960.webp",
+        "imageAlt": "Revisión de información para la toma de decisiones del proyecto"
+      },
+      "servicesMedia": {
+        "image": "assets/solutions/fondo-soluciones-digitales-1672.webp",
+        "imageSmall": "assets/solutions/fondo-soluciones-digitales-960.webp",
+        "imageAlt": ""
+      },
+      "servicesImage": {
+        "image": "assets/solutions/riesgos-proyecto-1100.webp",
+        "imageSmall": "assets/solutions/riesgos-proyecto-600.webp",
+        "imageAlt": "Análisis y coordinación de proyectos por un equipo de profesionales"
+      },
+      "servicesTitle": "¿Cómo te apoyamos?",
+      "servicesText": "Explora cada servicio para conocer su enfoque. Definimos el alcance contigo, según la etapa y las necesidades de tu proyecto.",
+      "whenTitle": "¿Cuándo necesitas este apoyo?"
     }
-  ]
+  ],
+  "heroMedia": {
+    "image": "assets/programs/pmo-1672.webp",
+    "imageSmall": "assets/programs/pmo-960.webp",
+    "imageAlt": ""
+  },
+  "heroNoteTitle": "De la complejidad a una gestión estructurada.",
+  "heroNoteText": "Planificación, control y riesgos conectados con las decisiones de tu organización.",
+  "heroTags": [
+    "Proyectos",
+    "Riesgos",
+    "Transmisión eléctrica"
+  ],
+  "catalogTitle": "Dos especialidades. Una visión del proyecto.",
+  "catalogText": "Elige el apoyo que necesitas. Podemos abordar una situación específica o acompañar la gestión de forma integral.",
+  "contact": {
+    "title": "Conversemos sobre tu proyecto.",
+    "description": "Cuéntanos qué necesitas fortalecer. El primer paso es entender tu contexto y definir el alcance de la consultoría.",
+    "steps": [
+      "Comparte tu necesidad",
+      "Revisamos el contexto del proyecto",
+      "Definimos un alcance a medida"
+    ],
+    "formTitle": "Solicita una conversación",
+    "image": "assets/hero/fondo-arquitectura-1536.webp",
+    "imageSmall": "assets/hero/fondo-arquitectura-800.webp",
+    "imageAlt": ""
+  }
 }

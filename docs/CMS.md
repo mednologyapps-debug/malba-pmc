@@ -1,6 +1,6 @@
 # CMS de MALBA PMC
 
-Panel funcional para Academia, sus programas y Publicaciones, con el diseño MALBA y Outfit local. Backend Python 3.10 o superior, sin dependencias de producción externas. Base SQLite privada; publicación del HTML en una transacción, sin consultas del navegador al CMS al visitar Academia.
+Panel funcional para Academia, sus programas, Publicaciones, tarjetas de Soluciones digitales, Nosotros y Consultoría, con el diseño MALBA y Outfit local. Backend Python 3.10 o superior, sin dependencias de producción externas. Base SQLite privada; publicación del HTML en una transacción, sin consultas del navegador al CMS al visitar Academia.
 
 ## Probar en Windows / VS Code
 
@@ -112,3 +112,13 @@ Verificados en navegador los siete PDFs, carga/alta de revista, publicación, el
 El menú lateral de Soluciones digitales permite seleccionar las dos tarjetas existentes y editar título, subtítulo, descripción, imagen de escritorio/celular, texto alternativo, estado visible, beneficios (entre uno y seis) y texto del botón. Usa el flujo de borrador, vista previa del catálogo y publicación habitual. Los campos permitidos se validan también en el servidor.
 
 Los registros `digitalCards` tienen identificadores fijos y se incorporan a bases anteriores sin reiniciar contenido, cuentas ni revisiones. Los enlaces de destino se derivan de `content/solutions.json`. Los textos, imágenes, planes, licencias y otras secciones del detalle del simulador no se modifican al editar las tarjetas; una prueba compara toda la página de detalle antes/después de publicar cambios del catálogo. No permite crear soluciones nuevas ni editar su funcionamiento.
+
+## Nosotros y Consultoría
+
+En el menú lateral, **Nosotros** abre accesos separados a Banner, Quiénes somos, Nuestro enfoque, Miguel Alba, Accesos a MALBA y Contacto. Permite editar textos, fotografías, fondos, credenciales y tarjetas; las tres tarjetas conservan sus destinos públicos.
+
+**Consultoría** permite editar la portada, cada una de las dos especialidades y el contacto compartido. En cada especialidad se configuran banner/tarjeta, etiquetas, necesidades, introducción, imágenes de cada sección, servicios/entregables y resultados. Los textos de la tarjeta también actualizan el desplegable de navegación. Se conservan las rutas existentes. El número de contacto usa el formato `https://wa.me/519...` y también se aplica al popup de contacto.
+
+Ambas áreas usan Guardar borrador, Vista previa, Publicar e Historial. La vista previa abre la sección seleccionada; no cambia la web pública. Al actualizar una instalación existente se incorporan las nuevas áreas sin reiniciar programas, cuentas ni revisiones, y sin publicar otras ediciones privadas. Las exportaciones incluyen sus contenidos e imágenes.
+
+Aula virtual aparece dentro del desplegable de Academia y en su portada; Contacto es la única acción destacada del encabezado. El menú móvil distribuye las opciones en filas completas y los desplegables en tarjetas compactas.

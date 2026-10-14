@@ -410,3 +410,37 @@
   .course-reasons li { flex-direction: row; gap: 14px; }
   .course-reasons li:nth-last-child(2) { border-bottom: 1px solid rgba(7,63,124,.13); }
 }
+
+/* Aula virtual belongs to Academia, with a clear secondary entry point. */
+.academy-menu .academy-classroom-link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 22px; margin-top:20px; background:#5d4594; color:white; border:1px solid #5d4594; border-radius:6px; font-weight:600; }
+.academy-menu .academy-classroom-link:hover { background:#003b73; color:white; }
+.academy-classroom-cta { margin-top:24px; }
+@media (max-width:1130px) {
+  body:has(.main-navigation.is-open) { overflow:hidden; }
+  .main-navigation.is-open { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:16px; padding:12px 20px 22px; background:#fff; overscroll-behavior:contain; box-shadow:0 18px 28px rgba(0,59,115,.12); }
+  .main-navigation .nav-links { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:0; width:100%; }
+  .main-navigation .nav-links > .nav-link,.main-navigation .nav-academia { width:100%; border-bottom:1px solid #e7eaf0; }
+  .main-navigation .nav-link { display:flex; align-items:center; justify-content:flex-start; min-height:54px; padding:14px 12px; text-align:left; font-size:16px; border-radius:6px; }
+  .main-navigation .nav-link.current { background:#f2eff8; color:#5d4594; }
+  .main-navigation .nav-academia { display:flex; flex-wrap:wrap; gap:0; align-items:center; padding:0; }
+  .main-navigation .nav-academia > .nav-link { flex:1; min-width:0; }
+  .main-navigation .academy-menu-toggle { width:48px; height:48px; border-radius:6px; color:#003b73; background:#f4f6f9; margin-left:6px; }
+  .main-navigation .academy-menu-toggle[aria-expanded="true"] { background:#5d4594; color:white; }
+  .main-navigation .academy-menu { position:static; inset:auto; transform:none; width:100%; flex-basis:100%; margin:0 0 12px; padding:12px; border:1px solid #e6e1ef; background:#f6f4fa; border-radius:8px; box-shadow:none; }
+  .main-navigation .academy-menu-heading { gap:12px; margin-bottom:12px; align-items:center; }
+  .main-navigation .academy-menu-heading strong { font-size:15px; }
+  .main-navigation .academy-menu-heading p { display:none; }
+  .main-navigation .academy-menu-heading a { padding:6px 0; max-width:120px; text-align:right; font-size:12px; }
+  .main-navigation .academy-menu-programs { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; }
+  .main-navigation .academy-menu .academy-menu-program { display:grid; grid-template-columns:72px minmax(0,1fr); gap:0; min-width:0; align-items:stretch; padding:0; border:1px solid #e4e5ed; background:white; }
+  .main-navigation .academy-menu-program img { width:72px; height:100%; min-height:90px; object-fit:cover; }
+  .main-navigation .academy-menu-program > span:not(.academy-menu-arrow) { padding:10px; min-width:0; }
+  .main-navigation .academy-menu-program strong { font-size:13px; margin:0 0 4px; padding:0; line-height:1.35; }
+  .main-navigation .academy-menu-program small { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:12px; line-height:1.4; }
+  .main-navigation .academy-menu-arrow { display:none; }
+  .main-navigation .academy-menu .academy-classroom-link { width:100%; margin-top:12px; font-size:14px; }
+  .main-navigation .academy-menu .academy-menu-upcoming { margin-top:12px; padding-top:12px; font-size:12px; }
+  .main-navigation .nav-actions { display:flex; flex-wrap:nowrap; width:100%; margin:0; padding:0; }
+  .main-navigation .nav-actions .header-cta { width:100%; min-height:48px; border-radius:6px; font-size:15px; }
+  .main-navigation a:focus-visible,.main-navigation button:focus-visible { outline:3px solid #5d4594; outline-offset:2px; }
+}
