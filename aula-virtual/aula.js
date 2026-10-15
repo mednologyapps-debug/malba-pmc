@@ -44,6 +44,8 @@ window.addEventListener('hashchange',()=>{render();window.scrollTo(0,0);});
 const classroomObserver=new MutationObserver(()=>{
  const page=root.querySelector('.learning-shell'),intro=page?.querySelector(':scope > .course-introduction'),outline=page?.querySelector('.course-outline');
  if(intro&&outline&&!outline.contains(intro)) outline.insertBefore(intro,outline.querySelector('.outline-modules'));
+ const content=page?.querySelector('.lesson-content'),heading=content?.querySelector('.lesson-heading'),note=content?.querySelector('.completion-note'),actions=content?.querySelector('.lesson-actions');
+ if(content&&heading&&actions&&heading.nextElementSibling!==note){heading.after(note,actions);}
 });
 classroomObserver.observe(root,{childList:true});
 boot();

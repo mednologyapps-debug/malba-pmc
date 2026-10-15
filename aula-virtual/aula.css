@@ -64,3 +64,15 @@
  .course-outline>.course-introduction>div{padding:0 15px 2px}
  .course-outline>.course-introduction p{font-size:13px;line-height:1.7}
 }
+
+/* El encabezado permanece alineado con el panel lateral durante el desplazamiento. */
+.aula-header{position:sticky;top:0;z-index:30}
+.lesson-heading,.lesson-body,.lesson-introduction,.lesson-resources{max-width:none}
+.lesson-actions{padding:18px 0 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 24px;align-items:center}
+.completion-note{order:0;margin:0 0 12px}
+@media(min-width:901px){
+ .lesson-content{padding-left:clamp(38px,4vw,72px);padding-right:clamp(38px,4vw,72px)}
+ .lesson-heading h2{max-width:none}
+ .lesson-actions{position:relative}
+}
+@media(max-width:650px){.lesson-actions{padding:15px 0 17px;margin-bottom:20px}.completion-note{margin-bottom:10px}}
