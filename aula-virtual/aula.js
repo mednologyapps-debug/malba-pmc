@@ -46,6 +46,12 @@ const classroomObserver=new MutationObserver(()=>{
  if(intro&&outline&&!outline.contains(intro)) outline.insertBefore(intro,outline.querySelector('.outline-modules'));
  const content=page?.querySelector('.lesson-content'),heading=content?.querySelector('.lesson-heading'),note=content?.querySelector('.completion-note'),actions=content?.querySelector('.lesson-actions');
  if(content&&heading&&actions&&heading.nextElementSibling!==note){heading.after(note,actions);}
+ if(actions&&!actions.querySelector('.lesson-action-context')){
+  const context=document.createElement('div');context.className='lesson-action-context';
+  const title=document.createElement('strong');title.textContent=heading?.querySelector('h2')?.textContent||'Lección actual';
+  const progress=document.createElement('span');progress.textContent=page?.querySelector('.learning-heading>div>span')?.textContent||'';
+  context.append(title,progress);actions.insertBefore(context,actions.querySelector('.secondary')||null);
+ }
 });
 classroomObserver.observe(root,{childList:true});
 boot();
