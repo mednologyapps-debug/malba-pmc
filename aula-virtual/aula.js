@@ -52,6 +52,20 @@ const classroomObserver=new MutationObserver(()=>{
   const progress=document.createElement('span');progress.textContent=page?.querySelector('.learning-heading>div>span')?.textContent||'';
   context.append(title,progress);actions.insertBefore(context,actions.querySelector('.secondary')||null);
  }
+ const userActions=root.querySelector('.user-actions');
+ if(userActions&&!userActions.querySelector('.profile-trigger')){
+  const name=userActions.querySelector('span')?.textContent||'Mi cuenta',logout=userActions.querySelector('button');
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='profile-trigger';trigger.setAttribute('aria-label','Abrir menú de perfil');trigger.setAttribute('aria-expanded','false');
+  const avatar=document.createElement('span');avatar.className='profile-avatar';avatar.setAttribute('aria-hidden','true');avatar.textContent=name.trim().slice(0,1).toUpperCase();
+  const label=document.createElement('span');label.className='profile-name';label.textContent=name;
+  const chevron=document.createElementNS('http://www.w3.org/2000/svg','svg');chevron.setAttribute('aria-hidden','true');chevron.setAttribute('viewBox','0 0 20 20');const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','m5 7 5 5 5-5');chevron.append(path);trigger.append(avatar,label,chevron);
+  const menu=document.createElement('div');menu.className='profile-menu';menu.hidden=true;
+  const home=document.createElement('a');home.href='#';home.className='profile-menu-link';home.textContent='Volver a mis cursos';home.addEventListener('click',e=>{e.preventDefault();menu.hidden=true;location.hash='';});
+  if(logout){logout.textContent='Cerrar sesión';logout.className='profile-menu-link';}
+  menu.append(home);if(logout)menu.append(logout);userActions.replaceChildren(trigger,menu);
+  trigger.addEventListener('click',e=>{e.stopPropagation();menu.hidden=!menu.hidden;trigger.setAttribute('aria-expanded',String(!menu.hidden));});
+  document.addEventListener('click',e=>{if(!userActions.contains(e.target)){menu.hidden=true;trigger.setAttribute('aria-expanded','false');}});
+ }
 });
 classroomObserver.observe(root,{childList:true});
 boot();

@@ -89,3 +89,14 @@
 @media(max-width:900px){.lesson-content{padding-bottom:140px}.lesson-actions{left:0;right:0;padding:13px 18px calc(13px + env(safe-area-inset-bottom));justify-content:stretch}.lesson-actions .primary,.lesson-actions .secondary{flex:1}}
 @media(max-width:600px){.lesson-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);position:fixed}.lesson-action-context{position:absolute;left:0;right:0;bottom:100%;height:34px;padding:5px 18px;background:#fff;border-top:1px solid #dfe4ed;justify-content:center}.lesson-action-context strong{max-width:52%;font-size:11px}.lesson-action-context span{font-size:11px}.lesson-actions .primary,.lesson-actions .secondary{width:100%;flex:none}.lesson-actions .secondary{grid-column:2;grid-row:1}}
 @media(max-width:480px){.lesson-actions{gap:8px}.lesson-actions .primary,.lesson-actions .secondary{padding:11px 10px;font-size:12px}}
+
+.user-actions{position:relative;margin-left:auto}
+.profile-trigger{display:inline-flex;align-items:center;gap:9px;border:1px solid #dce2eb;border-radius:999px;background:#fff;color:var(--blue);padding:5px 10px 5px 6px;min-height:44px;font-size:13px;font-weight:600}
+.profile-trigger:hover,.profile-trigger[aria-expanded=true]{border-color:#cbbfe0;background:var(--soft)}
+.profile-avatar{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--purple);color:white;font-size:14px;font-weight:700}
+.profile-trigger svg{width:16px;height:16px;fill:none;stroke:var(--purple);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.profile-menu{position:absolute;right:0;top:calc(100% + 10px);z-index:40;min-width:210px;padding:7px;background:white;border:1px solid var(--line);border-radius:9px;box-shadow:0 14px 35px #003b7320}
+.profile-menu[hidden]{display:none}
+.profile-menu-link{display:flex;align-items:center;width:100%;min-height:42px;padding:10px 13px;border:0;border-radius:6px;background:transparent;color:var(--blue);font-size:13px;font-weight:600;text-decoration:none;text-align:left}
+.profile-menu-link:hover{background:var(--soft);color:var(--purple)}
+@media(max-width:650px){.profile-name{display:none}.profile-trigger{min-height:40px;padding-right:8px}.profile-menu{right:-2px;min-width:200px}}
