@@ -76,3 +76,10 @@
  .lesson-actions{position:relative}
 }
 @media(max-width:650px){.lesson-actions{padding:15px 0 17px;margin-bottom:20px}.completion-note{margin-bottom:10px}}
+
+/* Navegación persistente de la lección: siempre accesible sin volver al final. */
+.lesson-content{padding-bottom:150px}
+.lesson-actions{position:fixed;z-index:25;left:340px;right:0;bottom:0;margin:0;padding:14px clamp(38px,4vw,72px) calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #dfe4ed;border-bottom:0;box-shadow:0 -10px 28px #003b7314;display:flex;gap:12px;align-items:center}
+.lesson-actions .primary,.lesson-actions .secondary{min-height:46px}
+@media(max-width:900px){.lesson-content{padding-bottom:140px}.lesson-actions{left:0;right:0;padding:13px 18px calc(13px + env(safe-area-inset-bottom));justify-content:stretch}.lesson-actions .primary,.lesson-actions .secondary{flex:1}}
+@media(max-width:480px){.lesson-actions{gap:8px}.lesson-actions .primary,.lesson-actions .secondary{padding:11px 10px;font-size:12px}}
