@@ -40,3 +40,27 @@
 .lesson-resources{max-width:920px}
 @media(max-width:900px){.learning-shell{padding:24px 18px 55px}.learning-layout{grid-template-columns:minmax(0,1fr);gap:16px}.course-outline{grid-column:1;grid-row:1;position:static}.lesson-content{grid-column:1;grid-row:2;min-height:0;padding:28px 22px}.outline-modules{max-height:45vh}}
 @media(max-width:650px){.learning-heading{padding:0;gap:12px}.learning-heading h1{font-size:23px}.learning-heading>div{max-width:none}.lesson-content{padding:24px 18px}.lesson-heading h2{font-size:27px}.course-outline>summary{padding:16px 17px 7px}.course-outline::after{padding:0 17px 13px}}
+
+/* Aula a pantalla completa: el índice permanece visible mientras cambia el contenido. */
+@media(min-width:901px){
+ .learning-shell{padding:28px 34px 60px 374px;min-height:calc(100dvh - 88px)}
+ .learning-shell>.back-button,.learning-heading{max-width:none;margin-left:0;margin-right:0}
+ .learning-heading{grid-template-columns:minmax(0,1fr) 260px}
+ .learning-layout{max-width:none;margin:0;display:block}
+ .course-outline{position:fixed;z-index:20;left:0;top:88px;bottom:0;width:340px;height:auto;border:0;border-right:1px solid var(--line);border-radius:0;background:white;box-shadow:4px 0 18px #003b7308;overflow-y:auto}
+ .course-outline>summary{padding:22px 22px 9px;border-radius:0;background:#eeeaf6}
+ .course-outline::after{padding:0 22px 17px;background:#eeeaf6}
+ .course-outline>.course-introduction{display:block;margin:0;border:0;border-top:1px solid #ded7eb;border-bottom:1px solid #ded7eb;border-radius:0;background:#f7f5fb}
+ .course-outline>.course-introduction>summary{padding:15px 22px;font-size:14px;color:var(--purple)}
+ .course-outline>.course-introduction>div{padding:0 22px 3px}
+ .course-outline>.course-introduction p{font-size:13px;line-height:1.65}
+ .outline-modules{max-height:none;padding:8px 16px 24px}
+ .lesson-content{margin:0;max-width:none;min-height:calc(100dvh - 218px);padding:clamp(32px,4vw,62px);}
+}
+@media(max-width:900px){
+ .learning-shell{min-height:calc(100dvh - 78px)}
+ .course-outline>.course-introduction{margin:0 15px 8px;border:1px solid #dcd5e9;border-radius:8px;background:#f7f5fb}
+ .course-outline>.course-introduction>summary{padding:14px 15px;font-size:14px}
+ .course-outline>.course-introduction>div{padding:0 15px 2px}
+ .course-outline>.course-introduction p{font-size:13px;line-height:1.7}
+}
