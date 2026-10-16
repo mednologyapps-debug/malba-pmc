@@ -108,3 +108,4 @@
 .outline-lesson.completed small{color:var(--purple);font-weight:600}
 .lesson-actions .primary.is-complete{background:#eeeaf6;border-color:#cfc2e3;color:var(--purple)}
 .lesson-actions .primary.is-complete:hover{background:#e4dcf1;border-color:#bfaed8;color:var(--blue)}
+.learning-shell>.back-button{display:none!important}
