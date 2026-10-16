@@ -52,6 +52,13 @@ const classroomObserver=new MutationObserver(()=>{
   const progress=document.createElement('span');progress.textContent=page?.querySelector('.learning-heading>div>span')?.textContent||'';
   context.append(title,progress);actions.insertBefore(context,actions.querySelector('.secondary')||null);
  }
+ page?.querySelectorAll('.outline-lesson').forEach(item=>{
+  const check=item.querySelector('.lesson-check'),small=item.querySelector('small'),done=check?.textContent==='✓';
+  item.classList.toggle('completed',done);
+  if(small){const base=small.dataset.base||small.textContent.split(' · ')[0];small.dataset.base=base;small.textContent=done?'Completada · '+base:base+' · No leída';}
+ });
+ const completeButton=actions?.querySelector('.primary'),currentCheck=page?.querySelector('.outline-lesson.current .lesson-check');
+ if(completeButton&&currentCheck){const done=currentCheck.textContent==='✓';completeButton.textContent=done?'Marcar como no leída':'Marcar como completada';completeButton.classList.toggle('is-complete',done);}
  const userActions=root.querySelector('.user-actions');
  if(userActions&&!userActions.querySelector('.profile-trigger')){
   const name=userActions.querySelector('span')?.textContent||'Mi cuenta',logout=userActions.querySelector('button');

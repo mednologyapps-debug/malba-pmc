@@ -100,3 +100,11 @@
 .profile-menu-link{display:flex;align-items:center;width:100%;min-height:42px;padding:10px 13px;border:0;border-radius:6px;background:transparent;color:var(--blue);font-size:13px;font-weight:600;text-decoration:none;text-align:left}
 .profile-menu-link:hover{background:var(--soft);color:var(--purple)}
 @media(max-width:650px){.profile-name{display:none}.profile-trigger{min-height:40px;padding-right:8px}.profile-menu{right:-2px;min-width:200px}}
+
+.outline-lesson.completed{background:#e9e2f5;color:#4d3c7d;border-left-color:var(--purple)}
+.outline-lesson.completed.current{background:#ddd2ee;color:#4d3c7d}
+.outline-lesson.completed .lesson-check{width:19px;height:19px;display:grid;place-items:center;border-radius:50%;background:var(--purple);color:white;font-size:12px;font-weight:700}
+.outline-lesson small{transition:color .15s ease}
+.outline-lesson.completed small{color:var(--purple);font-weight:600}
+.lesson-actions .primary.is-complete{background:#eeeaf6;border-color:#cfc2e3;color:var(--purple)}
+.lesson-actions .primary.is-complete:hover{background:#e4dcf1;border-color:#bfaed8;color:var(--blue)}
