@@ -1,0 +1,14 @@
+{
+  "name": "malba-pmc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MALBA PMC web, CMS y aula virtual",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
