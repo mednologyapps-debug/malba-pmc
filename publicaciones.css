@@ -20,3 +20,25 @@
 @media(max-width:480px){.book-introduction{grid-template-columns:110px minmax(0,1fr);gap:17px}.book-intro-copy h1{font-size:25px}.book-order-card.book-checkout-form{padding:22px 18px}.book-contact>label{grid-column:1/-1}.book-invoice-fields{grid-template-columns:1fr}.book-contact-row{grid-template-columns:1fr}.book-contact-row label:last-child{display:block}.book-contact .book-consents label{font-size:12px}.book-format-option b{padding-left:28px}.book-intro-copy .book-lead{font-size:13px}}
 @media(max-width:350px){.book-introduction{grid-template-columns:85px minmax(0,1fr);gap:12px}.book-intro-copy h1{font-size:22px}.book-order-card.book-checkout-form{padding:20px 15px}}
 @media(min-width:1200px){.book-introduction{grid-template-columns:.65fr 1.35fr;gap:24px;align-items:center}.book-intro-copy h1{font-size:34px}.book-cover-stage picture{max-width:245px}}
+/* Editorial storefront: give the book and checkout room to breathe on wide screens. */
+@media(min-width:1101px){
+ .book-store>.section-container{max-width:1500px}
+ .book-store-layout{grid-template-columns:minmax(0,1fr) 500px;gap:48px}
+ .book-introduction{grid-template-columns:minmax(300px,.8fr) 1.2fr;min-height:470px;gap:42px;padding:42px;border:1px solid #dfe6ef;border-radius:20px;background:#fff;box-shadow:0 18px 42px rgba(0,59,115,.06)}
+ .book-cover-stage picture{max-width:360px}
+ .book-intro-copy h1{font-size:clamp(34px,3.2vw,48px)}
+ .book-content-panel{padding:36px}
+}
+@media(max-width:760px){
+ .book-store>.section-container{padding-left:18px;padding-right:18px}
+ .book-introduction{grid-template-columns:minmax(145px,.72fr) minmax(0,1.28fr);gap:20px;padding:24px 20px 28px;border:1px solid #dfe6ef;border-radius:16px;background:#fff}
+ .book-cover-stage picture{max-width:190px}
+ .book-intro-copy h1{font-size:clamp(26px,7vw,34px)}
+ .book-order-card.book-checkout-form{width:100%;max-width:none;padding:24px 20px}
+}
+@media(max-width:480px){
+ .book-store>.section-container{padding-left:14px;padding-right:14px}
+ .book-introduction{grid-template-columns:145px minmax(0,1fr);gap:15px;padding:20px 14px 24px}
+ .book-cover-stage picture{max-width:145px}
+ .book-intro-copy h1{font-size:25px}
+}
