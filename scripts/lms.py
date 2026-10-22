@@ -1,5 +1,5 @@
 """Private initial LMS: separate student identities, enrolments and immutable certificates."""
-import base64,hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid,threading,os,zipfile,xml.etree.ElementTree as ET,smtplib
+import base64,hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid,threading,os,zipfile,xml.etree.ElementTree as ET,smtplib,ssl
 from email.message import EmailMessage
 from html import escape
 from copy import deepcopy
@@ -229,8 +229,12 @@ def enrollment_email(student,course,password,cms):
     title=escape(course.get('title','Programa MALBA PMC'));name=escape(student.get('name',''))
     html='''<!doctype html><html><body style="margin:0;background:#f5f6fa;font-family:Arial,sans-serif;color:#003b73"><div style="max-width:620px;margin:28px auto;background:#fff;border:1px solid #e1e6ef;border-radius:14px;overflow:hidden"><div style="background:#003b73;padding:28px 32px;text-align:center"><img src="https://malba-pmc.com/assets/malba-pmc-logo.png" alt="MALBA PMC" width="190" style="background:#fff;padding:10px;border-radius:6px"></div><div style="padding:34px"><p style="color:#5d4594;font-weight:bold;margin:0 0 10px">AULA VIRTUAL MALBA PMC</p><h1 style="font-size:26px;margin:0 0 18px">Hola, %s</h1><p style="font-size:16px;line-height:1.6">Tu acceso ya está listo. Fuiste inscrito(a) en <strong>%s</strong>.</p><div style="background:#f0edf7;border-radius:10px;padding:20px;margin:24px 0"><p style="margin:0 0 8px"><strong>Correo:</strong> %s</p><p style="margin:0"><strong>Contraseña temporal:</strong> %s</p></div><a href="%s" style="display:inline-block;background:#5d4594;color:#fff;text-decoration:none;padding:14px 22px;border-radius:7px;font-weight:bold">Ingresar al aula virtual</a><p style="font-size:13px;line-height:1.6;color:#60738b;margin-top:24px">Por seguridad, cambia tu contraseña en el primer ingreso. Si necesitas ayuda, responde este correo.</p></div><div style="padding:18px 34px;border-top:1px solid #e1e6ef;color:#60738b;font-size:12px">MALBA PMC · Gestión, aprendizaje y experiencia aplicada</div></div></body></html>'''%(name,title,escape(student.get('email','')),escape(password),url)
     msg=EmailMessage();msg['Subject']='Tu acceso a '+course.get('title','MALBA PMC');msg['From']=sender;msg['To']=student['email'];msg.set_content('Tu acceso al aula virtual está listo. Ingresa en '+url+' con tu correo y contraseña temporal.');msg.add_alternative(html,subtype='html')
-    with smtplib.SMTP(host,port,timeout=15) as smtp:
-        if os.getenv('MALBA_SMTP_TLS','1')!='0':smtp.starttls()
+    if port==465:
+        connection=smtplib.SMTP_SSL(host,port,timeout=15,context=ssl.create_default_context())
+    else:
+        connection=smtplib.SMTP(host,port,timeout=15)
+    with connection as smtp:
+        if port!=465 and os.getenv('MALBA_SMTP_TLS','1')!='0':smtp.starttls()
         if user and secret:smtp.login(user,secret)
         smtp.send_message(msg)
     return {'sent':True}
