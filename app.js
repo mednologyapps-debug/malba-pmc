@@ -62,6 +62,34 @@ document.querySelectorAll("dialog").forEach((dialog) => {
   });
 });
 
+// MALBA uses a clean, typography-led interface. Remove decorative arrow glyphs
+// from labels and links while keeping every control accessible by its aria-label.
+// Navigation controls that need a visible affordance use words instead.
+const arrowGlyphs = /[→←↗↘↓↑›‹⌄⌃]/g;
+const arrowlessControls = new Map([
+  ["Anterior", "Anterior"],
+  ["Siguiente", "Siguiente"],
+  ["Programa anterior", "Anterior"],
+  ["Programa siguiente", "Siguiente"],
+  ["Video anterior", "Anterior"],
+  ["Video siguiente", "Siguiente"],
+  ["Etapa anterior", "Anterior"],
+  ["Etapa siguiente", "Siguiente"],
+]);
+const arrowWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+const arrowTextNodes = [];
+while (arrowWalker.nextNode()) arrowTextNodes.push(arrowWalker.currentNode);
+arrowTextNodes.forEach((node) => {
+  const parent = node.parentElement;
+  if (!parent || /^(SCRIPT|STYLE|NOSCRIPT)$/i.test(parent.tagName)) return;
+  const control = parent.closest("button");
+  const label = control?.getAttribute("aria-label") || "";
+  const replacement = [...arrowlessControls.entries()].find(([key]) => label.includes(key));
+  node.nodeValue = replacement
+    ? replacement[1]
+    : node.nodeValue.replace(arrowGlyphs, "");
+});
+
 // Three-field contact modal, shared by all contact entry points.
 const quickContact = document.querySelector('#quick-contact-form');
 if (quickContact) {

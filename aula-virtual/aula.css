@@ -109,3 +109,6 @@
 .lesson-actions .primary.is-complete{background:#eeeaf6;border-color:#cfc2e3;color:var(--purple)}
 .lesson-actions .primary.is-complete:hover{background:#e4dcf1;border-color:#bfaed8;color:var(--blue)}
 .learning-shell>.back-button{display:none!important}
+.learning-shell .material-pages>.secondary{font-size:0}
+.learning-shell .material-pages>.secondary::after{content:'Anterior';font-size:12px}
+.learning-shell .material-pages>.secondary:last-of-type::after{content:'Siguiente'}
