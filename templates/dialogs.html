@@ -1,0 +1,33 @@
+<dialog id="contact-dialog" aria-labelledby="contact-title" aria-describedby="contact-description">
+  <div class="dialog-heading"><h2 id="contact-title">Conversemos</h2><button type="button" class="dialog-close" aria-label="Cerrar contacto">×</button></div>
+  <p id="contact-description">Cuéntanos qué necesitas. Completa estos tres campos para iniciar la conversación.</p>
+  <form id="quick-contact-form" method="post" data-contact-url="{{CONTACT_URL}}">
+    <label for="quick-contact-name">Nombre completo</label><input id="quick-contact-name" name="contact_name" autocomplete="name" required maxlength="120" placeholder="Tu nombre y apellidos" autofocus>
+    <label for="quick-contact-email">Correo electrónico</label><input id="quick-contact-email" name="contact_email" type="email" autocomplete="email" required maxlength="254" placeholder="nombre@correo.com">
+    <label for="quick-contact-phone">Número celular <small>(opcional)</small></label><input id="quick-contact-phone" name="contact_phone" type="tel" autocomplete="tel" maxlength="30" placeholder="+51 999 999 999">
+    <label for="quick-contact-message">¿Cómo podemos ayudarte?</label><textarea id="quick-contact-message" name="contact_message" rows="3" required maxlength="1500" placeholder="Escribe brevemente tu consulta."></textarea>
+    <button class="button button-purple" type="submit" disabled>Continuar por WhatsApp</button>
+    <p class="quick-contact-note">Se abrirá WhatsApp con tu mensaje listo para enviar.</p>
+    <noscript><p>También puedes <a href="{{CONTACT_URL}}" target="_blank" rel="noopener noreferrer">escribirnos directamente por WhatsApp</a>.</p></noscript>
+  </form>
+</dialog>
+<dialog id="publications-dialog" aria-labelledby="publications-title">
+      <div class="dialog-heading">
+        <h2 id="publications-title">Publicaciones</h2>
+        <button type="button" class="dialog-close" aria-label="Cerrar">
+          ×
+        </button>
+      </div>
+      <p>
+        Conocimiento aplicado a la dirección y gestión de proyectos de
+        infraestructura eléctrica.
+      </p>
+      <div class="dialog-description">
+        <h3>Gestión de proyectos de transmisión eléctrica</h3>
+        <p>
+          Planificación, control y experiencia aplicada a proyectos del sector.
+        </p>
+        <h3>Gestión de riesgos y Project Controls</h3>
+        <p>Metodologías para apoyar la toma de decisiones.</p>
+      </div>
+    </dialog>

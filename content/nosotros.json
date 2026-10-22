@@ -1,0 +1,110 @@
+{
+  "title": "Experiencia aplicada a tus proyectos.",
+  "description": "Somos MALBA PMC. Conectamos consultoría, formación y herramientas digitales para fortalecer la gestión de proyectos de transmisión eléctrica.",
+  "introTitle": "Transformamos la experiencia en metodología aplicada.",
+  "paragraphs": [
+    "Somos una firma especializada en capacitación y consultoría para proyectos de transmisión eléctrica. Acercamos estándares y metodologías internacionales a las necesidades reales de cada organización.",
+    "Diseñamos estrategias de gestión para la construcción de líneas y subestaciones, combinando visión estratégica, planificación y control. Nuestro objetivo es contribuir al cumplimiento de plazos, al uso eficiente de los recursos y a una gestión más informada de los riesgos."
+  ],
+  "quote": "Sin método, los proyectos se acercan al fracaso; con método, se acercan al éxito.",
+  "approach": [
+    {
+      "title": "Entendemos el contexto",
+      "description": "Partimos de la realidad del proyecto: su etapa, restricciones, objetivos y desafíos de gestión."
+    },
+    {
+      "title": "Estructuramos la gestión",
+      "description": "Conectamos planificación, control y riesgos con métodos y herramientas aplicables."
+    },
+    {
+      "title": "Convertimos la práctica en aprendizaje",
+      "description": "Organizamos la experiencia para fortalecer las decisiones del equipo y los proyectos siguientes."
+    }
+  ],
+  "director": {
+    "name": "Miguel Alba",
+    "role": "Director académico",
+    "image": "assets/people/miguel-alba.webp",
+    "description": "Ingeniero Electricista por la Universidad Nacional de Ingeniería y consultor en gestión de proyectos de infraestructura eléctrica.",
+    "paragraphs": [
+      "Cuenta con más de 10 años de experiencia en transmisión de alta tensión, en proyectos de líneas y subestaciones de hasta 500 kV.",
+      "Ha participado desde la planificación hasta la puesta en servicio y ha brindado soporte metodológico a portafolios de inversión en transmisión. Su enfoque conecta la experiencia práctica con metodologías de gestión."
+    ],
+    "credentials": [
+      {
+        "title": "PMP®",
+        "description": "Project Management Professional · PMI"
+      },
+      {
+        "title": "RMP®",
+        "description": "Risk Management Professional · PMI"
+      },
+      {
+        "title": "ISO 31000",
+        "description": "Risk Manager · PECB"
+      }
+    ]
+  },
+  "sourceUrl": "https://malba-pmc.com/quienes-somos/",
+  "heroMedia": {
+    "image": "assets/banner-transmision-1672.webp",
+    "imageSmall": "assets/banner-transmision-960.webp",
+    "imageAlt": ""
+  },
+  "introMedia": {
+    "image": "assets/programs/pmo-1672.webp",
+    "imageSmall": "assets/programs/pmo-960.webp",
+    "imageAlt": "Equipo de profesionales revisando información y planificación de un proyecto"
+  },
+  "methodMedia": {
+    "image": "assets/solutions/fondo-aprendizaje-digital-1672.webp",
+    "imageSmall": "assets/solutions/fondo-aprendizaje-digital-960.webp",
+    "imageAlt": ""
+  },
+  "methodTitle": "Un enfoque conectado con la realidad del proyecto.",
+  "directorCta": "Conoce cómo puede apoyar a tu organización",
+  "ecosystemTitle": "Una experiencia. Tres formas de acompañarte.",
+  "ecosystemText": "Encuentra la propuesta que responde a las necesidades de tu equipo.",
+  "destinations": [
+    {
+      "id": "consulting",
+      "title": "Consultoría",
+      "description": "Acompañamiento en gestión de proyectos y riesgos.",
+      "ctaLabel": "Explorar consultoría",
+      "image": "assets/banner-transmision-1672.webp",
+      "imageSmall": "assets/banner-transmision-960.webp",
+      "imageAlt": ""
+    },
+    {
+      "id": "academy",
+      "title": "Academia",
+      "description": "Formación especializada y aprendizaje aplicado.",
+      "ctaLabel": "Ver programas",
+      "image": "assets/academia/academia-1672.webp",
+      "imageSmall": "assets/academia/academia-960.webp",
+      "imageAlt": ""
+    },
+    {
+      "id": "digital",
+      "title": "Soluciones digitales",
+      "description": "Herramientas para entrenar y apoyar la toma de decisiones.",
+      "ctaLabel": "Conocer soluciones",
+      "image": "assets/solutions/fondo-soluciones-digitales-1672.webp",
+      "imageSmall": "assets/solutions/fondo-soluciones-digitales-960.webp",
+      "imageAlt": ""
+    }
+  ],
+  "contact": {
+    "title": "Conversemos sobre tu proyecto.",
+    "description": "Cuéntanos qué necesitas fortalecer. El primer paso es entender tu contexto y definir la forma de acompañarte.",
+    "steps": [
+      "Comparte tu necesidad",
+      "Revisamos el contexto del proyecto",
+      "Definimos una propuesta a medida"
+    ],
+    "formTitle": "Solicita una conversación",
+    "image": "assets/hero/fondo-arquitectura-1536.webp",
+    "imageSmall": "assets/hero/fondo-arquitectura-800.webp",
+    "imageAlt": ""
+  }
+}
