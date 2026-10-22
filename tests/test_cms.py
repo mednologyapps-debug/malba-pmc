@@ -275,7 +275,7 @@ class CMSIntegrationTests(unittest.TestCase):
         for route in ['/','/academia/','/publicaciones/','/consultoria/','/quienes-somos/','/soluciones-digitales/malba-risk/']:
             page=self.call(route)[1];parser=Header();parser.feed(page)
             self.assertEqual(parser.contact_forms,1,route);self.assertEqual(parser.classroom_icons,0,route)
-            self.assertEqual(parser.fields,['contact_name','contact_email','contact_message'],route)
+            self.assertEqual(parser.fields,['contact_name','contact_email','contact_phone','contact_message'],route)
             self.assertNotIn('{{CONTACT_URL}}',page);self.assertIn('data-contact-url="https://wa.me/51932563293"',page)
             header=page.split('</header>')[0]
             self.assertNotIn('Solicitar información',header);self.assertEqual(header.count('data-dialog="contact-dialog"'),1)

@@ -1,7 +1,7 @@
 /* Shared Academia navigation. Palette and type inherit from the MALBA homepage. */
 .nav-academia { position: relative; display: flex; align-items: center; gap: 3px; }
 .academy-menu-toggle { display: grid; place-items: center; width: 24px; height: 32px; padding: 0; border: 0; background: transparent; }
-.academy-menu-toggle svg { width: 16px; height: 16px; transition: transform .2s ease; }
+.academy-menu-toggle svg { display:block; width: 18px; height: 18px; transition: transform .2s ease; }
 .academy-menu-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .academy-menu { position: absolute; top: 100%; left: -18px; width: 265px; background: var(--white); color: var(--blue); border: 1px solid rgba(7,63,124,.12); border-radius: 6px; box-shadow: 0 12px 28px rgba(7,63,124,.12); padding: 6px; z-index: 35; }
 .academy-menu[hidden] { display: none; }
@@ -420,7 +420,7 @@
   .main-navigation.is-open { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:16px; padding:12px 20px 22px; background:#fff; overscroll-behavior:contain; box-shadow:0 18px 28px rgba(0,59,115,.12); }
   .main-navigation .nav-links { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:0; width:100%; }
   .main-navigation .nav-links > .nav-link,.main-navigation .nav-academia { width:100%; border-bottom:1px solid #e7eaf0; }
-  .main-navigation .nav-link { display:flex; align-items:center; justify-content:flex-start; min-height:54px; padding:14px 12px; text-align:left; font-size:16px; border-radius:6px; }
+  .main-navigation .nav-link { display:flex; align-items:center; justify-content:flex-start; min-height:54px; padding:14px 12px; text-align:left; font-size:17px; border-radius:6px; }
   .main-navigation .nav-link.current { background:#f2eff8; color:#5d4594; }
   .main-navigation .nav-academia { display:flex; flex-wrap:wrap; gap:0; align-items:center; padding:0; }
   .main-navigation .nav-academia > .nav-link { flex:1; min-width:0; }

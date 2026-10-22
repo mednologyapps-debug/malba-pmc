@@ -38,7 +38,7 @@
 .lesson-introduction{max-width:920px}
 .lesson-video{border-radius:7px;box-shadow:0 10px 30px #003b7318}
 .lesson-resources{max-width:920px}
-@media(max-width:900px){.learning-shell{padding:24px 18px 55px}.learning-layout{grid-template-columns:minmax(0,1fr);gap:16px}.course-outline{grid-column:1;grid-row:1;position:static}.lesson-content{grid-column:1;grid-row:2;min-height:0;padding:28px 22px}.outline-modules{max-height:45vh}}
+@media(max-width:900px){.learning-shell{padding:24px 18px 55px}.learning-layout{grid-template-columns:minmax(0,1fr);gap:16px}.course-outline{grid-column:1;grid-row:1;position:static}.lesson-content{grid-column:1;grid-row:2;min-height:0;padding:28px 22px}.outline-modules{max-height:45vh}.learning-heading{display:block}.learning-heading>h1,.learning-heading>div{min-width:0;width:100%}.learning-heading>div{margin-top:14px}}
 @media(max-width:650px){.learning-heading{padding:0;gap:12px}.learning-heading h1{font-size:23px}.learning-heading>div{max-width:none}.lesson-content{padding:24px 18px}.lesson-heading h2{font-size:27px}.course-outline>summary{padding:16px 17px 7px}.course-outline::after{padding:0 17px 13px}}
 
 /* Aula a pantalla completa: el índice permanece visible mientras cambia el contenido. */

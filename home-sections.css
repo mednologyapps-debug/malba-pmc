@@ -719,13 +719,14 @@ button.text-link { border: 0; background: transparent; text-align: left; }
 .expertise-words span { white-space: nowrap; }
 .expertise-words span:nth-child(even) { transform: translateX(-80px); }
 .expertise-layout { display: grid; grid-template-columns: 1.05fr .8fr 1.05fr; gap: 46px; align-items: center; padding-top: 68px; padding-bottom: 68px; }
-.expertise-copy h2 { font-size: clamp(30px,2.8vw,40px); font-weight: 500; line-height: 1.15; letter-spacing: -.8px; color: var(--purple); margin: 0 0 24px; }
+.expertise-copy h2 { font-size: clamp(34px,3.2vw,46px); font-weight: 600; line-height: 1.1; letter-spacing: -.9px; color: var(--blue); margin: 0 0 24px; position:relative; padding-bottom:16px; }
+.expertise-copy h2::after { content:""; display:block; width:58px; height:4px; margin-top:16px; border-radius:2px; background:var(--purple); }
 .expertise-copy h3 { font-size: 26px; font-weight: 600; margin: 0 0 8px; }
 .expertise-copy p { font-size: 16px; line-height: 1.65; margin: 0 0 16px; }
 .expertise-copy .expertise-credentials { font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
 .expertise-portrait { position: relative; isolation: isolate; margin: 0; padding: 14px 0; justify-self: center; width: 100%; max-width: 264px; }
-.expertise-portrait img { display: block; width: 100%; height: auto; border-radius: 120px 120px 8px 8px; }
-.expertise-portrait::before { content: ""; position: absolute; inset: 0 -14px; border: 1px solid rgba(84,69,149,.23); border-radius: 150px 150px 12px 12px; z-index: -1; }
+.expertise-portrait img { display: block; width: 100%; height: auto; border-radius: 18px 18px 76px 18px; box-shadow: 0 18px 34px rgba(0,59,115,.16); }
+.expertise-portrait::before { content: ""; position: absolute; inset: 24px -18px -18px 18px; background: var(--purple-soft); border-radius: 18px 18px 76px 18px; z-index: -1; }
 .expertise-options { display: grid; gap: 26px; }
 .expertise-option { display: grid; grid-template-columns: 42px 1fr; gap: 18px; align-items: start; }
 .expertise-option > svg { width: 42px; height: 42px; color: var(--purple); margin-top: 2px; }

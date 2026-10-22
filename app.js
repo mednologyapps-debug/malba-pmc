@@ -110,6 +110,7 @@ if (quickContact) {
       'Hola, MALBA PMC. Quisiera información.',
       'Nombre: ' + fields.get('contact_name').trim(),
       'Correo: ' + fields.get('contact_email').trim(),
+      'Celular: ' + ((fields.get('contact_phone') || '').trim() || 'No indicado'),
       'Consulta: ' + fields.get('contact_message').trim()
     ].join('\n'));
     const popup = window.open(destination.href, '_blank');

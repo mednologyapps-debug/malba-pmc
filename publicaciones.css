@@ -42,3 +42,6 @@
  .book-cover-stage picture{max-width:145px}
  .book-intro-copy h1{font-size:25px}
 }
+.book-preview-link{justify-content:center;padding:10px 14px;border:1px solid #d7cde7;border-radius:7px;background:#f7f4fb;gap:8px}
+.book-preview-link:hover{background:#eeeaf6;border-color:var(--purple)}
+.book-breadcrumb a:last-child{padding:10px 14px;border-radius:7px;background:#eeeaf6;color:var(--purple);font-size:13px}

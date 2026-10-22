@@ -23,7 +23,6 @@
 
 /* Keep the interface free of decorative arrow marks. Text and aria labels
    continue to communicate the action for screen readers and keyboard users. */
-.academy-menu-toggle svg,
 .academy-menu-arrow,
 .button > span[aria-hidden="true"],
 .text-link > span[aria-hidden="true"],
