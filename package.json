@@ -5,8 +5,12 @@
   "description": "MALBA PMC web, CMS y aula virtual",
   "type": "commonjs",
   "scripts": {
+    "build": "node -e \"console.log('MALBA PMC Node build listo')\"",
     "start": "node server.js",
     "check": "node --check server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.75.0"
   },
   "engines": {
     "node": ">=20"
