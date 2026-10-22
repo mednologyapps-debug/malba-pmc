@@ -476,16 +476,24 @@ def handle(h,cms,method,path):
                         elif action=='restore':db.execute('UPDATE lms_students SET deleted=0,active=1 WHERE id=?',(sid,))
                         else:db.execute('UPDATE lms_students SET active=CASE active WHEN 1 THEN 0 ELSE 1 END WHERE id=? AND deleted=0',(sid,));
                         h.response({'ok':True});return True
-                    name=text(body.get('name'),180,True);email=text(body.get('email'),254,True).lower();password=text(body.get('password',''),256)
+                    name=text(body.get('name'),180,True);email=text(body.get('email'),254,True).lower();password=text(body.get('password',''),256);course_id=text(body.get('courseId',''),80);send_email=bool(body.get('sendEmail'))
                     if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):raise ValueError('Revisa el correo del alumno.')
                     old=db.execute('SELECT * FROM lms_students WHERE id=?',(body.get('id',''),)).fetchone()
-                    if not old and len(password)<12 or password and len(password)<12:raise ValueError('La contraseña temporal debe tener al menos 12 caracteres.')
+                    if course_id and not db.execute('SELECT 1 FROM lms_courses WHERE id=?',(course_id,)).fetchone():raise ValueError('El curso seleccionado no existe.')
+                    if not old and not password and not send_email:raise ValueError('Indica una contraseña temporal o activa el envío por correo.')
+                    if password and len(password)<12:raise ValueError('La contraseña temporal debe tener al menos 12 caracteres.')
                     if db.execute('SELECT id FROM lms_students WHERE email=? AND id!=?',(email,old['id'] if old else '')).fetchone():raise ValueError('Ya existe un alumno con ese correo.')
-                    sid=old['id'] if old else uuid.uuid4().hex;salt=secrets.token_hex(16) if password else old['salt'];digest=cms.password_hash(password,salt) if password else old['hash'];active=int(bool(body.get('active',True)));forced=1 if password else old['force_password']
+                    generated=password or (temporary_password() if send_email else '');sid=old['id'] if old else uuid.uuid4().hex;salt=secrets.token_hex(16) if generated else old['salt'];digest=cms.password_hash(generated,salt) if generated else old['hash'];active=int(bool(body.get('active',True)));forced=1 if generated else old['force_password']
                     deleted=int(old['deleted']) if old else 0
                     db.execute('INSERT INTO lms_students(id,name,email,salt,hash,active,force_password,created,deleted) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,email=excluded.email,salt=excluded.salt,hash=excluded.hash,active=excluded.active,force_password=excluded.force_password',(sid,name,email,salt,digest,active,forced,time.time(),deleted))
-                    if password or not active:db.execute('DELETE FROM lms_sessions WHERE student_id=?',(sid,))
-                    h.response({'ok':True,'id':sid});return True
+                    if generated or not active:db.execute('DELETE FROM lms_sessions WHERE student_id=?',(sid,))
+                    email_status={'sent':False,'reason':'No solicitado'}
+                    if course_id:
+                        db.execute('INSERT INTO lms_enrollments VALUES(?,?,?,?,?,?) ON CONFLICT(student_id,course_id) DO UPDATE SET active=1,expires=excluded.expires',(sid,course_id,1,'','',time.time()))
+                        if send_email:
+                            try:email_status=enrollment_email({'name':name,'email':email},json.loads(db.execute('SELECT draft FROM lms_courses WHERE id=?',(course_id,)).fetchone()[0]),generated,cms)
+                            except Exception as exc:email_status={'sent':False,'reason':'SMTP: '+str(exc)[:180]}
+                    h.response({'ok':True,'id':sid,'email':email_status});return True
                 if path=='/api/lms/admin/students/import':
                     raw=base64.b64decode(str(body.get('content','')),validate=True);rows=parse_student_sheet(raw,text(body.get('filename','alumnos.xlsx'),120,True));course_id=body.get('courseId','');send=bool(body.get('sendEmail',True));created=updated=0;errors=[];emails=0
                     if len(rows)>500:raise ValueError('Puedes importar hasta 500 alumnos por archivo.')
@@ -516,7 +524,7 @@ def handle(h,cms,method,path):
                     if body.get('sendEmail') and body.get('active',True):
                         password=temporary_password();salt=secrets.token_hex(16);db.execute('UPDATE lms_students SET salt=?,hash=?,force_password=1 WHERE id=?',(salt,cms.password_hash(password,salt),student))
                         try:email_status=enrollment_email(dict(user),json.loads(course_row['draft']),password,cms)
-                        except Exception:email_status={'sent':False,'reason':'No se pudo enviar el correo. Revisa la configuración SMTP.'}
+                        except Exception as exc:email_status={'sent':False,'reason':'SMTP: '+str(exc)[:180]}
                     db.execute('INSERT INTO lms_enrollments VALUES(?,?,?,?,?,?) ON CONFLICT(student_id,course_id) DO UPDATE SET active=excluded.active,expires=excluded.expires',(student,course,int(bool(body.get('active',True))),expires,'',time.time()));h.response({'ok':True,'email':email_status});return True
                 if path=='/api/lms/admin/certificate/revoke':
                     db.execute('UPDATE lms_certificates SET revoked=1 WHERE id=?',(body['id'],));h.response({'ok':True});return True
