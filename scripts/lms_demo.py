@@ -130,7 +130,7 @@ def seed(cms):
         student=db.execute('SELECT * FROM lms_students WHERE email=?',('alumno.demo@malba.test',)).fetchone()
         if not student:
             sid=uuid.uuid4().hex;password=secrets.token_urlsafe(14);salt=secrets.token_hex(16)
-            db.execute('INSERT INTO lms_students VALUES(?,?,?,?,?,1,1,?)',(sid,'Alumno de demostración','alumno.demo@malba.test',salt,cms.password_hash(password,salt),now))
+            db.execute('INSERT INTO lms_students(id,name,email,salt,hash,active,force_password,created,deleted) VALUES(?,?,?,?,?,1,1,?,0)',(sid,'Alumno de demostración','alumno.demo@malba.test',salt,cms.password_hash(password,salt),now))
         else:sid=student['id']
         db.execute('INSERT INTO lms_courses VALUES(?,?,?,1,1,?)',(COURSE_ID,cms.dump(course),cms.dump(course),now))
         db.execute('INSERT INTO lms_enrollments VALUES(?,?,1,?,?,?)',(sid,COURSE_ID,'','demo-lesson-cierre',now))

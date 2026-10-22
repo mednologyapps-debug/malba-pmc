@@ -24,7 +24,7 @@ py scripts/cms_server.py --demo-lms
 4. Materiales privados: PDF, PNG, JPG, WebP, DOCX, XLSX, PPTX, ZIP y TXT; videos MP4, hasta 100 MB por archivo. Las portadas y firmas admiten PNG, JPG o WebP de hasta 5 MB. Para videos mayores usa un proveedor de streaming y conserva sus permisos de acceso. Los enlaces externos mantienen la privacidad configurada en el proveedor.
 5. Personaliza título, texto, responsable, cargo y firma opcional del certificado. Descarga una prueba PDF identificada como vista previa.
 6. Publica la edición. El servidor verifica el contenido obligatorio; guardar borrador no cambia el curso visible. Deshabilitar el curso suspende el acceso y conserva matrículas/avance. Las revisiones impiden sobrescribir una edición concurrente.
-7. En **Alumnos**, crea el acceso con correo y contraseña temporal, o restablece/deshabilita una cuenta. Puedes generar una contraseña aleatoria y copiar los datos para compartirlos por tu canal habitual. No hay envío automático de correos.
+7. En **Alumnos**, crea el acceso con correo y contraseña temporal, importa hasta 500 alumnos desde `.xlsx`/`.csv` y exporta el padrón en Excel. Los registros pueden habilitarse, deshabilitarse, restaurarse o enviarse a la papelera sin perder matrículas ni avance.
 8. En **Matrículas y avance**, asigna alumno/curso, configura un vencimiento opcional, suspende/reactiva accesos y revisa el porcentaje real calculado por el servidor. Puedes descargar certificados y revocarlos.
 
 Los cambios del aula tienen sus propios botones Guardar/Publicar. No se mezclan con los borradores o el historial de la web comercial.
@@ -45,7 +45,7 @@ La composición del certificado toma como referencia el adjunto `CertiMalba.webp
 - La verificación pública requiere el código aleatorio del documento y muestra únicamente nombre, curso y fecha. La descarga exige sesión del titular o administrador.
 - Para respaldar, detén el servidor y copia la carpeta privada completa y `assets/uploads/`. Nunca la subas a GitHub ni a un directorio público. Las portadas y firmas se guardan en la carpeta de imágenes del sitio; no uses esa carpeta para materiales privados.
 - El ZIP de **Descargar web publicada** sigue siendo una exportación estática de la web y las pantallas del aula. No contiene alumnos, sesiones, matrículas, materiales privados ni el backend; no funciona como LMS en un hosting que solo sirva HTML. El LMS requiere ejecutar este backend Python con almacenamiento persistente y HTTPS. No se ha desplegado esta entrega en Hostinger ni migrado usuarios de Tutor LMS.
-- No se han conectado pagos/Izipay, matriculación automática, correo transaccional, banco avanzado de exámenes, tareas calificadas o migración de WordPress. Las matrículas de esta versión las gestiona el administrador.
+- Las matrículas de esta versión las gestiona el administrador. Al matricular, el panel puede enviar un correo HTML con la URL del aula, credenciales temporales y datos del curso. Configura `MALBA_SMTP_HOST`, `MALBA_SMTP_PORT`, `MALBA_SMTP_USER`, `MALBA_SMTP_PASSWORD`, `MALBA_MAIL_FROM`, `MALBA_AULA_URL` y opcionalmente `MALBA_SMTP_TLS=0` en el servidor. Sin SMTP, la matrícula se guarda y el panel avisa que el correo quedó pendiente.
 
 ## Verificación
 

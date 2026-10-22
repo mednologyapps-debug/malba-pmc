@@ -1,5 +1,7 @@
 """Private initial LMS: separate student identities, enrolments and immutable certificates."""
-import hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid,threading
+import base64,hashlib,hmac,io,json,mimetypes,re,secrets,time,uuid,threading,os,zipfile,xml.etree.ElementTree as ET,smtplib
+from email.message import EmailMessage
+from html import escape
 from copy import deepcopy
 from datetime import datetime,timezone,timedelta
 LIMA=timezone(timedelta(hours=-5))
@@ -12,7 +14,7 @@ PDF_RENDER_LOCK=threading.Lock()
 
 def initialize(db):
     db.executescript('''
-    CREATE TABLE IF NOT EXISTS lms_students(id TEXT PRIMARY KEY,name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,salt TEXT NOT NULL,hash TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,force_password INTEGER NOT NULL DEFAULT 1,created REAL NOT NULL);
+    CREATE TABLE IF NOT EXISTS lms_students(id TEXT PRIMARY KEY,name TEXT NOT NULL,email TEXT UNIQUE NOT NULL,salt TEXT NOT NULL,hash TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,force_password INTEGER NOT NULL DEFAULT 1,created REAL NOT NULL,deleted INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS lms_sessions(id TEXT PRIMARY KEY,student_id TEXT NOT NULL,csrf TEXT NOT NULL,created REAL NOT NULL,touched REAL NOT NULL);
     CREATE TABLE IF NOT EXISTS lms_courses(id TEXT PRIMARY KEY,draft TEXT NOT NULL,published TEXT,revision INTEGER NOT NULL,active INTEGER NOT NULL DEFAULT 1,updated REAL NOT NULL);
     CREATE TABLE IF NOT EXISTS lms_enrollments(student_id TEXT NOT NULL,course_id TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,expires TEXT NOT NULL DEFAULT '',last_lesson TEXT NOT NULL DEFAULT '',created REAL NOT NULL,PRIMARY KEY(student_id,course_id));
@@ -23,6 +25,9 @@ def initialize(db):
     CREATE INDEX IF NOT EXISTS lms_quiz_student ON lms_quiz_attempts(student_id,course_id,lesson_id);
     CREATE INDEX IF NOT EXISTS lms_enrollment_course ON lms_enrollments(course_id);
     ''')
+    # Migrate installations created before the student trash was introduced.
+    columns={r[1] for r in db.execute('PRAGMA table_info(lms_students)')}
+    if 'deleted' not in columns:db.execute('ALTER TABLE lms_students ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0')
 
 def text(v,limit=500,required=False):
     if not isinstance(v,str) or len(v)>limit or any(ord(c)<32 and c not in '\n\t\r' for c in v):raise ValueError('Revisa los textos: hay un campo inválido o demasiado largo.')
@@ -101,8 +106,8 @@ def student_session(h,cms,csrf=False,allow_password=False):
     if not re.fullmatch('[a-zA-Z0-9_-]{40,100}',sid):return None
     now=time.time();key=hashlib.sha256(sid.encode()).hexdigest()
     with cms.connect() as db:
-        s=db.execute('SELECT s.*,u.name,u.email,u.active,u.force_password FROM lms_sessions s JOIN lms_students u ON u.id=s.student_id WHERE s.id=?',(key,)).fetchone()
-        if not s or not s['active'] or now-s['created']>cms.SESSION_MAX or now-s['touched']>cms.SESSION_IDLE:
+        s=db.execute('SELECT s.*,u.name,u.email,u.active,u.deleted,u.force_password FROM lms_sessions s JOIN lms_students u ON u.id=s.student_id WHERE s.id=?',(key,)).fetchone()
+        if not s or not s['active'] or s['deleted'] or now-s['created']>cms.SESSION_MAX or now-s['touched']>cms.SESSION_IDLE:
             db.execute('DELETE FROM lms_sessions WHERE id=?',(key,));return None
         if csrf and not hmac.compare_digest(h.headers.get('X-CSRF-Token',''),s['csrf']):raise PermissionError('La sesión cambió. Vuelve a ingresar.')
         if s['force_password'] and not allow_password:raise PermissionError('Cambia tu contraseña temporal para ingresar al aula.')
@@ -158,7 +163,7 @@ def admin_data(db):
     courses=[]
     for r in db.execute('SELECT * FROM lms_courses ORDER BY updated DESC'):
         d=dict(r);d['draft']=json.loads(d['draft']);d['published']=json.loads(d['published']) if d['published'] else None;courses.append(d)
-    students=[dict(s) for s in db.execute('SELECT id,name,email,active,force_password,created FROM lms_students ORDER BY name')]
+    students=[dict(s) for s in db.execute('SELECT id,name,email,active,force_password,created,deleted FROM lms_students ORDER BY deleted,name')]
     enrollments=[]
     for e in db.execute('SELECT * FROM lms_enrollments ORDER BY created DESC').fetchall():
         item=dict(e);c=next((x for x in courses if x['id']==e['course_id']),None)
@@ -166,6 +171,69 @@ def admin_data(db):
         cert=db.execute('SELECT id,issued,revoked FROM lms_certificates WHERE student_id=? AND course_id=?',(e['student_id'],e['course_id'])).fetchone()
         item['certificate']=dict(cert) if cert else None;enrollments.append(item)
     return dict(courses=courses,students=students,enrollments=enrollments)
+
+def _xlsx_cell(value):
+    value=str(value or '')
+    return '<c t="inlineStr"><is><t>'+escape(value)+'</t></is></c>'
+
+def students_xlsx(rows):
+    """Small dependency-free XLSX exporter for the admin roster."""
+    headers=['Nombre','Correo','Estado','Matrículas activas','Creado']
+    data=[headers]+[[r.get('name',''),r.get('email',''),'En papelera' if r.get('deleted') else 'Activo' if r.get('active') else 'Deshabilitado',r.get('enrollments',0),datetime.fromtimestamp(r.get('created',0),LIMA).strftime('%Y-%m-%d') if r.get('created') else ''] for r in rows]
+    body=''.join('<row r="%d">%s</row>'%(i,''.join(_xlsx_cell(v) for v in row)) for i,row in enumerate(data,1))
+    files={
+      '[Content_Types].xml':'<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+      '_rels/.rels':'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+      'xl/workbook.xml':'<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Alumnos" sheetId="1" r:id="rId1"/></sheets></workbook>',
+      'xl/_rels/workbook.xml.rels':'<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+      'xl/worksheets/sheet1.xml':'<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+body+'</sheetData></worksheet>'}
+    stream=io.BytesIO()
+    with zipfile.ZipFile(stream,'w',zipfile.ZIP_DEFLATED) as archive:
+        for name,value in files.items():archive.writestr(name,value)
+    return stream.getvalue()
+
+def parse_student_sheet(raw,filename):
+    """Read CSV or the simple XLSX shapes exported by Excel/this app."""
+    if filename.lower().endswith('.csv'):
+        import csv
+        return list(csv.DictReader(io.StringIO(raw.decode('utf-8-sig'))))
+    if not filename.lower().endswith(('.xlsx','.xls')):raise ValueError('Sube un archivo .xlsx o .csv.')
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+            shared=[]
+            if 'xl/sharedStrings.xml' in archive.namelist():
+                root=ET.fromstring(archive.read('xl/sharedStrings.xml'));shared=[''.join(x.itertext()) for x in root]
+            sheet=ET.fromstring(archive.read('xl/worksheets/sheet1.xml'))
+            rows=[]
+            for row in sheet.findall('.//{*}row'):
+                values=[]
+                for cell in row.findall('{*}c'):
+                    value=''.join(cell.find('{*}is').itertext()) if cell.find('{*}is') is not None else (cell.findtext('{*}v') or '')
+                    if cell.get('t')=='s' and value.isdigit() and int(value)<len(shared):value=shared[int(value)]
+                    values.append(value)
+                rows.append(values)
+    except (KeyError,zipfile.BadZipFile,ET.ParseError):raise ValueError('No se pudo leer el archivo Excel. Usa la plantilla descargable.')
+    if not rows:return []
+    headers=[str(x).strip().lower() for x in rows[0]]
+    aliases={'nombre':'name','nombre completo':'name','name':'name','correo':'email','correo electrónico':'email','email':'email','contraseña':'password','password':'password','activo':'active','estado':'active'}
+    mapped=[aliases.get(x,x) for x in headers];return [dict(zip(mapped,row+['']*(len(mapped)-len(row)))) for row in rows[1:] if any(str(x).strip() for x in row)]
+
+def temporary_password():return 'Malba-'+secrets.token_urlsafe(10)+'!'
+
+def enrollment_email(student,course,password,cms):
+    """Send a branded welcome email when SMTP is configured; never expose the password in logs."""
+    host=os.getenv('MALBA_SMTP_HOST') or os.getenv('SMTP_HOST')
+    if not host:return {'sent':False,'reason':'SMTP no configurado'}
+    port=int(os.getenv('MALBA_SMTP_PORT') or os.getenv('SMTP_PORT') or 587);user=os.getenv('MALBA_SMTP_USER') or os.getenv('SMTP_USER');secret=os.getenv('MALBA_SMTP_PASSWORD') or os.getenv('SMTP_PASSWORD');sender=os.getenv('MALBA_MAIL_FROM') or os.getenv('MAIL_FROM') or user
+    url=os.getenv('MALBA_AULA_URL','https://malba-pmc.com/aula-virtual/')
+    title=escape(course.get('title','Programa MALBA PMC'));name=escape(student.get('name',''))
+    html='''<!doctype html><html><body style="margin:0;background:#f5f6fa;font-family:Arial,sans-serif;color:#003b73"><div style="max-width:620px;margin:28px auto;background:#fff;border:1px solid #e1e6ef;border-radius:14px;overflow:hidden"><div style="background:#003b73;padding:28px 32px;text-align:center"><img src="https://malba-pmc.com/assets/malba-pmc-logo.png" alt="MALBA PMC" width="190" style="background:#fff;padding:10px;border-radius:6px"></div><div style="padding:34px"><p style="color:#5d4594;font-weight:bold;margin:0 0 10px">AULA VIRTUAL MALBA PMC</p><h1 style="font-size:26px;margin:0 0 18px">Hola, %s</h1><p style="font-size:16px;line-height:1.6">Tu acceso ya está listo. Fuiste inscrito(a) en <strong>%s</strong>.</p><div style="background:#f0edf7;border-radius:10px;padding:20px;margin:24px 0"><p style="margin:0 0 8px"><strong>Correo:</strong> %s</p><p style="margin:0"><strong>Contraseña temporal:</strong> %s</p></div><a href="%s" style="display:inline-block;background:#5d4594;color:#fff;text-decoration:none;padding:14px 22px;border-radius:7px;font-weight:bold">Ingresar al aula virtual</a><p style="font-size:13px;line-height:1.6;color:#60738b;margin-top:24px">Por seguridad, cambia tu contraseña en el primer ingreso. Si necesitas ayuda, responde este correo.</p></div><div style="padding:18px 34px;border-top:1px solid #e1e6ef;color:#60738b;font-size:12px">MALBA PMC · Gestión, aprendizaje y experiencia aplicada</div></div></body></html>'''%(name,title,escape(student.get('email','')),escape(password),url)
+    msg=EmailMessage();msg['Subject']='Tu acceso a '+course.get('title','MALBA PMC');msg['From']=sender;msg['To']=student['email'];msg.set_content('Tu acceso al aula virtual está listo. Ingresa en '+url+' con tu correo y contraseña temporal.');msg.add_alternative(html,subtype='html')
+    with smtplib.SMTP(host,port,timeout=15) as smtp:
+        if os.getenv('MALBA_SMTP_TLS','1')!='0':smtp.starttls()
+        if user and secret:smtp.login(user,secret)
+        smtp.send_message(msg)
+    return {'sent':True}
 
 def certificate_pdf(snapshot,code,issued,root):
     try:
@@ -307,6 +375,11 @@ def handle(h,cms,method,path):
                     else:h.response({'course':material_metadata(c,db)})
                     return True
                 if path=='/api/lms/admin':h.response(admin_data(db));return True
+                if path=='/api/lms/admin/students/export':
+                    rows=[]
+                    for s in db.execute('SELECT * FROM lms_students ORDER BY deleted,name'):
+                        item=dict(s);item['enrollments']=db.execute('SELECT COUNT(*) FROM lms_enrollments WHERE student_id=? AND active=1',(s['id'],)).fetchone()[0];rows.append(item)
+                    h.response(students_xlsx(rows),mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers={'Content-Disposition':'attachment; filename="alumnos-malba-pmc.xlsx"'});return True
                 if path=='/api/lms/me':
                     certificates=[]
                     for row in db.execute('SELECT id,snapshot,issued FROM lms_certificates WHERE student_id=? AND revoked=0 ORDER BY issued DESC',(actor['student_id'],)):
@@ -391,15 +464,41 @@ def handle(h,cms,method,path):
                     if row['revision']!=body.get('revision'):h.response({'error':'El curso cambió. Recarga el aula.'},409);return True
                     db.execute('UPDATE lms_courses SET active=?,revision=revision+1 WHERE id=?',(int(bool(body['active'])),body['id']));h.response({'ok':True});return True
                 if path=='/api/lms/admin/student':
+                    action=body.get('action')
+                    if action in ('toggle','delete','restore'):
+                        sid=ident(body.get('id',''));row=db.execute('SELECT id FROM lms_students WHERE id=?',(sid,)).fetchone()
+                        if not row:raise ValueError('Alumno no encontrado.')
+                        if action=='delete':db.execute('UPDATE lms_students SET deleted=1,active=0 WHERE id=?',(sid,));db.execute('DELETE FROM lms_sessions WHERE student_id=?',(sid,))
+                        elif action=='restore':db.execute('UPDATE lms_students SET deleted=0,active=1 WHERE id=?',(sid,))
+                        else:db.execute('UPDATE lms_students SET active=CASE active WHEN 1 THEN 0 ELSE 1 END WHERE id=? AND deleted=0',(sid,));
+                        h.response({'ok':True});return True
                     name=text(body.get('name'),180,True);email=text(body.get('email'),254,True).lower();password=text(body.get('password',''),256)
                     if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):raise ValueError('Revisa el correo del alumno.')
                     old=db.execute('SELECT * FROM lms_students WHERE id=?',(body.get('id',''),)).fetchone()
                     if not old and len(password)<12 or password and len(password)<12:raise ValueError('La contraseña temporal debe tener al menos 12 caracteres.')
                     if db.execute('SELECT id FROM lms_students WHERE email=? AND id!=?',(email,old['id'] if old else '')).fetchone():raise ValueError('Ya existe un alumno con ese correo.')
                     sid=old['id'] if old else uuid.uuid4().hex;salt=secrets.token_hex(16) if password else old['salt'];digest=cms.password_hash(password,salt) if password else old['hash'];active=int(bool(body.get('active',True)));forced=1 if password else old['force_password']
-                    db.execute('INSERT INTO lms_students VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,email=excluded.email,salt=excluded.salt,hash=excluded.hash,active=excluded.active,force_password=excluded.force_password',(sid,name,email,salt,digest,active,forced,time.time()))
+                    deleted=int(old['deleted']) if old else 0
+                    db.execute('INSERT INTO lms_students(id,name,email,salt,hash,active,force_password,created,deleted) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,email=excluded.email,salt=excluded.salt,hash=excluded.hash,active=excluded.active,force_password=excluded.force_password',(sid,name,email,salt,digest,active,forced,time.time(),deleted))
                     if password or not active:db.execute('DELETE FROM lms_sessions WHERE student_id=?',(sid,))
                     h.response({'ok':True,'id':sid});return True
+                if path=='/api/lms/admin/students/import':
+                    raw=base64.b64decode(str(body.get('content','')),validate=True);rows=parse_student_sheet(raw,text(body.get('filename','alumnos.xlsx'),120,True));course_id=body.get('courseId','');send=bool(body.get('sendEmail',True));created=updated=0;errors=[];emails=0
+                    if len(rows)>500:raise ValueError('Puedes importar hasta 500 alumnos por archivo.')
+                    for index,item in enumerate(rows,2):
+                        try:
+                            name=text(str(item.get('name','')),180,True);email=text(str(item.get('email','')),254,True).lower();password=text(str(item.get('password','')),256)
+                            if not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email):raise ValueError('correo inválido')
+                            old=db.execute('SELECT * FROM lms_students WHERE email=?',(email,)).fetchone();generated=password or temporary_password();salt=secrets.token_hex(16);active=str(item.get('active','1')).lower() not in ('0','no','false','deshabilitado','inactivo');sid=old['id'] if old else uuid.uuid4().hex
+                            db.execute('INSERT INTO lms_students(id,name,email,salt,hash,active,force_password,created,deleted) VALUES(?,?,?,?,?,?,?,?,0) ON CONFLICT(id) DO UPDATE SET name=excluded.name,salt=excluded.salt,hash=excluded.hash,active=excluded.active,force_password=excluded.force_password,deleted=0',(sid,name,email,salt,cms.password_hash(generated,salt),int(active),1,time.time()));updated+=1 if old else 0;created+=0 if old else 1
+                            if course_id:
+                                if not db.execute('SELECT 1 FROM lms_courses WHERE id=?',(ident(course_id),)).fetchone():raise ValueError('curso no encontrado')
+                                db.execute('INSERT INTO lms_enrollments VALUES(?,?,?,?,?,?) ON CONFLICT(student_id,course_id) DO UPDATE SET active=1,expires=excluded.expires',(sid,course_id,1,'','',time.time()))
+                                if send:
+                                    result=enrollment_email({'name':name,'email':email},{'title':json.loads(db.execute('SELECT draft FROM lms_courses WHERE id=?',(course_id,)).fetchone()[0])['title']},generated,cms)
+                                    emails+=int(result['sent'])
+                        except Exception as exc:errors.append({'row':index,'message':str(exc)[:160]})
+                    h.response({'ok':True,'created':created,'updated':updated,'enrolled':sum(1 for x in rows if course_id)-len(errors),'emailsSent':emails,'errors':errors});return True
                 if path=='/api/lms/admin/enroll':
                     student=ident(body['studentId']);course=ident(body['courseId']);expires=text(body.get('expires',''),10)
                     if expires:
@@ -407,7 +506,14 @@ def handle(h,cms,method,path):
                         try:datetime.strptime(expires,'%Y-%m-%d')
                         except ValueError:raise ValueError('Fecha de vencimiento inválida.')
                     if not db.execute('SELECT 1 FROM lms_students WHERE id=?',(student,)).fetchone() or not db.execute('SELECT 1 FROM lms_courses WHERE id=?',(course,)).fetchone():raise ValueError('Selecciona un alumno y un curso existentes.')
-                    db.execute('INSERT INTO lms_enrollments VALUES(?,?,?,?,?,?) ON CONFLICT(student_id,course_id) DO UPDATE SET active=excluded.active,expires=excluded.expires',(student,course,int(bool(body.get('active',True))),expires,'',time.time()));h.response({'ok':True});return True
+                    user=db.execute('SELECT * FROM lms_students WHERE id=?',(student,)).fetchone();course_row=db.execute('SELECT draft FROM lms_courses WHERE id=?',(course,)).fetchone()
+                    if user['deleted']:raise ValueError('Restaura al alumno antes de matricularlo.')
+                    password='';email_status={'sent':False,'reason':'No solicitado'}
+                    if body.get('sendEmail') and body.get('active',True):
+                        password=temporary_password();salt=secrets.token_hex(16);db.execute('UPDATE lms_students SET salt=?,hash=?,force_password=1 WHERE id=?',(salt,cms.password_hash(password,salt),student))
+                        try:email_status=enrollment_email(dict(user),json.loads(course_row['draft']),password,cms)
+                        except Exception:email_status={'sent':False,'reason':'No se pudo enviar el correo. Revisa la configuración SMTP.'}
+                    db.execute('INSERT INTO lms_enrollments VALUES(?,?,?,?,?,?) ON CONFLICT(student_id,course_id) DO UPDATE SET active=excluded.active,expires=excluded.expires',(student,course,int(bool(body.get('active',True))),expires,'',time.time()));h.response({'ok':True,'email':email_status});return True
                 if path=='/api/lms/admin/certificate/revoke':
                     db.execute('UPDATE lms_certificates SET revoked=1 WHERE id=?',(body['id'],));h.response({'ok':True});return True
                 if path=='/api/lms/quiz':
@@ -446,5 +552,5 @@ def seed_demo(cms):
         if db.execute('SELECT 1 FROM lms_students WHERE email=?',('alumno.demo@malba.test',)).fetchone():return None
         password=secrets.token_urlsafe(14);salt=secrets.token_hex(16);sid=uuid.uuid4().hex;cid=uuid.uuid4().hex
         c={'id':cid,'title':'Curso de demostración · Gestión de proyectos','description':'Contenido de prueba para validar el recorrido del aula. No corresponde a un programa académico real.','instructor':'Equipo MALBA PMC','hours':2,'image':'assets/programs/pmo-960.webp','sourceProgramId':'','certificate':{'enabled':True,'title':'Certificado de finalización','statement':'Ha completado las lecciones obligatorias del curso de demostración. Documento de prueba, sin validez académica.','issuer':'MALBA PMC','role':'Aula virtual · Demostración'},'modules':[{'id':uuid.uuid4().hex,'title':'Primeros pasos','lessons':[{'id':uuid.uuid4().hex,'title':title,'type':'text','body':body,'minutes':10,'required':True,'videoUrl':'','videoFileId':'','meetingUrl':'','resources':[]} for title,body in [('Bienvenida al aula','Este curso permite probar el acceso, la navegación y el avance. Marca la lección como completada cuando termines de revisarla.'),('Planificación y seguimiento','Define el alcance, identifica hitos y revisa restricciones. Esta lección de ejemplo cierra el recorrido y habilita un certificado de demostración.')]]}]}
-        db.execute('INSERT INTO lms_students VALUES(?,?,?,?,?,1,1,?)',(sid,'Alumno de demostración','alumno.demo@malba.test',salt,cms.password_hash(password,salt),time.time()));db.execute('INSERT INTO lms_courses VALUES(?,?,?,1,1,?)',(cid,cms.dump(c),cms.dump(c),time.time()));db.execute('INSERT INTO lms_enrollments VALUES(?,?,1,?,?,?)',(sid,cid,'','',time.time()))
+        db.execute('INSERT INTO lms_students(id,name,email,salt,hash,active,force_password,created,deleted) VALUES(?,?,?,?,?,1,1,?,0)',(sid,'Alumno de demostración','alumno.demo@malba.test',salt,cms.password_hash(password,salt),time.time()));db.execute('INSERT INTO lms_courses VALUES(?,?,?,1,1,?)',(cid,cms.dump(c),cms.dump(c),time.time()));db.execute('INSERT INTO lms_enrollments VALUES(?,?,1,?,?,?)',(sid,cid,'','',time.time()))
         return password
