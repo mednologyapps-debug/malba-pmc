@@ -107,6 +107,49 @@ async function getCourse(id,publishedOnly=false) { const r=await supabase.from('
 async function saveCourse(course,publish=false) { if(!course||!course.title)throw new Error('Completa el título del curso.');const id=asId(course.id),cert=course.certificate||{};const up=await supabase.from('lms_courses').upsert({id,slug:slugify(course.title)+'-'+id.slice(0,8),title:String(course.title).slice(0,180),description:course.description||'',introduction:course.introduction||'',instructor:course.instructor||'',cover_url:course.image||'',hours:Number(course.hours||0),certificate_enabled:!!cert.enabled,certificate_config:cert,status:publish?'published':'draft',source_program_id:course.sourceProgramId||null},{onConflict:'id'}).select('id').single();if(up.error)throw up.error;const oldMods=await supabase.from('lms_modules').select('id').eq('course_id',id),oldIds=(oldMods.data||[]).map(x=>x.id);if(oldIds.length){const oldLessons=await supabase.from('lms_lessons').select('id').in('module_id',oldIds);if(oldLessons.data?.length)await supabase.from('lms_materials').delete().in('lesson_id',oldLessons.data.map(x=>x.id));await supabase.from('lms_lessons').delete().in('module_id',oldIds);await supabase.from('lms_modules').delete().eq('course_id',id);}for(let mi=0;mi<(course.modules||[]).length;mi++){const m=course.modules[mi],mid=asId(m.id),mr=await supabase.from('lms_modules').insert({id:mid,course_id:id,title:m.title||'Módulo',description:m.description||'',sort_order:mi}).select('id').single();if(mr.error)throw mr.error;for(let li=0;li<(m.lessons||[]).length;li++){const l=m.lessons[li],lid=asId(l.id),lr=await supabase.from('lms_lessons').insert({id:lid,module_id:mid,title:l.title||'Lección',lesson_type:l.type||'text',body:l.body||'',video_url:l.videoUrl||'',video_file_id:l.videoFileId||null,meeting_url:l.meetingUrl||'',minutes:Number(l.minutes||0),required:l.required!==false,quiz:l.quiz||null,sort_order:li}).select('id').single();if(lr.error)throw lr.error;for(let ri=0;ri<(l.resources||[]).length;ri++){const x=l.resources[ri],mr2=await supabase.from('lms_materials').insert({id:asId(x.id),lesson_id:lid,name:x.name||'Material',file_path:x.fileId||null,external_url:x.url||null,mime_type:x.mimeType||null,size_bytes:Number(x.size||0),sort_order:ri});if(mr2.error)throw mr2.error;}}}return{ok:true,id,revision:1,published:publish}; }
 function studentFrom(req,res) { const s=sessionFrom(req,STUDENT_COOKIE,studentSessions);if(!s){json(res,401,{error:'Inicia sesión para acceder al aula.'});return null;}if(!csrfOk(req,s)){json(res,403,{error:'La sesión cambió. Vuelve a ingresar.'});return null;}return s; }
 async function studentRow(id) { const r=await supabase.from('lms_students').select('*').eq('id',id).maybeSingle();if(r.error)throw r.error;return r.data; }
+async function authUserByEmail(email) {
+  const profile=await supabase.from('lms_students').select('id').eq('email',email).maybeSingle();
+  if(profile.error)throw profile.error;
+  if(profile.data?.id)return{id:profile.data.id,email};
+  for(let page=1;page<=10;page++){
+    const result=await supabase.auth.admin.listUsers({page,perPage:1000});
+    if(result.error)throw result.error;
+    const users=result.data?.users||[],found=users.find(user=>String(user.email||'').toLowerCase()===email);
+    if(found)return found;
+    if(users.length<1000)break;
+  }
+  return null;
+}
+async function ensureAuthUser(email,name,password,resetExisting=false) {
+  let existing=await authUserByEmail(email);
+  if(existing){
+    const attributes={user_metadata:{full_name:name}};
+    if(resetExisting&&password)attributes.password=password;
+    const updated=await supabase.auth.admin.updateUserById(existing.id,attributes);
+    if(updated.error)throw updated.error;
+    return{user:updated.data.user||existing,created:false,passwordChanged:Boolean(resetExisting&&password)};
+  }
+  const created=await supabase.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:name}});
+  if(!created.error)return{user:created.data.user,created:true,passwordChanged:true};
+  if(!/already been registered|already exists|email_exists/i.test(String(created.error.code||'')+' '+String(created.error.message||'')))throw created.error;
+  existing=await authUserByEmail(email);
+  if(!existing)throw created.error;
+  const attributes={user_metadata:{full_name:name}};
+  if(resetExisting&&password)attributes.password=password;
+  const updated=await supabase.auth.admin.updateUserById(existing.id,attributes);
+  if(updated.error)throw updated.error;
+  return{user:updated.data.user||existing,created:false,passwordChanged:Boolean(resetExisting&&password)};
+}
+async function saveEnrollment(studentId,courseId,active=true,expires='') {
+  const existing=await supabase.from('lms_enrollments').select('id').eq('student_id',studentId).eq('course_id',courseId).maybeSingle();
+  if(existing.error)throw existing.error;
+  const payload={student_id:studentId,course_id:courseId,status:active?'active':'paused',expires_at:expires||null};
+  const result=existing.data
+    ?await supabase.from('lms_enrollments').update(payload).eq('id',existing.data.id)
+    :await supabase.from('lms_enrollments').insert({id:asId(),...payload});
+  if(result.error)throw result.error;
+  return existing.data?.id||null;
+}
 async function studentCourses(studentId) { const er=await supabase.from('lms_enrollments').select('*').eq('student_id',studentId).in('status',['active','completed']);if(er.error)throw er.error;const out=[];for(const e of er.data||[]){if(e.expires_at&&e.expires_at<new Date().toISOString().slice(0,10))continue;const c=await getCourse(e.course_id,true);if(!c)continue;const pr=await supabase.from('lms_progress').select('lesson_id').eq('student_id',studentId).eq('course_id',e.course_id),required=lessonsFrom(c.modules).filter(l=>l.required),done=(pr.data||[]).map(x=>x.lesson_id),certificate=await supabase.from('lms_certificates').select('id,issued_at,snapshot').eq('student_id',studentId).eq('course_id',e.course_id).is('revoked_at',null).maybeSingle();for(const l of lessonsFrom(c.modules)){if(l.quiz?.questions)l.quiz={...l.quiz,questions:l.quiz.questions.map(q=>{const {correct,explanation,...safe}=q;return safe;})};l.completed=done.includes(l.id);}out.push({course:c,progress:{done,completed:done.filter(x=>required.some(l=>l.id===x)).length,total:required.length,percent:required.length?Math.round(done.filter(x=>required.some(l=>l.id===x)).length*100/required.length):0},lastLesson:e.last_lesson_id||'',expires:e.expires_at||'',certificate:certificate.data?{id:certificate.data.id,issued:Date.parse(certificate.data.issued_at)/1000}:null});}return out; }
 function simplePdf(title,name,code) { const esc=s=>String(s).replace(/[()\\]/g,'\\$&');const stream=`BT /F1 22 Tf 72 700 Td (${esc(title)}) Tj /F1 14 Tf 0 -48 Td (Otorgado a: ${esc(name)}) Tj 0 -28 Td (Código de verificación: ${esc(code)}) Tj ET`;const objs=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',`<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`];let pdf='%PDF-1.4\n',offsets=[0];for(const [i,obj] of objs.entries()){offsets.push(Buffer.byteLength(pdf));pdf+=`${i+1} 0 obj\n${obj}\nendobj\n`;}const x=Buffer.byteLength(pdf);pdf+=`xref\n0 ${objs.length+1}\n0000000000 65535 f \n${offsets.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n ').join('\n')}\ntrailer\n<< /Size ${objs.length+1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF`;return Buffer.from(pdf); }
 
@@ -140,8 +183,68 @@ async function lmsApi(req,res,url) {
     const b=await requestBody(req);
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/course/save')return json(res,200,await saveCourse(b.course,b.publish===true));
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/course/status'){const r=await supabase.from('lms_courses').update({status:b.active?'published':'hidden'}).eq('id',b.id);if(r.error)throw r.error;return json(res,200,{ok:true});}
-    if(req.method==='POST'&&url.pathname==='/api/lms/admin/student'){if(['toggle','delete','restore'].includes(b.action)){const update=b.action==='delete'?{active:false,deleted_at:new Date().toISOString()}:b.action==='restore'?{active:true,deleted_at:null}:{};if(b.action==='toggle'){const old=await studentRow(b.id);update.active=!old.active;}const r=await supabase.from('lms_students').update(update).eq('id',b.id);if(r.error)throw r.error;return json(res,200,{ok:true});}const name=String(b.name||'').trim(),email=String(b.email||'').trim().toLowerCase();if(!name||!email)throw new Error('Completa nombre y correo.');let user,password=String(b.password||''),forcePassword=Boolean(password);if(b.id){const existing=await studentRow(b.id);const updated=await supabase.auth.admin.updateUserById(b.id,{password:password||undefined,user_metadata:{full_name:name}});if(updated.error)throw updated.error;forcePassword=password?true:!!existing.force_password_change;user={id:b.id};}else{password=password||`Malba-${crypto.randomBytes(8).toString('hex')}`;forcePassword=true;const created=await supabase.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:name}});if(created.error)throw created.error;user=created.data.user;}const up=await supabase.from('lms_students').upsert({id:user.id,full_name:name,email,active:b.active!==false,force_password_change:forcePassword}).select('id').single();if(up.error)throw up.error;let emailStatus={sent:false,reason:'No solicitado.'};if(b.courseId){const en=await supabase.from('lms_enrollments').upsert({id:asId(b.enrollmentId),student_id:user.id,course_id:b.courseId,status:'active',expires_at:b.expires||null});if(en.error)throw en.error;if(b.sendEmail){try{emailStatus=await sendWelcomeEmail({name,email},await getCourse(b.courseId),password);}catch(error){emailStatus={sent:false,reason:'SMTP: '+String(error.message||error).slice(0,180)};}}}return json(res,200,{ok:true,id:user.id,email:emailStatus});}
-    if(req.method==='POST'&&url.pathname==='/api/lms/admin/students/import'){const raw=Buffer.from(String(b.content||''),'base64'),filename=String(b.filename||'');if(!/\.(csv|xlsx|xls)$/i.test(filename))throw new Error('Sube un archivo CSV, XLSX o XLS.');let rows=[];if(/\.csv$/i.test(filename)){const lines=raw.toString('utf8').replace(/^\ufeff/,'').split(/\r?\n/).filter(Boolean),headers=lines.shift().split(',').map(x=>x.trim().toLowerCase());rows=lines.map(line=>Object.fromEntries(headers.map((h,j)=>[h,line.split(',')[j]?.trim().replace(/^"|"$/g,'')||''])));}else rows=parseExcelRows(raw);if(rows.length>500)throw new Error('Puedes importar hasta 500 alumnos por archivo.');const errors=[];for(let i=0;i<rows.length;i++){const row=rows[i];try{const email=(row.correo||row['correo electrónico']||row.email||'').toLowerCase(),name=row.nombre||row['nombre completo']||row.name||email;if(!email)throw new Error('correo requerido');const password=row.contraseña||row.password||`Malba-${crypto.randomBytes(8).toString('hex')}`;const c=await supabase.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:name}});if(c.error&&c.error.code!=='email_exists')throw c.error;const id=c.data.user?.id;if(id){await supabase.from('lms_students').upsert({id,full_name:name,email,active:true,force_password_change:true});if(b.courseId)await supabase.from('lms_enrollments').upsert({id:asId(),student_id:id,course_id:b.courseId,status:'active'});if(b.sendEmail)await sendWelcomeEmail({name,email},b.courseId?await getCourse(b.courseId):null,password);}}catch(e){errors.push({row:i+2,message:String(e.message||e)});}}return json(res,200,{ok:true,created:rows.length-errors.length,updated:0,errors});}
+    if(req.method==='POST'&&url.pathname==='/api/lms/admin/student'){
+      if(['toggle','delete','restore'].includes(b.action)){
+        const update=b.action==='delete'?{active:false,deleted_at:new Date().toISOString()}:b.action==='restore'?{active:true,deleted_at:null}:{};
+        if(b.action==='toggle'){const old=await studentRow(b.id);update.active=!old.active;}
+        const r=await supabase.from('lms_students').update(update).eq('id',b.id);if(r.error)throw r.error;
+        return json(res,200,{ok:true});
+      }
+      const name=String(b.name||'').trim(),email=String(b.email||'').trim().toLowerCase();
+      if(!name||!email)throw new Error('Completa nombre y correo.');
+      let user,password=String(b.password||''),forcePassword=Boolean(password),created=false;
+      if(b.id){
+        const existing=await studentRow(b.id);
+        const updated=await supabase.auth.admin.updateUserById(b.id,{password:password||undefined,user_metadata:{full_name:name}});
+        if(updated.error)throw updated.error;
+        forcePassword=password?true:!!existing.force_password_change;
+        user=updated.data.user||{id:b.id};
+      }else{
+        password=password||`Malba-${crypto.randomBytes(8).toString('hex')}`;
+        const ensured=await ensureAuthUser(email,name,password,Boolean(b.password||b.sendEmail));
+        user=ensured.user;created=ensured.created;
+        const existing=await studentRow(user.id);
+        forcePassword=ensured.passwordChanged||!!existing?.force_password_change;
+      }
+      const up=await supabase.from('lms_students').upsert({id:user.id,full_name:name,email,active:b.active!==false,deleted_at:null,force_password_change:forcePassword}).select('id').single();
+      if(up.error)throw up.error;
+      let emailStatus={sent:false,reason:'No solicitado.'};
+      if(b.courseId){
+        await saveEnrollment(user.id,b.courseId,true,b.expires||'');
+        if(b.sendEmail){
+          try{emailStatus=await sendWelcomeEmail({name,email},await getCourse(b.courseId),password);}
+          catch(error){emailStatus={sent:false,reason:'SMTP: '+String(error.message||error).slice(0,180)};}
+        }
+      }
+      return json(res,200,{ok:true,id:user.id,created,email:emailStatus});
+    }
+    if(req.method==='POST'&&url.pathname==='/api/lms/admin/students/import'){
+      const raw=Buffer.from(String(b.content||''),'base64'),filename=String(b.filename||'');
+      if(!/\.(csv|xlsx|xls)$/i.test(filename))throw new Error('Sube un archivo CSV, XLSX o XLS.');
+      let rows=[];
+      if(/\.csv$/i.test(filename)){
+        const lines=raw.toString('utf8').replace(/^\ufeff/,'').split(/\r?\n/).filter(Boolean),headers=lines.shift().split(',').map(x=>x.trim().toLowerCase());
+        rows=lines.map(line=>Object.fromEntries(headers.map((h,j)=>[h,line.split(',')[j]?.trim().replace(/^"|"$/g,'')||''])));
+      }else rows=parseExcelRows(raw);
+      if(rows.length>500)throw new Error('Puedes importar hasta 500 alumnos por archivo.');
+      const errors=[];let created=0,updated=0;
+      for(let i=0;i<rows.length;i++){
+        const row=rows[i];
+        try{
+          const email=String(row.correo||row['correo electrónico']||row.email||'').trim().toLowerCase(),name=String(row.nombre||row['nombre completo']||row.name||email).trim();
+          if(!email)throw new Error('correo requerido');
+          const supplied=String(row.contraseña||row.password||''),password=supplied||`Malba-${crypto.randomBytes(8).toString('hex')}`;
+          const ensured=await ensureAuthUser(email,name,password,Boolean(supplied||b.sendEmail));
+          const previous=await studentRow(ensured.user.id),forcePassword=ensured.passwordChanged||!!previous?.force_password_change;
+          const profile=await supabase.from('lms_students').upsert({id:ensured.user.id,full_name:name,email,active:true,deleted_at:null,force_password_change:forcePassword});
+          if(profile.error)throw profile.error;
+          if(ensured.created)created++;else updated++;
+          if(b.courseId)await saveEnrollment(ensured.user.id,b.courseId,true,'');
+          if(b.sendEmail)await sendWelcomeEmail({name,email},b.courseId?await getCourse(b.courseId):null,password);
+        }catch(e){errors.push({row:i+2,message:String(e.message||e)});}
+      }
+      return json(res,200,{ok:true,created,updated,errors});
+    }
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/enroll'){const existing=await supabase.from('lms_enrollments').select('id').eq('student_id',b.studentId).eq('course_id',b.courseId).maybeSingle();if(existing.error)throw existing.error;const payload={student_id:b.studentId,course_id:b.courseId,status:b.active===false?'paused':'active',expires_at:b.expires||null};const en=existing.data?await supabase.from('lms_enrollments').update(payload).eq('id',existing.data.id):await supabase.from('lms_enrollments').insert({id:asId(),...payload});if(en.error)throw en.error;let email={sent:false,reason:'No solicitado.'};if(b.sendEmail&&b.active!==false){const user=await studentRow(b.studentId),password=`Malba-${crypto.randomBytes(8).toString('hex')}`;const auth=await supabase.auth.admin.updateUserById(b.studentId,{password});if(auth.error)throw auth.error;await supabase.from('lms_students').update({force_password_change:true}).eq('id',b.studentId);try{email=await sendWelcomeEmail({name:user.full_name,email:user.email},await getCourse(b.courseId),password);}catch(error){email={sent:false,reason:'SMTP: '+String(error.message||error).slice(0,180)};}}return json(res,200,{ok:true,email});}
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/certificate/revoke'){const r=await supabase.from('lms_certificates').update({revoked_at:new Date().toISOString()}).eq('id',b.id);if(r.error)throw r.error;return json(res,200,{ok:true});}
     return json(res,404,{error:'Ruta de administración LMS no encontrada.'});
