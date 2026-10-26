@@ -13,7 +13,23 @@ const clone = x=>JSON.parse(JSON.stringify(x));
 let messageTimer;function message(text,error=false){if(wizardProgram&&$('#create-dialog').open){wizardError(text);return;}clearTimeout(messageTimer);const x=$('#message');x.hidden=!text;x.textContent=text;x.classList.toggle('error',error);if(text&&!error)messageTimer=setTimeout(()=>x.hidden=true,9000);}
 function markChanged(){if(solutionDraft&&$('#solution-dialog').open)return;if(publicationDraft&&$('#publication-dialog').open)return;if(wizardProgram&&$('#create-dialog').open){wizardDirty=true;return;}changeCounter++;unsaved=true;updateStatus();}
 function updateStatus(){const x=$('#save-state');x.textContent=unsaved?'Cambios sin guardar':draftDirty?'Borrador guardado · pendiente de publicar':'Contenido publicado';if(lastSaved&&!unsaved)x.textContent+=' · '+date(lastSaved);x.classList.toggle('unsaved',unsaved||draftDirty);}
-async function request(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-CSRF-Token':csrf||''}:{},body:body?JSON.stringify(body):undefined});const result=await r.json();if(!r.ok){if(r.status===401&&path!='/api/login'){showLogin();}throw Error(result.error||'No se pudo completar la operación.');}return result;}
+async function request(path,body){
+ const method=body?'POST':'GET';
+ let r;
+ try{r=await fetch(path,{method,headers:body?{'Content-Type':'application/json','Accept':'application/json','X-CSRF-Token':csrf||''}:{'Accept':'application/json'},body:body?JSON.stringify(body):undefined,credentials:'same-origin',cache:'no-store'});}
+ catch(err){throw Error('No fue posible contactar al servidor del CMS. Revisa el estado de la aplicación Node.js en Hostinger. '+err.message);}
+ const type=String(r.headers.get('content-type')||'').toLowerCase();
+ const raw=await r.text();
+ let result;
+ if(type.includes('application/json')){
+  try{result=JSON.parse(raw);}catch(_){throw Error('Respuesta JSON incompleta del servidor ('+r.status+'). Revisa los registros de ejecución Node.js en Hostinger.');}
+ }else{
+  const failure=Error('El servidor respondió con '+(type.includes('text/html')?'una página HTML':'un formato inesperado')+' (HTTP '+r.status+') al '+method+' '+path+'. La operación no pudo confirmarse. Revisa Runtime logs y Despliegues de Hostinger antes de reintentar.');
+  failure.code='NON_JSON_RESPONSE';failure.httpStatus=r.status;failure.path=path;throw failure;
+ }
+ if(!r.ok){if(r.status===401&&path!='/api/login')showLogin();throw Error(result.error||'No se pudo completar la operación (HTTP '+r.status+').');}
+ return result;
+}
 function showLogin(){csrf=null;$('#app').hidden=true;$('#login').hidden=false;$('#loading').hidden=true;}
 async function loadContent(){const r=await request('/api/content');data=r.data;revision=r.revision;publishedIds=r.publishedIds;draftDirty=r.dirty;lastSaved=r.updated;unsaved=false;renderNavigation();renderEditor();updateStatus();}
 function closeMobileNavigation(){const sidebar=document.querySelector('.sidebar'),toggle=$('#mobile-navigation-toggle');if(!sidebar||!toggle)return;sidebar.classList.remove('menu-open');toggle.setAttribute('aria-expanded','false');}
