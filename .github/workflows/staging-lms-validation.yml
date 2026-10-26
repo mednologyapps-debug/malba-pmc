@@ -1,0 +1,36 @@
+name: Staging LMS validation
+on:
+  push:
+    branches: [staging-hostinger]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Syntax checks
+        run: |
+          node --check server.js
+          node --check aula-virtual/aula.js
+          node --check dashboard/lms-admin.js
+      - name: Node auth and LMS fixture tests
+        run: npm run test:node
+      - name: Python CMS and LMS tests
+        run: |
+          pip install -r requirements.txt
+          python -m unittest discover -s tests -p 'test_*.py'
+      - name: SEO audit
+        run: npm run seo:audit
+      - name: Dependency audit
+        run: npm audit --audit-level=moderate
