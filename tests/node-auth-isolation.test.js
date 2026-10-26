@@ -94,7 +94,11 @@ test('Node enrollment, email and student authentication never alter admin author
   const imported=await request('/api/lms/admin/students/import',{filename:'alumnos.xlsx',content:Buffer.from(await importWorkbook.xlsx.writeBuffer()).toString('base64'),courseId,sendEmail:false},admin.cookie,csrf);
   assert.equal(imported.status,200);assert.equal(imported.data.created,1);assert.equal(imported.data.enrolled,1);assert.equal(imported.data.errors.length,0);
   const decodedMail=mail.replace(/=\n/g,'').replace(/=([0-9A-F]{2})/g,(_,hex)=>String.fromCharCode(parseInt(hex,16)));
-  assert.match(decodedMail,/Ingresar al aula virtual/);assert.ok(!decodedMail.includes('/aula-virtual/aula-virtual/'));
+  assert.match(decodedMail,/Ingresar al aula virtual/);
+  assert.ok(!decodedMail.includes('AULA VIRTUAL · MALBA PMC'),'email should not show redundant overline');
+  assert.ok(!decodedMail.includes('background:#f1eff8'),'email access box must not use purple background');
+  assert.ok(!decodedMail.includes('border-left:4px solid #5d4594'),'email access box must not use purple left accent');
+  assert.match(decodedMail,/Correo de acceso/,'email should keep access details');assert.ok(!decodedMail.includes('/aula-virtual/aula-virtual/'));
   assert.ok(decodedMail.includes(`href="${origin}/aula-virtual/"`));
   assert.equal((await fetch(origin+'/aula-virtual/')).status,200);
   // A course assignment or notification must not rotate an existing password.
