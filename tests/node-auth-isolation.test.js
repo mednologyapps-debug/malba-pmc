@@ -134,5 +134,25 @@ test('Node enrollment, email and student authentication never alter admin author
   assert.equal(failed.status,500);assert.ok(!failed.data.error.includes('deshabilitado'));failProfile=false;
   const swapped=student.cookie.replace('malba_student_session','malba_cms_session');
   assert.equal((await request('/api/content',undefined,swapped)).status,401);
+  // Deleted students remain in Auth while in the CMS trash. Creating them again
+  // with the same email must intentionally rotate the password and reuse the profile.
+  const original=await request('/api/lms/admin/student',{name:'Recreate Fixture',email:'recreate@invalid.test',password:'First-Password-123',courseIds:[courseId],active:true},admin.cookie,csrf);
+  assert.equal(original.status,200,JSON.stringify(original.data));
+  const duplicate=await request('/api/lms/admin/student',{name:'Duplicate Fixture',email:'recreate@invalid.test',password:'Other-Password-123',active:true},admin.cookie,csrf);
+  assert.equal(duplicate.status,409,'active students cannot be silently replaced by a create operation');
+  assert.equal(users.get(original.data.id).password,'First-Password-123');
+  const deleted=await request('/api/lms/admin/student',{id:original.data.id,action:'delete'},admin.cookie,csrf);
+  assert.equal(deleted.status,200);
+  assert.equal(profiles.get(original.data.id).active,false);
+  assert.ok(profiles.get(original.data.id).deleted_at);
+  const remade=await request('/api/lms/admin/student',{name:'Recreate Fixture',email:'recreate@invalid.test',password:'Second-Password-123',courseIds:[courseId],active:true,sendEmail:true},admin.cookie,csrf);
+  assert.equal(remade.status,200,JSON.stringify(remade.data));
+  assert.equal(remade.data.reactivated,true);
+  assert.equal(remade.data.id,original.data.id);
+  assert.equal(profiles.get(original.data.id).deleted_at,null);
+  assert.equal(profiles.get(original.data.id).active,true);
+  assert.equal(users.get(original.data.id).password,'Second-Password-123');
+  assert.equal((await request('/api/lms/login',{email:'recreate@invalid.test',password:'First-Password-123'})).status,401);
+  assert.equal((await request('/api/lms/login',{email:'recreate@invalid.test',password:'Second-Password-123'})).status,200);
   assert.equal(polluted,0,'a user session reached an administrative Supabase operation');
 });
