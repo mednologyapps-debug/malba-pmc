@@ -118,3 +118,13 @@ if (quickContact) {
     else window.location.assign(destination.href);
   });
 }
+
+
+// Shared public-site assistant (not loaded inside the admin or student LMS).
+// Home already has a direct script tag; other public pages load it here.
+if (!document.querySelector('script[src*="site-widgets.js"]')) {
+  const assistantScript = document.createElement('script');
+  assistantScript.src = '/site-widgets.js?v=20261026-energy2';
+  assistantScript.defer = true;
+  document.head.append(assistantScript);
+}
