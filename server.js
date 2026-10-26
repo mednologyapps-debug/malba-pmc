@@ -278,6 +278,7 @@ async function lmsApi(req,res,url) {
       let user,password=String(b.password||''),forcePassword=Boolean(password),created=false;
       if(b.id){
         const existing=await studentRow(b.id);
+        if(b.sendEmail&&selectedCourses.length&&!password)password=`Malba-${crypto.randomBytes(8).toString('hex')}`;
         const updated=await supabase.auth.admin.updateUserById(b.id,{password:password||undefined,user_metadata:{full_name:name}});
         if(updated.error)throw updated.error;
         forcePassword=password?true:!!existing.force_password_change;
