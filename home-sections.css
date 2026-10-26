@@ -1007,4 +1007,112 @@ body:has(#video-dialog[open]) { overflow: hidden; }
 
 /* MALBA banner SVG and accessible assistant */
 .slider-arrow svg{display:block!important;width:24px!important;height:24px!important;visibility:visible!important;opacity:1!important;color:#073F7C!important;pointer-events:none}.slider-arrow:hover svg{color:#fff!important}.slider-arrow:active{transform:translateY(-50%) scale(.95)}.slider-arrow:focus-visible{outline:3px solid #5D4594!important;outline-offset:4px}
-.malba-assistant{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:45;display:flex;align-items:flex-end;flex-direction:column;gap:10px;max-width:calc(100vw - 32px)}.malba-assistant-trigger{width:78px;height:85px;background:transparent;border:0;padding:0;cursor:pointer;filter:drop-shadow(0 5px 5px rgba(0,30,65,.15));animation:malba-float 4s ease-in-out infinite}.malba-assistant-trigger svg{width:100%;height:100%;display:block}.malba-assistant-trigger:focus-visible,.malba-assistant-close:focus-visible,.malba-assistant-link:focus-visible{outline:3px solid #5D4594;outline-offset:3px}.malba-assistant-panel{width:min(332px,calc(100vw - 32px));background:#fff;color:#003B73;border:1px solid #dbe3ee;border-radius:14px;padding:19px;box-shadow:0 8px 24px rgba(0,32,74,.16);font-family:Outfit,sans-serif}.malba-assistant-panel[hidden]{display:none!important}.malba-assistant-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.malba-assistant-head strong{font-size:17px}.malba-assistant-close{border:0;background:#eef1f7;color:#003B73;border-radius:8px;width:30px;height:30px;font-size:22px;cursor:pointer}.malba-assistant-panel p{font-size:15px;line-height:1.5;margin:15px 0 8px}.malba-assistant-panel .malba-assistant-note{color:#4d607a;font-size:13px;margin:0 0 18px}.malba-assistant-link{display:block;text-align:center;padding:12px 16px;background:#5D4594;color:#fff!important;border-radius:8px;text-decoration:none;font-weight:600}.malba-assistant-link:hover{background:#003B73}@keyframes malba-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}@media(max-width:760px){.malba-assistant{bottom:calc(80px + env(safe-area-inset-bottom))}.malba-assistant-trigger{width:61px;height:68px}}@media(prefers-reduced-motion:reduce){.malba-assistant-trigger{animation:none}}
+
+/* MALBA PMC · Energy Assistant / visible across public pages */
+.malba-assistant{
+  position:fixed;z-index:45;
+  right:max(14px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;align-items:flex-end;gap:9px;
+  max-width:calc(100vw - 28px);font-family:Outfit,Arial,sans-serif;
+  color:#003B73;
+}
+.malba-assistant [hidden]{display:none!important}
+.malba-assistant-launcher{display:flex;align-items:center;justify-content:flex-end;gap:5px}
+.malba-assistant-bubble{
+  position:relative;max-width:220px;border:1px solid #dfe5ef;
+  padding:12px 17px;border-radius:14px 14px 5px 14px;
+  background:#fff;color:#003B73;
+  box-shadow:0 5px 18px rgba(0,34,75,.10);
+  font-family:inherit;font-weight:600;font-size:14px;
+  line-height:1.35;cursor:pointer;text-align:left;
+}
+.malba-assistant-bubble::after{
+  content:'';position:absolute;right:-6px;top:calc(50% - 5px);
+  width:9px;height:9px;border-top:1px solid #dfe5ef;border-right:1px solid #dfe5ef;
+  background:#fff;transform:rotate(45deg);
+}
+.malba-assistant-bubble:hover{border-color:#5D4594}
+.malba-assistant.is-open .malba-assistant-bubble{display:none}
+.malba-assistant-trigger{
+  border:0;padding:0;background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  width:96px;height:104px;
+  filter:drop-shadow(0 5px 8px rgba(0,32,76,.16));
+  animation:malba-float 4s ease-in-out infinite;
+}
+.malba-assistant-robot{width:100%;height:100%;object-fit:contain;display:block}
+.malba-assistant-panel{
+  width:min(370px,calc(100vw - 28px));max-height:min(565px,calc(100dvh - 155px));
+  overflow-y:auto;overscroll-behavior:contain;
+  background:#fff;border:1px solid #dbe3ed;border-radius:16px;
+  box-shadow:0 12px 36px rgba(0,32,76,.18);
+  color:#003B73;
+}
+.malba-assistant-head{
+  display:flex;align-items:center;gap:11px;
+  background:#003B73;color:#fff;padding:16px 18px;
+}
+.malba-assistant-avatar{
+  width:44px;height:44px;object-fit:contain;flex-shrink:0;
+  background:#fff;border-radius:10px;padding:2px;
+}
+.malba-assistant-headline{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.malba-assistant-headline strong{font-size:17px;line-height:1.2;font-weight:700}
+.malba-assistant-headline span{color:#dbe7f2;font-size:12px}
+.malba-assistant-close{
+  border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;
+  width:32px;height:32px;min-width:32px;border-radius:8px;
+  font-size:24px;line-height:1;display:grid;place-items:center;
+}
+.malba-assistant-close:hover{background:rgba(255,255,255,.23)}
+.malba-assistant-intro{
+  font-size:15px;line-height:1.55;font-weight:500;
+  padding:20px 20px 7px;margin:0!important;
+}
+.malba-assistant-label{
+  padding:0 20px;margin:12px 0 10px!important;
+  color:#64758b;font-size:12px!important;font-weight:600;
+}
+.malba-assistant-quicklinks{display:grid;gap:8px;padding:0 20px}
+.malba-assistant-question{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border:1px solid #e0e6ee;border-radius:9px;
+  color:#003B73!important;background:#fff;text-decoration:none!important;
+  padding:12px 13px;min-height:44px;font-size:13px;
+  line-height:1.4;font-weight:500;transition:background .16s,border-color .16s;
+}
+.malba-assistant-question:hover{background:#f6f5fa;border-color:#b8aad4}
+.malba-assistant-chevron{
+  font-size:23px;line-height:12px;color:#5D4594;flex-shrink:0;font-weight:400;
+}
+.malba-assistant-link{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin:18px 20px 20px;padding:13px 16px;
+  min-height:47px;border-radius:9px;
+  background:#5D4594;color:#fff!important;
+  font-size:14px;font-weight:600;text-decoration:none!important;
+  text-align:center;transition:background .16s;
+}
+.malba-assistant-link:hover{background:#003B73}
+.malba-assistant-wa-icon{font-size:17px}
+.malba-assistant-bubble:focus-visible,
+.malba-assistant-trigger:focus-visible,
+.malba-assistant-question:focus-visible,
+.malba-assistant-close:focus-visible,
+.malba-assistant-link:focus-visible{
+  outline:3px solid #5D4594;outline-offset:3px;
+}
+@keyframes malba-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media(max-width:760px){
+  .malba-assistant{bottom:calc(74px + env(safe-area-inset-bottom));right:max(8px,env(safe-area-inset-right))}
+  .malba-assistant-trigger{width:73px;height:80px}
+  .malba-assistant-bubble{padding:10px 13px;max-width:174px;font-size:12px}
+  .malba-assistant-panel{max-height:calc(100dvh - 195px)}
+}
+@media(max-height:540px){
+  .malba-assistant-panel{max-height:calc(100dvh - 115px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .malba-assistant-trigger{animation:none}
+  .malba-assistant-question,.malba-assistant-link{transition:none}
+}
