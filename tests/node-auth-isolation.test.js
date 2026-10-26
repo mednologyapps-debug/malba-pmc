@@ -38,8 +38,8 @@ test('Node enrollment, email and student authentication never alter admin author
     if(table==='lms_students'){
       if(failProfile)return send(500,{code:'fixture_error',message:'temporary profile lookup failure'});
       if(['POST','PATCH'].includes(req.method)){
-        const id=body.id||url.searchParams.get('id')?.slice(3),previous=profiles.get(id)||{};
-        profiles.set(id,{...previous,...body});rows=[profiles.get(id)];
+        const filter=url.searchParams.get('id')||'',ids=body.id?[body.id]:filter.startsWith('eq.')?[filter.slice(3)]:filter.startsWith('in.(')?filter.slice(4,-1).split(','):[];
+        for(const id of ids){const previous=profiles.get(id)||{};profiles.set(id,{...previous,...body,id});rows.push(profiles.get(id));}
       }else rows=[...profiles.values()];
     }else if(table==='lms_enrollments'){
       if(req.method==='POST')enrollments.push(body);
@@ -79,6 +79,19 @@ test('Node enrollment, email and student authentication never alter admin author
   const saved=await request('/api/lms/admin/student',{name:'Alumno Fixture',email:'student@invalid.test',password:'Local-password-123',active:true,courseId,sendEmail:true},admin.cookie,csrf);
   assert.equal(saved.status,200);assert.equal(saved.data.email.sent,true);
   assert.equal(profiles.get(saved.data.id).active,true);assert.equal(enrollments.length,1);
+  for(const route of ['/api/lms/admin/students/template','/api/lms/admin/students/export']){
+    const excel=await fetch(origin+route,{headers:{cookie:admin.cookie}}),bytes=Buffer.from(await excel.arrayBuffer());
+    assert.equal(excel.status,200);assert.match(excel.headers.get('content-type'),/spreadsheetml/);assert.equal(bytes.subarray(0,2).toString(),'PK');
+    const workbook=new (require('exceljs').Workbook)();await workbook.xlsx.load(bytes);assert.equal(workbook.worksheets[0].name,'Alumnos');
+  }
+  const bulk=await request('/api/lms/admin/students/bulk',{ids:[saved.data.id],action:'disable'},admin.cookie,csrf);
+  assert.equal(bulk.status,200);assert.equal(profiles.get(saved.data.id).active,false);
+  await request('/api/lms/admin/students/bulk',{ids:[saved.data.id],action:'enable'},admin.cookie,csrf);
+  assert.equal(profiles.get(saved.data.id).active,true);
+  const importWorkbook=new (require('exceljs').Workbook)(),sheet=importWorkbook.addWorksheet('Alumnos');
+  sheet.addRow(['Nombre','Correo','Contraseña','Estado']);sheet.addRow(['Importado Fixture','importado@invalid.test','Imported-password-123','Activo']);
+  const imported=await request('/api/lms/admin/students/import',{filename:'alumnos.xlsx',content:Buffer.from(await importWorkbook.xlsx.writeBuffer()).toString('base64'),courseId,sendEmail:false},admin.cookie,csrf);
+  assert.equal(imported.status,200);assert.equal(imported.data.created,1);assert.equal(imported.data.enrolled,1);assert.equal(imported.data.errors.length,0);
   const decodedMail=mail.replace(/=\n/g,'').replace(/=([0-9A-F]{2})/g,(_,hex)=>String.fromCharCode(parseInt(hex,16)));
   assert.match(decodedMail,/Ingresar al aula virtual/);assert.ok(!decodedMail.includes('/aula-virtual/aula-virtual/'));
   assert.ok(decodedMail.includes(`href="${origin}/aula-virtual/"`));

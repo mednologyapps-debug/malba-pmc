@@ -3,6 +3,30 @@
   position: relative;
   background: var(--blue);
 }
+
+.floating-whatsapp {
+  position: fixed;
+  right: clamp(18px, 2.5vw, 34px);
+  bottom: clamp(18px, 2.5vw, 32px);
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 12px 18px 12px 14px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 28px;
+  background: var(--purple);
+  color: var(--white);
+  box-shadow: 0 12px 30px rgba(7,32,61,.24);
+  font-weight: 600;
+  transition: transform .2s ease, background .2s ease;
+}
+.floating-whatsapp svg { width: 28px; height: 28px; flex: 0 0 auto; }
+.floating-whatsapp:hover { transform: translateY(-3px); background: var(--blue); }
+.floating-whatsapp:focus-visible { outline-color: var(--white); box-shadow: 0 0 0 5px var(--purple),0 12px 30px rgba(7,32,61,.24); }
+@media(max-width:760px){.floating-whatsapp{width:54px;height:54px;padding:12px;justify-content:center}.floating-whatsapp span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}}
+@media(prefers-reduced-motion:reduce){.floating-whatsapp{transition:none}.floating-whatsapp:hover{transform:none}}
 .hero-track {
   display: flex;
   align-items: flex-start;
@@ -27,33 +51,45 @@
 }
 .slider-controls {
   position: absolute;
-  right: max(32px, calc((100vw - var(--max)) / 2 + 32px));
-  bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  inset: 0;
   z-index: 3;
   color: var(--white);
+  pointer-events: none;
 }
 .slider-arrow {
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: var(--white);
-  background: var(--blue);
+  display: grid !important;
+  place-items: center;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(7, 63, 124, 0.12);
+  color: var(--blue);
+  background: var(--white);
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 24px;
+  box-shadow: 0 8px 24px rgba(7, 32, 61, 0.18);
+  pointer-events: auto;
 }
+.slider-arrow:first-child { left: clamp(14px, 2.4vw, 38px); }
+.slider-arrow:last-child { right: clamp(14px, 2.4vw, 38px); }
 .slider-arrow:hover {
   background: var(--purple);
+  color: var(--white);
 }
 .slider-controls button:focus-visible {
   outline-color: var(--white);
 }
 .slider-dots {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 4px;
+  pointer-events: auto;
 }
 .slider-dot {
   width: 28px;
@@ -411,13 +447,12 @@
 }
 @media (max-width: 760px) {
   .slider-controls {
-    right: 24px;
-    bottom: 18px;
-    gap: 12px;
+    inset: 0;
   }
   .slider-arrow {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
   }
   .hero-copy {
     padding-bottom: 88px;

@@ -30,7 +30,6 @@
 .course-whatsapp > span[aria-hidden="true"] {
   display: none !important;
 }
-.slider-arrow,
 .collection-controls button,
 .knowledge-controls button {
   display: none !important;
