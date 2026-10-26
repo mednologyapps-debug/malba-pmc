@@ -275,22 +275,39 @@ async function lmsApi(req,res,url) {
       if(requested.length>100)throw new Error('Selecciona hasta 100 cursos.');
       const selectedCourses=await Promise.all(requested.map(id=>getCourse(id,true)));
       if(selectedCourses.some(c=>!c))throw new Error('Todos los cursos deben estar publicados antes de matricular alumnos.');
-      let user,password=String(b.password||''),forcePassword=Boolean(password),created=false;
+      let user,password=String(b.password||''),forcePassword=Boolean(password),created=false,reactivated=false;
       if(password&&password.length<12)throw new Error('La nueva contraseña temporal debe tener al menos 12 caracteres.');
       if(b.id){
         const existing=await studentRow(b.id);
-        // La inscripción por correo no puede reemplazar la contraseña actual.
-        const updated=await supabase.auth.admin.updateUserById(b.id,{password:password||undefined,user_metadata:{full_name:name}});
+        if(!existing||existing.deleted_at)return json(res,409,{error:'Este alumno no está activo. Restáuralo o créalo nuevamente desde Alumnos.'});
+        if(String(existing.email||'').trim().toLowerCase()!==email)return json(res,409,{error:'El correo de acceso no puede modificarse desde Editar alumno. Crea un nuevo acceso para otro correo.'});
+        const authAttributes={user_metadata:{full_name:name}};
+        if(password)authAttributes.password=password;
+        const updated=await supabase.auth.admin.updateUserById(b.id,authAttributes);
         if(updated.error)throw updated.error;
         forcePassword=password?true:!!existing.force_password_change;
         user=updated.data.user||{id:b.id};
       }else{
+        // Borrar desde el CMS solo envía a papelera. Re-crear con el mismo correo
+        // debe actualizar de forma explícita la contraseña de Supabase Auth.
         password=password||`Malba-${crypto.randomBytes(8).toString('hex')}`;
-        const ensured=await ensureAuthUser(email,name,password,false);
-        if(!ensured.created)password='';
-        user=ensured.user;created=ensured.created;
-        const existing=await studentRow(user.id);
-        forcePassword=ensured.passwordChanged||!!existing?.force_password_change;
+        const authAccount=await authUserByEmail(email);
+        if(authAccount){
+          const previous=await studentRow(authAccount.id);
+          if(!previous)return json(res,409,{error:'Este correo ya pertenece a una cuenta de autenticación no gestionada como alumno.'});
+          if(!previous.deleted_at)return json(res,409,{error:'Ya existe un alumno con este correo. Utiliza Editar alumno para gestionar su acceso.'});
+          const restored=await supabase.auth.admin.updateUserById(authAccount.id,{password,user_metadata:{full_name:name}});
+          if(restored.error)throw restored.error;
+          user=restored.data.user||authAccount;
+          reactivated=true;
+          forcePassword=true;
+        }else{
+          const ensured=await ensureAuthUser(email,name,password,false);
+          if(!ensured.created)return json(res,409,{error:'Este correo ya está registrado. Actualiza el listado y vuelve a intentarlo.'});
+          user=ensured.user;
+          created=true;
+          forcePassword=true;
+        }
       }
       const up=await supabase.from('lms_students').upsert({id:user.id,full_name:name,email,active:b.active!==false,deleted_at:null,force_password_change:forcePassword}).select('id').single();
       if(up.error)throw up.error;
@@ -300,7 +317,7 @@ async function lmsApi(req,res,url) {
         try{emailStatus=await sendWelcomeEmail({name,email},selectedCourses.length?selectedCourses:{title:'tus programas MALBA PMC'},password);}
         catch(error){emailStatus={sent:false,reason:'SMTP: '+String(error.message||error).slice(0,180)};}
       }
-      return json(res,200,{ok:true,id:user.id,created,email:emailStatus});
+      return json(res,200,{ok:true,id:user.id,created,reactivated,email:emailStatus});
     }
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/students/import'){
       const raw=Buffer.from(String(b.content||''),'base64'),filename=String(b.filename||'');
