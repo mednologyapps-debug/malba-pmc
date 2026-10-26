@@ -136,16 +136,16 @@ test('Node enrollment, email and student authentication never alter admin author
   assert.equal((await request('/api/content',undefined,swapped)).status,401);
   // Deleted students remain in Auth while in the CMS trash. Creating them again
   // with the same email must intentionally rotate the password and reuse the profile.
-  const original=await request('/api/lms/admin/student',{name:'Recreate Fixture',email:'recreate@invalid.test',password:'First-Password-123',courseIds:[courseId],active:true},admin.cookie,csrf);
+  const original=await request('/api/lms/admin/student',{name:'Recreate Fixture',email:'recreate@invalid.test',password:'First-Password-123',courseIds:[courseId],active:true},admin.cookie,admin.data.csrf);
   assert.equal(original.status,200,JSON.stringify(original.data));
-  const duplicate=await request('/api/lms/admin/student',{name:'Duplicate Fixture',email:'recreate@invalid.test',password:'Other-Password-123',active:true},admin.cookie,csrf);
+  const duplicate=await request('/api/lms/admin/student',{name:'Duplicate Fixture',email:'recreate@invalid.test',password:'Other-Password-123',active:true},admin.cookie,admin.data.csrf);
   assert.equal(duplicate.status,409,'active students cannot be silently replaced by a create operation');
   assert.equal(users.get(original.data.id).password,'First-Password-123');
-  const deleted=await request('/api/lms/admin/student',{id:original.data.id,action:'delete'},admin.cookie,csrf);
+  const deleted=await request('/api/lms/admin/student',{id:original.data.id,action:'delete'},admin.cookie,admin.data.csrf);
   assert.equal(deleted.status,200);
   assert.equal(profiles.get(original.data.id).active,false);
   assert.ok(profiles.get(original.data.id).deleted_at);
-  const remade=await request('/api/lms/admin/student',{name:'Recreate Fixture',email:'recreate@invalid.test',password:'Second-Password-123',courseIds:[courseId],active:true,sendEmail:true},admin.cookie,csrf);
+  const remade=await request('/api/lms/admin/student',{name:'Recreate Fixture',email:'recreate@invalid.test',password:'Second-Password-123',courseIds:[courseId],active:true,sendEmail:true},admin.cookie,admin.data.csrf);
   assert.equal(remade.status,200,JSON.stringify(remade.data));
   assert.equal(remade.data.reactivated,true);
   assert.equal(remade.data.id,original.data.id);
