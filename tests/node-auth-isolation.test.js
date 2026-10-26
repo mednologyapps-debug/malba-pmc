@@ -11,7 +11,7 @@ const {once}=require('node:events');
 test('Node enrollment, email and student authentication never alter admin authority',async(t)=>{
   const key='local-service-role-fixture',profiles=new Map(),users=new Map(),enrollments=[];
   const courseId='10000000-0000-4000-8000-000000000001';
-  let polluted=0,failProfile=false,mail='';
+  let polluted=0,failProfile=false,failStudentWrite=false,mail='';
   const backend=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://localhost'),chunks=[];
     for await(const chunk of req)chunks.push(chunk);
@@ -26,17 +26,18 @@ test('Node enrollment, email and student authentication never alter admin author
     if(req.headers.authorization!==`Bearer ${key}`){polluted++;return send(403,{code:'42501',message:'permission denied: user token replaced service role'});}
     if(url.pathname==='/auth/v1/admin/users'){
       if(req.method==='GET')return send(200,{users:[...users.values()],aud:'authenticated'});
-      const user={id:require('node:crypto').randomUUID(),email:body.email,password:body.password};
+      const user={id:require('node:crypto').randomUUID(),email:body.email,password:body.password,app_metadata:body.app_metadata||{},user_metadata:body.user_metadata||{}};
       users.set(user.id,user);return send(200,user);
     }
     if(url.pathname.startsWith('/auth/v1/admin/users/')){
-      const user=users.get(url.pathname.split('/').pop());Object.assign(user,body);return send(200,user);
+      const user=users.get(url.pathname.split('/').pop());if(req.method==='DELETE'){users.delete(user?.id);return send(200,{})}Object.assign(user,body);return send(200,user);
     }
     const table=url.pathname.split('/').pop();
     const single=String(req.headers.accept||'').includes('object+json');
     let rows=[];
     if(table==='lms_students'){
       if(failProfile)return send(500,{code:'fixture_error',message:'temporary profile lookup failure'});
+      if(failStudentWrite&&['POST','PATCH'].includes(req.method))return send(500,{code:'fixture_error',message:'simulated profile write failure'});
       if(['POST','PATCH'].includes(req.method)){
         const filter=url.searchParams.get('id')||'',ids=body.id?[body.id]:filter.startsWith('eq.')?[filter.slice(3)]:filter.startsWith('in.(')?filter.slice(4,-1).split(','):[];
         for(const id of ids){const previous=profiles.get(id)||{};profiles.set(id,{...previous,...body,id});rows.push(profiles.get(id));}
@@ -154,5 +155,24 @@ test('Node enrollment, email and student authentication never alter admin author
   assert.equal(users.get(original.data.id).password,'Second-Password-123');
   assert.equal((await request('/api/lms/login',{email:'recreate@invalid.test',password:'First-Password-123'})).status,401);
   assert.equal((await request('/api/lms/login',{email:'recreate@invalid.test',password:'Second-Password-123'})).status,200);
+  // A failed profile write rolls back newly created Auth accounts, allowing a fresh retry.
+  failStudentWrite=true;
+  const failedRegistration=await request('/api/lms/admin/student',{name:'Write Failure',email:'failwrite@invalid.test',password:'Safe-password-321'},admin.cookie,admin.data.csrf);
+  assert.equal(failedRegistration.status,500);
+  assert.equal([...users.values()].some(u=>u.email==='failwrite@invalid.test'),false,'failed profile save must remove Auth-only account');
+  failStudentWrite=false;
+  const successfulRetry=await request('/api/lms/admin/student',{name:'Write Failure',email:'failwrite@invalid.test',password:'Safe-password-321'},admin.cookie,admin.data.csrf);
+  assert.equal(successfulRetry.status,200,JSON.stringify(successfulRetry.data));
+  assert.equal(profiles.get(successfulRetry.data.id).email,'failwrite@invalid.test');
+  // A previous interrupted request may leave a tagged Auth-only account. Reclaim it.
+  const orphanId=require('node:crypto').randomUUID();
+  users.set(orphanId,{id:orphanId,email:'orphan@invalid.test',password:'Prior-password-123',app_metadata:{malba_lms_student:true},user_metadata:{full_name:'Orphan Fixture'}});
+  const recovered=await request('/api/lms/admin/student',{name:'Orphan Fixture',email:'orphan@invalid.test',password:'New-password-123'},admin.cookie,admin.data.csrf);
+  assert.equal(recovered.status,200,JSON.stringify(recovered.data));
+  assert.equal(recovered.data.id,orphanId);
+  assert.equal(recovered.data.reactivated,true);
+  assert.equal(profiles.get(orphanId).email,'orphan@invalid.test');
+  assert.equal(users.get(orphanId).password,'New-password-123');
+  assert.equal((await request('/api/lms/login',{email:'orphan@invalid.test',password:'New-password-123'})).status,200);
   assert.equal(polluted,0,'a user session reached an administrative Supabase operation');
 });
