@@ -276,6 +276,7 @@ async function lmsApi(req,res,url) {
       const selectedCourses=await Promise.all(requested.map(id=>getCourse(id,true)));
       if(selectedCourses.some(c=>!c))throw new Error('Todos los cursos deben estar publicados antes de matricular alumnos.');
       let user,password=String(b.password||''),forcePassword=Boolean(password),created=false;
+      if(password&&password.length<12)throw new Error('La nueva contraseña temporal debe tener al menos 12 caracteres.');
       if(b.id){
         const existing=await studentRow(b.id);
         // La inscripción por correo no puede reemplazar la contraseña actual.
@@ -295,8 +296,8 @@ async function lmsApi(req,res,url) {
       if(up.error)throw up.error;
       let emailStatus={sent:false,reason:'No solicitado.'};
       for(const id of requested)await saveEnrollment(user.id,id,true,b.expires||'');
-      if(b.sendEmail&&selectedCourses.length){
-        try{emailStatus=await sendWelcomeEmail({name,email},selectedCourses,password);}
+      if(b.sendEmail&&(selectedCourses.length||password)){
+        try{emailStatus=await sendWelcomeEmail({name,email},selectedCourses.length?selectedCourses:{title:'tus programas MALBA PMC'},password);}
         catch(error){emailStatus={sent:false,reason:'SMTP: '+String(error.message||error).slice(0,180)};}
       }
       return json(res,200,{ok:true,id:user.id,created,email:emailStatus});
