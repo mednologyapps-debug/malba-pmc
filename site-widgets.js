@@ -109,7 +109,7 @@
     .then(settings => {
       if (!settings || settings.whatsappEnabled !== true) return;
       const number = String(settings.whatsappNumber || '').replace(/\D/g, '');
-      if (!/^\d{9,15}$/.test(number) || /^(\d)\1+$/.test(number)) return;
+      if (!/^\d{9,15}$/.test(number) || /^(\d)\1+$/.test(number) || number === '51999999999') return;
       contact.href = 'https://wa.me/' + number + '?text=' + encodeURIComponent(String(settings.whatsappMessage || 'Hola, deseo información sobre MALBA PMC.'));
       contact.hidden = false;
     })
