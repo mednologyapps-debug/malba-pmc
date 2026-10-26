@@ -336,13 +336,21 @@ async function lmsApi(req,res,url) {
           if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('correo inválido o vacío');
           const supplied=String(row.contraseña||row.password||''),password=supplied||`Malba-${crypto.randomBytes(8).toString('hex')}`;
           if(supplied&&supplied.length<12)throw new Error('la contraseña debe tener al menos 12 caracteres');
-          const ensured=await ensureAuthUser(email,name,password,false);
-          const previous=await studentRow(ensured.user.id),forcePassword=ensured.passwordChanged||!!previous?.force_password_change;
+          const authAccount=await authUserByEmail(email);
+          const previous=authAccount?await studentRow(authAccount.id):null;
+          if(authAccount&&!previous)throw new Error('el correo pertenece a una cuenta que no es alumno');
+          let ensured;
+          if(previous?.deleted_at){
+            const restored=await supabase.auth.admin.updateUserById(authAccount.id,{password,user_metadata:{full_name:name}});
+            if(restored.error)throw restored.error;
+            ensured={user:restored.data.user||authAccount,created:false,passwordChanged:true};
+          }else ensured=await ensureAuthUser(email,name,password,false);
+          const forcePassword=ensured.passwordChanged||!!previous?.force_password_change;
           const status=String(row.estado||'Activo').trim().toLocaleLowerCase('es'),active=!['deshabilitado','inactivo','no'].includes(status);
           const profile=await supabase.from('lms_students').upsert({id:ensured.user.id,full_name:name,email,active,deleted_at:null,force_password_change:forcePassword});
           if(profile.error)throw profile.error;
           if(b.courseId){await saveEnrollment(ensured.user.id,b.courseId,active,'');enrolled++;}
-          if(b.sendEmail&&b.courseId&&active){const sent=await sendWelcomeEmail({name,email},importCourse,ensured.created?password:'');if(sent.sent)emailsSent++;}
+          if(b.sendEmail&&b.courseId&&active){const sent=await sendWelcomeEmail({name,email},importCourse,ensured.passwordChanged?password:'');if(sent.sent)emailsSent++;}
           if(ensured.created)created++;else updated++;
         }catch(e){errors.push({row:i+2,message:String(e.message||e)});}
       }
