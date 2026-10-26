@@ -96,6 +96,22 @@ test('Node enrollment, email and student authentication never alter admin author
   assert.match(decodedMail,/Ingresar al aula virtual/);assert.ok(!decodedMail.includes('/aula-virtual/aula-virtual/'));
   assert.ok(decodedMail.includes(`href="${origin}/aula-virtual/"`));
   assert.equal((await fetch(origin+'/aula-virtual/')).status,200);
+  // A course assignment or notification must not rotate an existing password.
+  const separate=await request('/api/lms/admin/enroll',{studentId:saved.data.id,courseId,active:true,sendEmail:true},admin.cookie,csrf);
+  assert.equal(separate.status,200,JSON.stringify(separate.data));
+  assert.equal(users.get(saved.data.id).password,'Local-password-123','single enrollment must preserve credentials');
+  const grouped=await request('/api/lms/admin/students/bulk-enroll',{ids:[saved.data.id],courseIds:[courseId],sendEmail:true},admin.cookie,csrf);
+  assert.equal(grouped.status,200,JSON.stringify(grouped.data));
+  assert.equal(users.get(saved.data.id).password,'Local-password-123','bulk enrollment must preserve credentials');
+  const edited=await request('/api/lms/admin/student',{id:saved.data.id,name:'Alumno Fixture',email:'student@invalid.test',active:true,courseIds:[courseId],sendEmail:true},admin.cookie,csrf);
+  assert.equal(edited.status,200,JSON.stringify(edited.data));
+  assert.equal(users.get(saved.data.id).password,'Local-password-123','course update and email must preserve credentials');
+  const repeatWorkbook=new (require('exceljs').Workbook)(),repeatSheet=repeatWorkbook.addWorksheet('Alumnos');
+  repeatSheet.addRow(['Nombre','Correo','Contraseña','Estado']);
+  repeatSheet.addRow(['Alumno Fixture','student@invalid.test','Accidentally-reset-pass-123','Activo']);
+  const repeat=await request('/api/lms/admin/students/import',{filename:'import.xlsx',content:Buffer.from(await repeatWorkbook.xlsx.writeBuffer()).toString('base64'),courseId,sendEmail:true},admin.cookie,csrf);
+  assert.equal(repeat.status,200,JSON.stringify(repeat.data));
+  assert.equal(users.get(saved.data.id).password,'Local-password-123','import should not unexpectedly reset existing credentials');
   const student=await request('/api/lms/login',{email:'student@invalid.test',password:'Local-password-123'});
   assert.equal(student.status,200,JSON.stringify(student.data));
   const session=await request('/api/lms/session',undefined,student.cookie);
