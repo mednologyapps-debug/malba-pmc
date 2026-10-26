@@ -28,7 +28,7 @@ jobs:
         run: npm run test:node
       - name: Python CMS and LMS tests
         run: |
-          pip install -r requirements.txt
+          pip install -r requirements.txt 'pypdf>=6,<7'
           python -m unittest discover -s tests -p 'test_*.py'
       - name: SEO audit
         run: npm run seo:audit
