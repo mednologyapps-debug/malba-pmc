@@ -122,3 +122,25 @@
  #notice{bottom:154px;right:14px;max-width:calc(100% - 28px)}
 }
 @media(max-width:480px){#notice{bottom:146px;font-size:13px;padding:13px 16px}}
+
+/* Índice claro: solo la selección y el avance aportan un fondo de estado. */
+.course-outline{box-shadow:none}
+.course-outline>summary{background:#fff;font-size:16px;line-height:1.5;padding:20px 22px 14px;border-bottom:1px solid var(--line)}
+.course-outline::after{content:none}
+.course-outline>.course-introduction{background:#fff;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0}
+.course-outline>.course-introduction>summary{font-size:16px;padding:17px 22px;color:var(--blue)}
+.course-outline>.course-introduction>div{padding:0 22px 4px}
+.course-outline>.course-introduction p{font-size:14px;line-height:1.75}
+.course-outline .outline-module>summary{font-size:15px;line-height:1.5;padding:8px;font-weight:600}
+.course-outline .outline-lesson{background:transparent;box-shadow:none;border-left:3px solid transparent;color:var(--blue);padding:14px 10px;gap:10px}
+.outline-lesson-copy{display:block;flex:1;min-width:0}
+.outline-lesson-title{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px}
+.course-outline .outline-lesson strong{font-size:16px;font-weight:500;line-height:1.45;overflow-wrap:anywhere}
+.course-outline .outline-lesson small{font-size:13px;line-height:1.5;font-weight:400;color:#526781;margin-top:5px}
+.course-outline .outline-lesson.completed{background:#f8f6fc;border-left-color:transparent;color:var(--blue)}
+.course-outline .outline-lesson.current{background:#eee9f7;border-left-color:var(--purple);color:var(--purple)}
+.course-outline .outline-lesson.current strong{font-weight:600}
+.course-outline .outline-lesson:hover{outline:1px solid #d6cde6;outline-offset:-1px}
+.lesson-completed-label{display:inline-block;font-size:12px;font-weight:600;line-height:1.5;color:var(--purple)}
+.course-outline .lesson-check{flex:0 0 19px;margin-top:2px}
+@media(max-width:900px){.course-outline.mobile-open{box-shadow:none;border:1px solid var(--line)}.course-outline .outline-module>summary{font-size:16px}}
