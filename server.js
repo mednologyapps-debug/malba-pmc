@@ -13,7 +13,7 @@ const ADMIN_COOKIE = 'malba_cms_session';
 const STUDENT_COOKIE = 'malba_student_session';
 const SESSION_TTL = 8 * 60 * 60;
 const MAX_UPLOAD = 100 * 1024 * 1024;
-const APP_VERSION = process.env.APP_VERSION || 'node-supabase-lms';
+const APP_VERSION = process.env.APP_VERSION || 'node-supabase-lms-20261026.2';
 const REDIRECTS = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'redirects.json'), 'utf8')); } catch { return {}; } })();
 const PRIVATE_FILES = /(^|\/)(?:\.env|\.runtime|\.cms-private|server\.js|package\.json|package-lock\.json|supabase|scripts|tests)(?:\/|$)/i;
 const MIME = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.ico':'image/x-icon','.pdf':'application/pdf','.mp4':'video/mp4'};
