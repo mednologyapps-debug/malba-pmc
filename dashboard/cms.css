@@ -63,3 +63,22 @@ dialog{border:1px solid var(--line);border-radius:14px;max-width:560px;width:cal
 .academy-card-menu button{text-align:left;background:transparent;border:0;border-radius:6px;min-height:42px;padding:10px;color:#003B73;cursor:pointer;font:inherit;font-size:13px}
 .academy-card-menu button:hover{background:#f0f3f8}
 @media(max-width:680px){.academy-quick-links{display:grid;grid-template-columns:1fr 1fr;gap:8px}.academy-quick-link{min-width:0;padding:10px}.academy-catalog-grid{grid-template-columns:1fr}.academy-card-actions{flex-wrap:wrap}}
+
+/* Academia: editor de creación integrado, sin modal ni scroll interior */
+#editor>.wizard-page{display:block;position:relative;inset:auto;margin:0;width:100%;max-width:none;max-height:none;overflow:visible;border:0;border-radius:0;padding:0;background:transparent;box-shadow:none;color:var(--ink)}
+#editor>.wizard-page::backdrop{display:none}
+#editor>.wizard-page form{width:100%;max-width:none;min-width:0;display:block}
+#editor>.wizard-page .wizard-heading{position:relative;padding:22px 26px 16px;background:#fff;border:1px solid #dfe6ef;border-radius:12px 12px 0 0}
+#editor>.wizard-page .wizard-heading h2{font-size:clamp(22px,2vw,30px);margin:0 0 8px;padding-right:40px}
+#editor>.wizard-page .wizard-heading>p{margin:0;color:#63758a;line-height:1.6}
+#editor>.wizard-page .dialog-close{right:20px;top:22px;z-index:2}
+#editor>.wizard-page .wizard-progress{margin:0 0 20px;padding:15px 20px;background:#fff;border:1px solid #dfe6ef;border-top:0;border-radius:0 0 12px 12px;display:flex;gap:8px;overflow:auto}
+#editor>.wizard-page .wizard-progress button{flex:1 0 120px;max-width:250px;padding:10px;white-space:normal;line-height:1.4}
+#editor>.wizard-page #wizard-body{min-width:0;display:grid;gap:18px;background:#fff;padding:26px;border:1px solid #dfe6ef;border-radius:12px}
+#editor>.wizard-page #wizard-body>h3{font-size:clamp(19px,1.8vw,24px);font-weight:600;color:#003B73}
+#editor>.wizard-page #wizard-body .panel-body{padding:20px}
+#editor>.wizard-page #wizard-body .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+#editor>.wizard-page .wizard-footer{position:sticky;bottom:0;z-index:6;margin:18px 0 0;padding:16px 22px;background:#fff;border:1px solid #dfe6ef;border-radius:12px;box-shadow:0 -3px 12px rgba(8,40,75,.04)}
+#editor>.wizard-page .wizard-footer button{min-height:44px}
+@media(max-width:850px){#editor>.wizard-page .wizard-heading{padding:20px}#editor>.wizard-page .wizard-progress{padding:12px}#editor>.wizard-page #wizard-body{padding:18px}#editor>.wizard-page #wizard-body .fields{grid-template-columns:1fr}}
+@media(max-width:600px){#editor>.wizard-page .wizard-progress button{min-width:110px;flex:0 0 130px;font-size:12px}#editor>.wizard-page .wizard-footer{padding:12px;gap:8px;flex-wrap:wrap}#editor>.wizard-page .wizard-footer>span{order:-1;width:100%}#editor>.wizard-page .wizard-footer button{flex:1;font-size:12px}}
