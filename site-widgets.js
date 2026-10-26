@@ -1,1 +1,117 @@
-'use strict';(async()=>{if(document.querySelector('[data-malba-assistant]'))return;let settings={whatsappEnabled:true,whatsappNumber:'51999999999',whatsappMessage:'Hola, deseo recibir información sobre los servicios de MALBA PMC.'};try{const r=await fetch('/api/public-settings',{headers:{Accept:'application/json'}});if(r.ok)settings={...settings,...await r.json()};}catch(_){}const number=String(settings.whatsappNumber||'').replace(/\D/g,'');if(!settings.whatsappEnabled||!/^\d{9,15}$/.test(number))return;const root=document.createElement('div');root.className='malba-assistant';root.dataset.malbaAssistant='';const panel=document.createElement('section');panel.className='malba-assistant-panel';panel.id='malba-assistant-panel';panel.hidden=true;panel.setAttribute('aria-label','Asistente MALBA PMC');const header=document.createElement('div');header.className='malba-assistant-head';const name=document.createElement('strong');name.textContent='Asistente MALBA';const close=document.createElement('button');close.type='button';close.className='malba-assistant-close';close.setAttribute('aria-label','Cerrar asistente');close.textContent='×';header.append(name,close);const greeting=document.createElement('p');greeting.textContent='Hola, ¿en qué podemos ayudarte?';const note=document.createElement('p');note.className='malba-assistant-note';note.textContent='Podemos orientarte sobre nuestros programas, consultoría y soluciones.';const contact=document.createElement('a');contact.className='malba-assistant-link';contact.textContent='Hablar por WhatsApp';contact.href='https://wa.me/'+number+'?text='+encodeURIComponent(String(settings.whatsappMessage||''));contact.target='_blank';contact.rel='noopener noreferrer';panel.append(header,greeting,note,contact);const trigger=document.createElement('button');trigger.type='button';trigger.className='malba-assistant-trigger';trigger.setAttribute('aria-label','Abrir asistente MALBA');trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls',panel.id);trigger.innerHTML="<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 112\" width=\"74\" height=\"82\" aria-hidden=\"true\"><path d=\"M50 11v9\" stroke=\"#003B73\" stroke-width=\"4\" stroke-linecap=\"round\"/><circle cx=\"50\" cy=\"8\" r=\"5\" fill=\"#5D4594\"/><path d=\"M21 39Q21 20 50 20q29 0 29 19v26q0 25-29 25T21 65Z\" fill=\"#fff\" stroke=\"#003B73\" stroke-width=\"4\"/><rect x=\"28\" y=\"37\" width=\"44\" height=\"31\" rx=\"12\" fill=\"#003B73\"/><rect x=\"35\" y=\"48\" width=\"9\" height=\"7\" rx=\"3.5\" fill=\"#B6E7FF\"/><rect x=\"56\" y=\"48\" width=\"9\" height=\"7\" rx=\"3.5\" fill=\"#B6E7FF\"/><path d=\"M44 61q6 4 12 0\" stroke=\"#B6E7FF\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M19 56 12 61M81 56l7 5\" stroke=\"#5D4594\" stroke-width=\"5\" stroke-linecap=\"round\"/><rect x=\"32\" y=\"86\" width=\"36\" height=\"16\" rx=\"8\" fill=\"#5D4594\"/><path d=\"M40 94h20\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>";function toggle(open){panel.hidden=!open;trigger.setAttribute('aria-expanded',String(open));trigger.setAttribute('aria-label',open?'Cerrar asistente MALBA':'Abrir asistente MALBA');if(open)close.focus();else trigger.focus();}trigger.addEventListener('click',()=>toggle(panel.hidden));close.addEventListener('click',()=>toggle(false));document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden)toggle(false)});root.append(panel,trigger);document.body.append(root);})();
+'use strict';
+(() => {
+  // This shared widget is injected from app.js on public pages.
+  // The home page may also load it directly; initialize only once.
+  if (window.__malbaAssistantInitialized || document.querySelector('[data-malba-assistant]')) return;
+  window.__malbaAssistantInitialized = true;
+
+  const make = (tag, cls, text) => {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  };
+  const asset = '/assets/assistant-malba-energy.webp?v=2';
+  const root = make('div', 'malba-assistant');
+  root.dataset.malbaAssistant = '';
+  const panel = make('section', 'malba-assistant-panel');
+  panel.id = 'malba-assistant-panel';
+  panel.hidden = true;
+  panel.setAttribute('role', 'region');
+  panel.setAttribute('aria-label', 'Asistente MALBA');
+
+  const header = make('div', 'malba-assistant-head');
+  const avatar = make('img', 'malba-assistant-avatar');
+  avatar.src = asset;
+  avatar.alt = '';
+  avatar.width = 42;
+  avatar.height = 42;
+  const heading = make('div', 'malba-assistant-headline');
+  heading.append(make('strong', '', 'Asistente MALBA'), make('span', '', 'Encuentra lo que necesitas'));
+  const close = make('button', 'malba-assistant-close', '×');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Cerrar asistente');
+  header.append(avatar, heading, close);
+
+  const introduction = make('p', 'malba-assistant-intro', '¡Hola! ¿En qué podemos ayudarte hoy?');
+  const label = make('p', 'malba-assistant-label', 'Preguntas frecuentes');
+  const quickLinks = make('nav', 'malba-assistant-quicklinks');
+  quickLinks.setAttribute('aria-label', 'Accesos rápidos de MALBA');
+  for (const [text, url] of [
+    ['¿Qué cursos disponibles hay?', '/academia/'],
+    ['¿Qué soluciones digitales ofrecen?', '/soluciones-digitales/'],
+    ['¿Dónde veo sus publicaciones?', '/publicaciones/'],
+    ['¿Cómo solicito una consultoría?', '/consultoria/']
+  ]) {
+    const link = make('a', 'malba-assistant-question');
+    link.href = url;
+    link.append(make('span', '', text), make('span', 'malba-assistant-chevron', '›'));
+    link.lastElementChild.setAttribute('aria-hidden', 'true');
+    quickLinks.append(link);
+  }
+
+  const contact = make('a', 'malba-assistant-link', 'Hablar por WhatsApp');
+  contact.hidden = true; // Show only after reading a valid CMS WhatsApp configuration.
+  contact.target = '_blank';
+  contact.rel = 'noopener noreferrer';
+  contact.setAttribute('aria-label', 'Hablar con MALBA por WhatsApp (abre en otra pestaña)');
+  const icon = make('span', 'malba-assistant-wa-icon', '↗');
+  icon.setAttribute('aria-hidden', 'true');
+  contact.append(icon);
+  panel.append(header, introduction, label, quickLinks, contact);
+
+  const launcher = make('div', 'malba-assistant-launcher');
+  const bubble = make('button', 'malba-assistant-bubble', '¿Cómo puedo ayudarte?');
+  bubble.type = 'button';
+  bubble.setAttribute('aria-controls', panel.id);
+  bubble.setAttribute('aria-expanded', 'false');
+  const trigger = make('button', 'malba-assistant-trigger');
+  trigger.type = 'button';
+  trigger.setAttribute('aria-label', 'Abrir asistente MALBA');
+  trigger.setAttribute('aria-controls', panel.id);
+  trigger.setAttribute('aria-expanded', 'false');
+  const robot = make('img', 'malba-assistant-robot');
+  robot.src = asset;
+  robot.alt = '';
+  robot.width = 104;
+  robot.height = 104;
+  robot.decoding = 'async';
+  trigger.append(robot);
+  launcher.append(bubble, trigger);
+  root.append(panel, launcher);
+  document.body.append(root);
+
+  const toggle = (open, restoreFocus = false) => {
+    panel.hidden = !open;
+    root.classList.toggle('is-open', open);
+    trigger.setAttribute('aria-expanded', String(open));
+    bubble.setAttribute('aria-expanded', String(open));
+    trigger.setAttribute('aria-label', open ? 'Cerrar asistente MALBA' : 'Abrir asistente MALBA');
+    if (open) close.focus();
+    else if (restoreFocus) trigger.focus();
+  };
+  trigger.addEventListener('click', () => toggle(panel.hidden));
+  bubble.addEventListener('click', () => toggle(true));
+  close.addEventListener('click', () => toggle(false, true));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !panel.hidden) toggle(false, true);
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!panel.hidden && !root.contains(event.target)) toggle(false);
+  });
+
+  // FAQs always work, even if WhatsApp is disabled or settings are temporarily unavailable.
+  fetch('/api/public-settings', { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' })
+    .then(async response => {
+      if (!response.ok || !String(response.headers.get('content-type') || '').includes('application/json')) return null;
+      return response.json();
+    })
+    .then(settings => {
+      if (!settings || settings.whatsappEnabled !== true) return;
+      const number = String(settings.whatsappNumber || '').replace(/\D/g, '');
+      if (!/^\d{9,15}$/.test(number) || /^(\d)\1+$/.test(number)) return;
+      contact.href = 'https://wa.me/' + number + '?text=' + encodeURIComponent(String(settings.whatsappMessage || 'Hola, deseo información sobre MALBA PMC.'));
+      contact.hidden = false;
+    })
+    .catch(() => {});
+})();
