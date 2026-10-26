@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "description": "MALBA PMC web, CMS y aula virtual",
+  "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "build": "node -e \"console.log('MALBA PMC Node build listo')\"",
     "start": "node server.js",
-    "check": "node --check server.js"
+    "check": "node --check server.js",
+    "seo:audit": "python scripts/seo_audit.py",
+    "seo:release": "python scripts/seo_release.py"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.75.0"
+    "@supabase/supabase-js": "2.118.0",
+    "nodemailer": "10.2.1",
+    "ws": "8.22.0"
   },
   "engines": {
     "node": ">=20"

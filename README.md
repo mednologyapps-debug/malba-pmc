@@ -1,6 +1,10 @@
 # MALBA PMC — web y CMS
 
-Primera entrega de la reconstrucción. El repositorio original solo contenía este README, sin el código de Hostinger.
+> Estado de integración: el runtime Node/Supabase, el CMS y el aula virtual
+> están versionados en este repositorio. El despliegue de staging debe usar
+> este mismo checkout y las variables de entorno descritas en `.env.example`.
+
+La aplicación sirve la web pública, el CMS y el aula virtual desde `server.js`.
 
 ## Probar
 

@@ -149,3 +149,5 @@ __pycache__/
 # Private CMS database / user images (never commit accounts or sessions)
 .cms-private/
 assets/uploads/
+# Temporary upload locks created while a PDF is being written.
+assets/publications/.*.pdf.*

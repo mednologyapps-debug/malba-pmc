@@ -1,0 +1,12 @@
+{
+  "/academy/": "/academia/",
+  "/academy": "/academia/",
+  "/proximos-cursos/": "/academia/proximos/",
+  "/proximos-cursos": "/academia/proximos/",
+  "/quienes-somos": "/quienes-somos/",
+  "/publicaciones": "/publicaciones/",
+  "/consultoria": "/consultoria/",
+  "/soluciones-digitales": "/soluciones-digitales/",
+  "/escritorio": "/aula-virtual/",
+  "/aula": "/aula-virtual/"
+}
