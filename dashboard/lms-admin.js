@@ -15,14 +15,58 @@ async function renderLmsEditor(){
  if(lmsState.course){lmsCourseEditor(editor);return;}
  const nav=el('nav',{class:'lms-nav','aria-label':'Administración del aula'});for(const [id,label]of [['courses','Cursos'],['students','Alumnos'],['enrollments','Matrículas y avance']]){const b=lmsButton(label,()=>{lmsState.view=id;lmsState.query='';lmsState.selectedStudents.clear();renderLmsEditor();},lmsState.view===id?'active':'');b.setAttribute('aria-current',lmsState.view===id?'page':'false');nav.append(b);}editor.append(nav);
  const head=el('div',{class:'lms-section-head'},[el('div',{},[el('h2',{text:lmsState.view==='courses'?'Cursos':lmsState.view==='students'?'Alumnos':'Matrículas y avance'}),el('p',{text:lmsState.view==='courses'?'Crea, organiza y publica la experiencia completa del alumno.':lmsState.view==='students'?'Gestiona accesos, matrículas y grupos sin realizar tareas una por una.':'Revisa el acceso y el avance de cada alumno.'})])]);
- if(lmsState.view==='courses'){const tools=el('div',{class:'lms-student-tools'});tools.append(lmsButton('Crear curso de demostración',lmsCreateDemoCourse,'button secondary'),lmsButton('Crear curso',()=>{lmsState.course=lmsNewCourse();lmsState.revision=0;lmsState.step=0;lmsState.dirty=false;renderLmsEditor();},'button primary'));head.append(tools);}else if(lmsState.view==='students'){head.append(el('div',{class:'lms-student-tools'},[lmsButton('Importar Excel',lmsImportDialog,'button secondary'),el('a',{href:'/api/lms/admin/students/export',class:'button secondary',text:'Exportar Excel',download:'alumnos-malba-pmc.xlsx'}),lmsButton('Crear alumno',()=>lmsStudentDialog(),'button primary')]));}else head.append(lmsButton('Matricular alumno',()=>lmsEnrollDialog(),'button primary'));editor.append(head);
+ if(lmsState.view==='courses'){const tools=el('div',{class:'lms-student-tools'});tools.append(lmsButton('Crear curso',()=>{lmsState.course=lmsNewCourse();lmsState.revision=0;lmsState.step=0;lmsState.dirty=false;renderLmsEditor();},'button primary'));head.append(tools);}else if(lmsState.view==='students'){head.append(el('div',{class:'lms-student-tools'},[lmsButton('Importar Excel',lmsImportDialog,'button secondary'),el('a',{href:'/api/lms/admin/students/export',class:'button secondary',text:'Exportar Excel',download:'alumnos-malba-pmc.xlsx'}),lmsButton('Crear alumno',()=>lmsStudentDialog(),'button primary')]));}else head.append(lmsButton('Matricular alumno',()=>lmsEnrollDialog(),'button primary'));editor.append(head);
  const controls=el('div',{class:'lms-list-controls'}),search=el('input',{class:'lms-search',type:'search',placeholder:lmsState.view==='courses'?'Buscar curso…':'Buscar por alumno, correo o curso…','aria-label':'Buscar en el aula'});search.value=lmsState.query;controls.append(search);if(lmsState.view==='students'){const course=el('select',{class:'lms-course-filter','aria-label':'Filtrar alumnos por curso'});course.append(el('option',{value:'',text:'Todos los cursos'}));for(const c of lmsState.records.courses)course.append(el('option',{value:c.id,text:c.draft.title}));course.value=lmsState.studentCourseFilter;course.addEventListener('change',()=>{lmsState.studentCourseFilter=course.value;lmsState.selectedStudents.clear();draw();});controls.append(course);}editor.append(controls);const results=el('div');editor.append(results);search.addEventListener('input',()=>{lmsState.query=search.value;draw();});
  const matches=value=>String(value||'').toLocaleLowerCase('es').includes(lmsState.query.toLocaleLowerCase('es'));
  function draw(){if(lmsState.view==='courses')drawCourses(results,matches);else if(lmsState.view==='students')drawStudents(results,matches);else drawEnrollments(results,matches);}
  draw();
 }
 function lmsSkeleton(){const box=el('div',{class:'lms-skeleton','aria-label':'Cargando aula virtual','aria-busy':'true'});box.append(el('span',{class:'skeleton-line wide'}),el('div',{class:'skeleton-tabs'},[el('span'),el('span'),el('span')]),el('span',{class:'skeleton-line'}));for(let i=0;i<3;i++)box.append(el('div',{class:'skeleton-card'},[el('span',{class:'skeleton-avatar'}),el('div',{},[el('span',{class:'skeleton-line wide'}),el('span',{class:'skeleton-line'})])]));return box;}
-function drawCourses(results,matches){const s=lmsState.records;results.replaceChildren();results.className='lms-roster';const types=[['published','Publicados'],['draft','Borradores'],['disabled','Deshabilitados']];const kind=r=>!r.active?'disabled':!r.published?'draft':'published';if(!lmsState.courseFilter)lmsState.courseFilter='published';const filters=el('div',{class:'lms-student-filters',role:'tablist','aria-label':'Estado de cursos'});for(const [key,label]of types){const b=lmsButton('',()=>{lmsState.courseFilter=key;drawCourses(results,matches);},'lms-filter-pill'+(lmsState.courseFilter===key?' active':''));b.append(el('span',{text:label}),el('strong',{text:String(s.courses.filter(r=>kind(r)===key).length)}));b.setAttribute('aria-selected',String(lmsState.courseFilter===key));filters.append(b);}results.append(filters);const grid=el('div',{class:'cms-program-grid lms-course-grid'});results.append(grid);const list=s.courses.filter(r=>kind(r)===lmsState.courseFilter&&matches(r.draft.title));for(const r of list){const c=r.draft,lessons=c.modules.reduce((n,m)=>n+m.lessons.length,0),card=el('article',{class:'cms-program-card lms-course-card'}),media=el('div',{class:'lms-course-media'},[el('img',{src:asset(c.image),alt:'',loading:'lazy'}),el('span',{class:'visibility-badge',text:!r.active?'Deshabilitado':!r.published?'Borrador':JSON.stringify(r.draft)!==JSON.stringify(r.published)?'Publicado · cambios pendientes':'Publicado'})]);card.append(media,el('div',{class:'cms-program-info'},[el('strong',{text:c.title}),el('p',{text:c.description||'Sin descripción todavía.'}),el('div',{class:'lms-course-meta'},[el('span',{text:c.modules.length+' módulos'}),el('span',{text:lessons+' lecciones'}),el('span',{text:s.enrollments.filter(e=>e.course_id===r.id&&e.active).length+' alumnos'})])]));const actions=el('div',{class:'cms-card-actions'},[lmsButton('Editar curso',()=>{lmsState.course=clone(c);lmsState.revision=r.revision;lmsState.step=0;lmsState.dirty=false;renderLmsEditor();},'card-primary'),lmsButton(r.active?'Deshabilitar':'Habilitar',async()=>{if(!confirm((r.active?'¿Deshabilitar':'¿Habilitar')+' este curso? El avance se conservará.'))return;try{await lmsApi('/course/status',{id:r.id,active:!r.active,revision:r.revision});await lmsReload();renderLmsEditor();}catch(e){message(e.message,true);}},'card-secondary')]);card.append(actions);grid.append(card);}if(!list.length)grid.append(lmsEmpty('No hay cursos en esta categoría.','Crea uno desde cero o instala el curso de demostración para revisar todo el flujo.'));}
+function drawCourses(results,matches){
+ const state=lmsState.records;results.replaceChildren();results.className='lms-catalog';
+ const kind=r=>!r.active?'disabled':!r.published?'draft':'published';
+ const types=[['published','Publicados'],['draft','Borradores'],['disabled','Deshabilitados']];
+ if(!types.some(([key])=>key===lmsState.courseFilter))lmsState.courseFilter='published';
+ const filters=el('div',{class:'lms-catalog-tabs',role:'tablist','aria-label':'Filtrar cursos por estado'});
+ for(const [key,label]of types){
+  const b=lmsButton('',()=>{lmsState.courseFilter=key;drawCourses(results,matches);},'lms-catalog-tab'+(lmsState.courseFilter===key?' active':''));
+  b.setAttribute('role','tab');b.setAttribute('aria-selected',String(lmsState.courseFilter===key));
+  b.append(el('span',{text:label}),el('span',{class:'lms-catalog-count',text:String(state.courses.filter(r=>kind(r)===key).length)}));
+  filters.append(b);
+ }
+ results.append(filters);
+ const list=state.courses.filter(r=>kind(r)===lmsState.courseFilter&&matches(r.draft.title));
+ const caption=el('p',{class:'lms-catalog-summary',text:list.length+' '+(list.length===1?'curso':'cursos')+' en esta vista'});
+ results.append(caption);
+ const grid=el('div',{class:'lms-catalog-grid'});results.append(grid);
+ const edit=r=>{lmsState.course=clone(r.draft);lmsState.revision=r.revision;lmsState.step=0;lmsState.dirty=false;renderLmsEditor();};
+ for(const r of list){
+  const c=r.draft,lessons=(c.modules||[]).reduce((n,m)=>n+(m.lessons||[]).length,0);
+  const count=state.enrollments.filter(e=>e.course_id===r.id&&e.active).length;
+  const card=el('article',{class:'lms-catalog-card'});
+  const cover=el('div',{class:'lms-catalog-cover'});
+  cover.append(el('img',{src:asset(c.image),alt:'',loading:'lazy',width:440,height:220}));
+  card.append(cover);
+  const content=el('div',{class:'lms-catalog-content'});
+  const badge=el('span',{class:'lms-catalog-badge '+kind(r),text:!r.active?'Deshabilitado':!r.published?'Borrador':'Publicado'});
+  content.append(badge,el('h3',{text:c.title||'Curso sin título'}));
+  if(JSON.stringify(r.draft)!==JSON.stringify(r.published)&&r.published)content.append(el('p',{class:'lms-catalog-pending',text:'Hay cambios sin publicar'}));
+  const metadata=el('div',{class:'lms-catalog-meta'});
+  for(const label of [c.modules.length+' módulos',lessons+' lecciones',count+' alumnos'])metadata.append(el('span',{text:label}));
+  content.append(metadata);
+  const actions=el('div',{class:'lms-catalog-actions'});
+  actions.append(lmsButton('Editar',()=>edit(r),'button primary'));
+  const details=el('details',{class:'lms-catalog-more'}),summary=el('summary',{text:'Más opciones'});
+  const menu=el('div',{class:'lms-catalog-menu'});
+  if(r.published)menu.append(el('a',{href:'/aula-virtual/',target:'_blank',rel:'noopener noreferrer',text:'Abrir aula virtual'}));
+  menu.append(lmsButton(r.active?'Deshabilitar curso':'Habilitar curso',async()=>{
+   if(!confirm((r.active?'¿Deshabilitar':'¿Habilitar')+' este curso? Se conservará el avance del alumno.'))return;
+   try{await lmsApi('/course/status',{id:r.id,active:!r.active,revision:r.revision});await lmsReload();renderLmsEditor();}catch(e){message(e.message,true);}
+  },'lms-catalog-menu-button'));
+  details.append(summary,menu);actions.append(details);content.append(actions);card.append(content);grid.append(card);
+ }
+ if(!list.length)grid.append(lmsEmpty('No hay cursos en esta categoría.','Puedes cambiar el estado o crear un curso nuevo.'));
+}
 function studentState(u){return u.deleted?'deleted':u.active?'active':'disabled';}
 function drawStudents(results,matches){const s=lmsState.records;results.replaceChildren();results.className='lms-roster';const counts={active:0,disabled:0,deleted:0};s.students.forEach(u=>counts[studentState(u)]++);const filters=el('div',{class:'lms-student-filters',role:'tablist','aria-label':'Estado de alumnos'});for(const [key,label]of [['active','Activos'],['disabled','Deshabilitados'],['deleted','Papelera']]){const b=lmsButton('',()=>{lmsState.studentFilter=key;lmsState.selectedStudents.clear();drawStudents(results,matches);},'lms-filter-pill'+(lmsState.studentFilter===key?' active':''));b.append(el('span',{text:label}),el('strong',{text:String(counts[key])}));b.setAttribute('aria-selected',String(lmsState.studentFilter===key));filters.append(b);}results.append(filters);
  const list=s.students.filter(u=>{const courseIds=s.enrollments.filter(e=>e.student_id===u.id&&e.active).map(e=>e.course_id);return studentState(u)===lmsState.studentFilter&&(!lmsState.studentCourseFilter||courseIds.includes(lmsState.studentCourseFilter))&&matches(u.name+' '+u.email);});
