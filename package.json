@@ -9,6 +9,7 @@
     "build": "node -e \"console.log('MALBA PMC Node build listo')\"",
     "start": "node server.js",
     "check": "node --check server.js",
+    "test:node": "node --test tests/node-*.test.js",
     "seo:audit": "python scripts/seo_audit.py",
     "seo:release": "python scripts/seo_release.py"
   },
