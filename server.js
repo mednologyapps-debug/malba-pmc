@@ -275,6 +275,7 @@ async function lmsApi(req,res,url) {
       if(requested.length>100)throw new Error('Selecciona hasta 100 cursos.');
       const selectedCourses=await Promise.all(requested.map(id=>getCourse(id,true)));
       if(selectedCourses.some(c=>!c))throw new Error('Todos los cursos deben estar publicados antes de matricular alumnos.');
+      const trace=crypto.randomUUID().slice(0,8);console.info('LMS student write start',trace);
       let user,password=String(b.password||''),forcePassword=Boolean(password),created=false,reactivated=false;
       if(password&&password.length<12)throw new Error('La nueva contraseña temporal debe tener al menos 12 caracteres.');
       if(b.id){
@@ -312,12 +313,14 @@ async function lmsApi(req,res,url) {
           forcePassword=true;
         }
       }
+      console.info('LMS student Auth ready',trace,created?'created':reactivated?'reused':'updated');
       const up=await supabase.from('lms_students').upsert({id:user.id,full_name:name,email,active:b.active!==false,deleted_at:null,force_password_change:forcePassword}).select('id').single();
       if(up.error){
         // Best-effort rollback avoids leaving an unusable Auth-only account.
         if(created){const rollback=await supabase.auth.admin.deleteUser(user.id);if(rollback.error)console.error('LMS profile rollback failed',rollback.error);}
         throw up.error;
       }
+      console.info('LMS student profile saved',trace);
       let emailStatus={sent:false,reason:'No solicitado.'};
       for(const id of requested)await saveEnrollment(user.id,id,true,b.expires||'');
       if(b.sendEmail&&(selectedCourses.length||password)){
