@@ -19,3 +19,30 @@
 
 /* Multi-course enrollment selector and compact course status tabs */
 .lms-course-picker{margin:18px 0;padding:14px 16px;border:1px solid #d8dfeb;border-radius:10px;min-width:0;display:grid;gap:10px}.lms-course-picker legend{padding:0 6px;color:#003B73;font-weight:600}.lms-course-picker .lms-check-row{margin:0;padding:9px 10px;border-radius:8px;background:#f6f8fb;min-width:0;display:flex;align-items:center;gap:10px}.lms-course-picker .lms-check-row input{width:17px;height:17px;accent-color:#5D4594;flex:none}.lms-course-picker .lms-check-row span{min-width:0;overflow-wrap:anywhere}.lms-course-chips{display:flex;flex-wrap:wrap;gap:7px}.lms-course-chip{display:inline-flex;max-width:100%;overflow-wrap:anywhere;background:#ebe7f4;color:#473478;border-radius:6px;padding:5px 9px;font-size:12px;font-weight:600}.lms-roster>.lms-list-controls select{padding:10px 12px;min-width:0;max-width:100%;border:1px solid #d7e0eb;border-radius:8px;color:#003B73;background:#fff}.lms-roster>.lms-list-controls{display:flex;flex-wrap:wrap;gap:10px}.lms-course-grid{width:100%}.lms-course-card{box-shadow:none!important;border:1px solid #e2e6ef}.lms-course-card:hover{box-shadow:0 5px 15px rgba(4,39,83,.08)!important}@media(max-width:600px){.lms-roster>.lms-list-controls select{width:100%}.lms-course-picker{padding:12px}.lms-course-grid{grid-template-columns:1fr}}
+
+/* Academia CMS - catálogo simplificado. Alcance aislado al administrador LMS. */
+.lms-catalog{display:grid;gap:15px;min-width:0}
+.lms-catalog-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 12px;border-bottom:1px solid #e3e8ef}
+.lms-catalog-tab{border:1px solid transparent;border-radius:9px;background:transparent;color:#52657a;padding:11px 14px;min-height:44px;display:inline-flex;gap:9px;align-items:center;font:inherit;font-size:14px;cursor:pointer}
+.lms-catalog-tab.active{color:#003B73;background:#edf2f8;border-color:#cdd9e7;font-weight:600}
+.lms-catalog-tab:focus-visible,.lms-catalog-more summary:focus-visible{outline:3px solid #5D4594;outline-offset:2px}
+.lms-catalog-count{padding:2px 7px;border-radius:6px;background:#fff;color:#003B73;font-size:12px;font-weight:600}
+.lms-catalog-summary{font-size:13px;color:#65758a;margin:0}
+.lms-catalog-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:18px;min-width:0}
+.lms-catalog-card{display:flex;flex-direction:column;min-width:0;background:#fff;border:1px solid #e0e5ed;border-radius:12px;overflow:hidden;box-shadow:none}
+.lms-catalog-cover{height:174px;background:#edf2f7;overflow:hidden}.lms-catalog-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.lms-catalog-content{padding:18px;display:flex;flex-direction:column;align-items:flex-start;gap:13px;flex:1;min-width:0}
+.lms-catalog-badge{padding:5px 8px;border-radius:6px;font-size:11px;letter-spacing:.01em;font-weight:600;background:#edf2f8;color:#003B73}
+.lms-catalog-badge.draft{background:#f2eff7;color:#5D4594}
+.lms-catalog-badge.disabled{background:#f0f1f3;color:#59636e}
+.lms-catalog-content h3{font-size:18px;line-height:1.36;color:#163c65;margin:0;font-weight:600;overflow-wrap:anywhere}
+.lms-catalog-pending{margin:0;font-size:12px;color:#7052a2}
+.lms-catalog-meta{display:flex;gap:8px 14px;flex-wrap:wrap;font-size:12px;color:#627286;margin-top:auto}
+.lms-catalog-meta span+span:before{content:"·";margin-right:12px;color:#aab6c5}
+.lms-catalog-actions{display:flex;width:100%;align-items:center;gap:10px;padding-top:14px;border-top:1px solid #edf0f4}
+.lms-catalog-actions>.button{flex:1;justify-content:center;min-height:42px}
+.lms-catalog-more{position:relative;flex:1;min-width:0}.lms-catalog-more summary{list-style:none;cursor:pointer;display:flex;justify-content:center;align-items:center;min-height:42px;padding:8px;border-radius:8px;color:#003B73;font-size:13px;font-weight:600;border:1px solid #d8e0ea}
+.lms-catalog-more summary::-webkit-details-marker{display:none}.lms-catalog-more[open] summary{background:#f2f5fa}
+.lms-catalog-menu{position:absolute;right:0;bottom:calc(100% + 7px);z-index:5;background:#fff;border:1px solid #dbe1eb;border-radius:9px;padding:6px;box-shadow:0 8px 20px rgba(11,38,69,.1);min-width:210px;max-width:calc(100vw - 40px);display:grid}
+.lms-catalog-menu a,.lms-catalog-menu-button{padding:12px;text-align:left;background:none;border:0;border-radius:6px;color:#003B73;font:inherit;font-size:13px;cursor:pointer;text-decoration:none;min-height:42px}.lms-catalog-menu a:hover,.lms-catalog-menu-button:hover{background:#f2f5fa}
+@media(max-width:680px){.lms-catalog-grid{grid-template-columns:1fr}.lms-catalog-tabs{gap:3px}.lms-catalog-tab{padding:9px 8px;font-size:12px}.lms-catalog-cover{height:180px}}
