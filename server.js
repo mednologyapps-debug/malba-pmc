@@ -181,7 +181,7 @@ async function ensureAuthUser(email,name,password,resetExisting=false) {
     if(updated.error)throw updated.error;
     return{user:updated.data.user||existing,created:false,passwordChanged:Boolean(resetExisting&&password)};
   }
-  const created=await supabase.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:name}});
+  const created=await supabase.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name:name},app_metadata:{malba_lms_student:true}});
   if(!created.error)return{user:created.data.user,created:true,passwordChanged:true};
   if(!/already been registered|already exists|email_exists/i.test(String(created.error.code||'')+' '+String(created.error.message||'')))throw created.error;
   existing=await authUserByEmail(email);
@@ -294,9 +294,12 @@ async function lmsApi(req,res,url) {
         const authAccount=await authUserByEmail(email);
         if(authAccount){
           const previous=await studentRow(authAccount.id);
-          if(!previous)return json(res,409,{error:'Este correo ya pertenece a una cuenta de autenticación no gestionada como alumno.'});
-          if(!previous.deleted_at)return json(res,409,{error:'Ya existe un alumno con este correo. Utiliza Editar alumno para gestionar su acceso.'});
-          const restored=await supabase.auth.admin.updateUserById(authAccount.id,{password,user_metadata:{full_name:name}});
+          if(previous&&!previous.deleted_at)return json(res,409,{error:'Ya existe un alumno con este correo. Utiliza Editar alumno para gestionar su acceso.'});
+          // An interrupted registration may have created Auth but not the student profile.
+          // Only reclaim orphan Auth users that were explicitly provisioned for this LMS.
+          const appManaged=authAccount.app_metadata?.malba_lms_student===true;
+          if(!previous&&!appManaged)return json(res,409,{error:'Este correo pertenece a una cuenta externa. No se modificaron sus credenciales.'});
+          const restored=await supabase.auth.admin.updateUserById(authAccount.id,{password,user_metadata:{full_name:name},app_metadata:{...(authAccount.app_metadata||{}),malba_lms_student:true}});
           if(restored.error)throw restored.error;
           user=restored.data.user||authAccount;
           reactivated=true;
@@ -310,7 +313,11 @@ async function lmsApi(req,res,url) {
         }
       }
       const up=await supabase.from('lms_students').upsert({id:user.id,full_name:name,email,active:b.active!==false,deleted_at:null,force_password_change:forcePassword}).select('id').single();
-      if(up.error)throw up.error;
+      if(up.error){
+        // Best-effort rollback avoids leaving an unusable Auth-only account.
+        if(created){const rollback=await supabase.auth.admin.deleteUser(user.id);if(rollback.error)console.error('LMS profile rollback failed',rollback.error);}
+        throw up.error;
+      }
       let emailStatus={sent:false,reason:'No solicitado.'};
       for(const id of requested)await saveEnrollment(user.id,id,true,b.expires||'');
       if(b.sendEmail&&(selectedCourses.length||password)){
