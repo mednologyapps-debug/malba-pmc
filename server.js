@@ -447,10 +447,17 @@ const server=http.createServer(async(req,res)=>{const url=new URL(req.url||'/',`
     // Runtime pages reflect the published CMS revision (also after server restart).
     const pagePath=publicPagePath(url.pathname);
     if(pagePath&&!/^(?:aula-virtual|dashboard|verificar-certificado)\//.test(pagePath)&&(pagePath.endsWith('/index.html')||pagePath==='index.html'||pagePath==='sitemap.xml')){
-      const snapshot=await getPublicPages();
-      if(snapshot.pages.has(pagePath)){
-        if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':pagePath.endsWith('.xml')?'application/xml; charset=utf-8':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end();}
-        return servePublishedPage(res,pagePath,snapshot.pages.get(pagePath));
+      try {
+        const snapshot=await getPublicPages();
+        if(snapshot.pages.has(pagePath)){
+          if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':pagePath.endsWith('.xml')?'application/xml; charset=utf-8':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end();}
+          return servePublishedPage(res,pagePath,snapshot.pages.get(pagePath));
+        }
+        // A removed program must not remain accessible via its old static file.
+        if(pagePath.endsWith('/index.html'))return text(res,404,'Página no publicada.');
+      } catch(error) {
+        // Site remains accessible even when the Python renderer is unavailable.
+        console.error('Public CMS rendering unavailable; serving last static fallback',error);
       }
     }
     const file=safeFile(url.pathname);if(!file)return text(res,404,'Recurso no encontrado.');if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':MIME[path.extname(file).toLowerCase()]||'application/octet-stream','X-Content-Type-Options':'nosniff'});return res.end();}return serve(res,file);}catch(error){const requestId=crypto.randomUUID();console.error(requestId,error);return json(res,500,{error:error.message&&process.env.NODE_ENV!=='production'?error.message:'No se pudo completar la operación.',requestId});}});
