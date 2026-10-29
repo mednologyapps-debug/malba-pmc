@@ -446,7 +446,7 @@ async function api(req,res,url) { if(url.pathname.startsWith('/api/public-asset/
 const server=http.createServer(async(req,res)=>{const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);try{if(req.method==='GET'&&url.pathname==='/health')return json(res,200,{ok:true,service:'malba-pmc',version:APP_VERSION,supabase:!!supabase});if((req.method==='GET'||req.method==='HEAD')&&REDIRECTS[url.pathname]){res.writeHead(301,{'Location':REDIRECTS[url.pathname],'Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'});return res.end();}if(url.pathname.startsWith('/api/')){const handled=await api(req,res,url);if(handled!==false)return;}if(req.method!=='GET'&&req.method!=='HEAD')return text(res,405,'Método no permitido.');
     // Runtime pages reflect the published CMS revision (also after server restart).
     const pagePath=publicPagePath(url.pathname);
-    if(pagePath&&(pagePath.endsWith('/index.html')||pagePath==='index.html'||pagePath==='sitemap.xml')){
+    if(pagePath&&!/^(?:aula-virtual|dashboard|verificar-certificado)\//.test(pagePath)&&(pagePath.endsWith('/index.html')||pagePath==='index.html'||pagePath==='sitemap.xml')){
       const snapshot=await getPublicPages();
       if(snapshot.pages.has(pagePath)){
         if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':pagePath.endsWith('.xml')?'application/xml; charset=utf-8':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end();}
