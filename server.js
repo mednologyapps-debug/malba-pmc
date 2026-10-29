@@ -95,6 +95,59 @@ async function publicAsset(req,res,url) {
   res.writeHead(200,{'Content-Type':mime,'Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin'});
   if(req.method==='GET')res.end(data);else res.end();
 }
+// Public pages are generated from the actual published CMS snapshot, not from
+// HTML files committed months earlier. Cache in memory; other Node workers refresh.
+let publicPageCache=null;
+let publicPageCacheTime=0;
+let publicPageCacheChecking=null;
+const PUBLIC_CACHE_MS=10000;
+function compilePublicPages(snapshot) {
+  const input=JSON.stringify(snapshot);
+  const options={cwd:ROOT,encoding:'utf8',input,maxBuffer:32*1024*1024,timeout:30000,windowsHide:true};
+  let run;
+  for(const executable of [process.env.PYTHON_EXECUTABLE,'python3','python'].filter(Boolean)){
+    run=spawnSync(executable,[path.join(ROOT,'scripts/render_publication.py')],options);
+    if(!run.error||run.error.code!=='ENOENT')break;
+  }
+  if(run?.error)throw new Error('No se pudo generar la web pública: '+run.error.message);
+  if(!run||run.status!==0)throw new Error('No se pudo generar la web pública: '+String(run?.stderr||'Python no disponible').slice(-750));
+  const pages=JSON.parse(run.stdout||'{}');
+  if(!pages['index.html']||!pages['academia/index.html']||!pages['sitemap.xml'])throw new Error('La publicación está incompleta.');
+  return new Map(Object.entries(pages));
+}
+async function getPublicPages(force=false){
+  if(!force&&publicPageCache&&Date.now()-publicPageCacheTime<PUBLIC_CACHE_MS)return publicPageCache;
+  if(publicPageCacheChecking)return publicPageCacheChecking;
+  publicPageCacheChecking=(async()=>{
+    const d=await getDocument();
+    const version=String(d.published_at||'')+':'+String(d.revision||0);
+    if(!force&&publicPageCache?.version===version){publicPageCacheTime=Date.now();return publicPageCache;}
+    const pages=compilePublicPages(d.published||initialDocument());
+    publicPageCache={version,pages};
+    publicPageCacheTime=Date.now();
+    return publicPageCache;
+  })();
+  try{return await publicPageCacheChecking;}
+  catch(error){
+    if(publicPageCache){console.error('Using last valid public snapshot',error);publicPageCacheTime=Date.now();return publicPageCache;}
+    throw error;
+  }finally{publicPageCacheChecking=null;}
+}
+function publicPagePath(urlPath){
+  let target;
+  try{target=decodeURIComponent(urlPath.split('?')[0]);}catch(_){return null;}
+  if(target.includes('\\')||target.includes('..'))return null;
+  if(target==='/'||target==='/index.html')return 'index.html';
+  if(target.endsWith('/'))target+='index.html';
+  else if(!path.posix.extname(target))target+='/index.html';
+  return target.replace(/^\/+/, '');
+}
+function servePublishedPage(res,name,body){
+  const isXml=name.endsWith('.xml');
+  res.writeHead(200,{'Content-Type':isXml?'application/xml; charset=utf-8':'text/html; charset=utf-8',
+    'Cache-Control':'no-store, max-age=0','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN'});
+  res.end(body);
+}
 function safeFile(requestPath) { const decoded=decodeURIComponent(requestPath.split('?')[0]); const relative=decoded.replace(/^\/+/,'')||'index.html';if(PRIVATE_FILES.test(relative))return null; const file=path.resolve(ROOT,relative); if(file!==ROOT&&!file.startsWith(ROOT+path.sep))return null; try{const stat=fs.statSync(file);if(stat.isDirectory()){const index=path.join(file,'index.html');return fs.existsSync(index)?index:null;}if(stat.isFile())return file;}catch(_){}if(!path.extname(file)){const index=path.join(file,'index.html');if(fs.existsSync(index))return index;}return null; }
 function serve(res,file) { const ext=path.extname(file).toLowerCase();const privatePage=/\/(dashboard|aula-virtual)\//.test(file);res.writeHead(200,{'Content-Type':MIME[ext]||'application/octet-stream','Cache-Control':privatePage?'no-store':(process.env.NODE_ENV==='production'?'public, max-age=300':'no-store'),'X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()'});fs.createReadStream(file).on('error',()=>{if(!res.headersSent)text(res,500,'No se pudo leer el recurso.');else res.destroy();}).pipe(res); }
 function requireAdmin(req,res) { const s=sessionFrom(req,ADMIN_COOKIE,adminSessions);if(!s){json(res,401,{error:'Debes iniciar sesión.'});return null;}return s; }
@@ -242,7 +295,12 @@ async function cmsApi(req,res,url) {
   const b=await requestBody(req);
   if(req.method==='POST'&&url.pathname==='/api/site-settings'){const saved=await saveSiteSettings(b);return json(res,200,{ok:true,settings:saved.published.siteSettings,revision:saved.revision});}
   if(req.method==='POST'&&(url.pathname==='/api/upload'||url.pathname==='/api/upload-pdf')){const raw=Buffer.from(String(b.content||''),'base64');if(!raw.length)throw new Error('Archivo vacío.');const isPdf=url.pathname.endsWith('pdf');if(isPdf&&!raw.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('El archivo no es un PDF válido.');return json(res,200,await storeCmsFile(raw,isPdf,isPdf?'application/pdf':'image/webp'));}
-  if(req.method==='POST'&&['/api/draft','/api/publish'].includes(url.pathname)){const d=await getDocument();if(Number(b.revision)!==Number(d.revision))return json(res,409,{error:'Hay una edición más reciente. Recarga el panel.'});const saved=await saveDocument({...d,draft:b.data},url.pathname==='/api/publish');return json(res,200,{ok:true,revision:saved.revision,updated:Date.parse(saved.updated_at||'')/1000||Date.now()/1000});}
+  if(req.method==='POST'&&['/api/draft','/api/publish'].includes(url.pathname)){const d=await getDocument();if(Number(b.revision)!==Number(d.revision))return json(res,409,{error:'Hay una edición más reciente. Recarga el panel.'});const publishing=url.pathname==='/api/publish';
+    // Validate and compile all public pages before committing a publication.
+    const generated=publishing?compilePublicPages(b.data):null;
+    const saved=await saveDocument({...d,draft:b.data},publishing);
+    if(publishing){publicPageCache={version:String(saved.published_at||'')+':'+String(saved.revision||0),pages:generated};publicPageCacheTime=Date.now();}
+    return json(res,200,{ok:true,revision:saved.revision,updated:Date.parse(saved.updated_at||'')/1000||Date.now()/1000,applied:publishing});}
   if(req.method==='POST'&&url.pathname==='/api/visibility'){const d=await getDocument(),next=structuredClone(b.data),records=b.area==='academy'?next.programs:(next.publications?.items||[]),item=records.find(x=>x.id===b.id);if(!item)return json(res,404,{error:'Contenido no encontrado.'});item.visibility=b.visibility;const saved=await saveDocument({...d,draft:next},false);return json(res,200,{revision:saved.revision,updated:Date.parse(saved.updated_at||'')/1000||Date.now()/1000,dirty:true,applied:false});}
   if(req.method==='POST'&&url.pathname==='/api/restore'){const d=await getDocument();let row;if(supabase)row=(await supabase.from('cms_history').select('data').eq('id',b.id).maybeSingle()).data;else row=fallbackHistory.find(x=>String(x.id)===String(b.id));if(!row)return json(res,404,{error:'Versión no encontrada.'});if(Number(b.revision)!==Number(d.revision))return json(res,409,{error:'Hay una edición más reciente. Recarga el panel.'});const saved=await saveDocument({...d,draft:row.data},false);return json(res,200,{data:saved.draft,revision:saved.revision,updated:Date.parse(saved.updated_at||'')/1000||Date.now()/1000});}
   return false;
@@ -385,6 +443,16 @@ async function lmsApi(req,res,url) {
 }
 
 async function api(req,res,url) { if(url.pathname.startsWith('/api/public-asset/'))return publicAsset(req,res,url);if(url.pathname.startsWith('/api/lms/'))return lmsApi(req,res,url);return cmsApi(req,res,url); }
-const server=http.createServer(async(req,res)=>{const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);try{if(req.method==='GET'&&url.pathname==='/health')return json(res,200,{ok:true,service:'malba-pmc',version:APP_VERSION,supabase:!!supabase});if((req.method==='GET'||req.method==='HEAD')&&REDIRECTS[url.pathname]){res.writeHead(301,{'Location':REDIRECTS[url.pathname],'Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'});return res.end();}if(url.pathname.startsWith('/api/')){const handled=await api(req,res,url);if(handled!==false)return;}if(req.method!=='GET'&&req.method!=='HEAD')return text(res,405,'Método no permitido.');const file=safeFile(url.pathname);if(!file)return text(res,404,'Recurso no encontrado.');if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':MIME[path.extname(file).toLowerCase()]||'application/octet-stream','X-Content-Type-Options':'nosniff'});return res.end();}return serve(res,file);}catch(error){const requestId=crypto.randomUUID();console.error(requestId,error);return json(res,500,{error:error.message&&process.env.NODE_ENV!=='production'?error.message:'No se pudo completar la operación.',requestId});}});
+const server=http.createServer(async(req,res)=>{const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);try{if(req.method==='GET'&&url.pathname==='/health')return json(res,200,{ok:true,service:'malba-pmc',version:APP_VERSION,supabase:!!supabase});if((req.method==='GET'||req.method==='HEAD')&&REDIRECTS[url.pathname]){res.writeHead(301,{'Location':REDIRECTS[url.pathname],'Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'});return res.end();}if(url.pathname.startsWith('/api/')){const handled=await api(req,res,url);if(handled!==false)return;}if(req.method!=='GET'&&req.method!=='HEAD')return text(res,405,'Método no permitido.');
+    // Runtime pages reflect the published CMS revision (also after server restart).
+    const pagePath=publicPagePath(url.pathname);
+    if(pagePath&&(pagePath.endsWith('/index.html')||pagePath==='index.html'||pagePath==='sitemap.xml')){
+      const snapshot=await getPublicPages();
+      if(snapshot.pages.has(pagePath)){
+        if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':pagePath.endsWith('.xml')?'application/xml; charset=utf-8':'text/html; charset=utf-8','Cache-Control':'no-store'});return res.end();}
+        return servePublishedPage(res,pagePath,snapshot.pages.get(pagePath));
+      }
+    }
+    const file=safeFile(url.pathname);if(!file)return text(res,404,'Recurso no encontrado.');if(req.method==='HEAD'){res.writeHead(200,{'Content-Type':MIME[path.extname(file).toLowerCase()]||'application/octet-stream','X-Content-Type-Options':'nosniff'});return res.end();}return serve(res,file);}catch(error){const requestId=crypto.randomUUID();console.error(requestId,error);return json(res,500,{error:error.message&&process.env.NODE_ENV!=='production'?error.message:'No se pudo completar la operación.',requestId});}});
 server.listen(PORT,'0.0.0.0',()=>console.log(`MALBA PMC listening on ${PORT}`));
 module.exports=server;
