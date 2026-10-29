@@ -303,11 +303,21 @@ def _render_outputs(data, home=None, preview=False):
     home=re.sub(r'<footer class="site-footer".*?</footer>',lambda _:shared('footer.html','','home',programs),home,flags=re.S)
     contact_dialog=re.search(r'<dialog id="contact-dialog".*?</dialog>',shared('dialogs.html','','home',programs),flags=re.S).group(0)
     home=re.sub(r'<dialog id="contact-dialog".*?</dialog>',lambda _:contact_dialog,home,flags=re.S)
-    inactive={p['slug']+'/' for p in data['programs'] if p.get('visibility','public')!='public'}
-    home=re.sub(r'<article class="program-card">.*?</article>',lambda m:'' if any(f'href="{slug}"' in m[0] for slug in inactive) else m[0],home,flags=re.S)
-    if not re.search(r'<article class="program-card">',home):
-        empty='<article class="program-card"><div class="program-card-copy"><h3>Próximas convocatorias</h3><p>Estamos preparando nuevas oportunidades de formación.</p><a class="text-link" href="academia/proximos/">Mantenerme informado →</a></div></article>'
-        home=re.sub(r'(<div class="program-grid"[^>]*id="program-list"[^>]*>)',lambda m:m[0]+empty,home,count=1)
+    # The homepage cards must also reflect live CMS edits, not frozen HTML.
+    cards=[]
+    for p in programs:
+        image=esc(local(p.get('image') or 'assets/banner-transmision-1672.webp',''))
+        alt=esc(p.get('imageAlt') or p['title'])
+        title=esc(p['title'])
+        summary=esc(p.get('cardDescription') or p.get('description') or '')
+        slug=esc(p['slug'])
+        cards.append(f'<article class="program-card"><div class="program-art"><img src="{image}" alt="{alt}" loading="lazy" decoding="async"></div><div class="program-card-copy"><h3>{title}</h3><p>{summary}</p><a class="text-link" href="{slug}/">Ver programa <span aria-hidden="true">↗</span></a></div></article>')
+    if not cards:
+        cards=['<article class="program-card"><div class="program-card-copy"><h3>Próximas convocatorias</h3><p>Estamos preparando nuevas oportunidades de formación.</p><a class="text-link" href="academia/proximos/">Mantenerme informado →</a></div></article>']
+    home, count = re.subn(
+        r'(<div class="program-grid"[^>]*id="program-list"[^>]*>).*?(</div>\s*<div class="collection-controls")',
+        lambda m: m[1]+''.join(cards)+m[2], home, count=1, flags=re.S)
+    if count != 1: raise ValueError('No se encontró el bloque de programas destacados en la portada.')
     from build_publications import content,render_publications
     outputs.update(render_publications(content(data),programs))
     from build_solutions import render_solutions
