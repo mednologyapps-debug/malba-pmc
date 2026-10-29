@@ -22,6 +22,8 @@ class PublicPublicationTests(unittest.TestCase):
         program['title']='PROGRAMA-PUBLICADO-PRUEBA-2026'
         after=self.render(data)
         self.assertIn('PROGRAMA-PUBLICADO-PRUEBA-2026',after['academia/index.html'])
+        self.assertIn('PROGRAMA-PUBLICADO-PRUEBA-2026',after['index.html'])
+        self.assertIn('PROGRAMA-PUBLICADO-PRUEBA-2026',after[program['slug']+'/index.html'])
         self.assertNotIn('PROGRAMA-PUBLICADO-PRUEBA-2026',before['academia/index.html'])
         self.assertIn('index.html',after)
         self.assertIn('sitemap.xml',after)
