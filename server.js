@@ -50,7 +50,55 @@ async function sendWelcomeEmail(student, course, password) {
 }
 function excelText(cell) { const value=cell?.value;if(value==null)return '';if(value instanceof Date)return value.toISOString().slice(0,10);if(typeof value==='object'){if(value.text)return String(value.text);if(value.hyperlink)return String(value.text||value.hyperlink);if(value.richText)return value.richText.map(x=>x.text||'').join('');if(Object.hasOwn(value,'result'))return String(value.result??'');}return String(value).trim(); }
 async function parseExcelRows(raw) { const workbook=new ExcelJS.Workbook();try{await workbook.xlsx.load(raw);}catch{throw new Error('El archivo no es un Excel .xlsx válido. Descarga la plantilla y vuelve a intentarlo.');}const sheet=workbook.worksheets[0];if(!sheet)throw new Error('El Excel no contiene hojas.');const headerRow=sheet.getRow(1),headers=[];for(let col=1;col<=headerRow.cellCount;col++)headers.push(excelText(headerRow.getCell(col)).toLocaleLowerCase('es'));if(!headers.includes('correo')&&!headers.includes('email')&&!headers.includes('correo electrónico'))throw new Error('Falta la columna Correo. Usa la plantilla de MALBA PMC.');const rows=[];sheet.eachRow((row,index)=>{if(index===1)return;const values=headers.map((header,i)=>[header,excelText(row.getCell(i+1))]);if(values.some(([,value])=>value))rows.push(Object.fromEntries(values));});return rows; }
-async function studentWorkbook(rows=[],template=false) { const workbook=new ExcelJS.Workbook();workbook.creator='MALBA PMC';workbook.created=new Date();const sheet=workbook.addWorksheet('Alumnos',{views:[{state:'frozen',ySplit:1}]});const headers=template?['Nombre','Correo','Contraseña','Estado']:['Nombre','Correo','Estado','Cursos'];sheet.addRow(headers);for(const row of rows)sheet.addRow(headers.map(h=>row[h]??''));sheet.columns=[{width:30},{width:34},{width:template?24:18},{width:template?18:48}];sheet.autoFilter={from:'A1',to:`${template?'D':'D'}1`};const header=sheet.getRow(1);header.height=28;header.eachCell(cell=>{cell.font={bold:true,color:{argb:'FFFFFFFF'},size:11};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF073F7C'}};cell.alignment={vertical:'middle'};cell.border={bottom:{style:'thin',color:{argb:'FF544595'}}};});if(template){sheet.addRow(['','','','Activo']);sheet.getColumn(4).eachCell((cell,row)=>{if(row>1)cell.dataValidation={type:'list',allowBlank:true,formulae:['"Activo,Deshabilitado"']};});const notes=workbook.addWorksheet('Instrucciones');notes.columns=[{width:26},{width:88}];notes.addRows([['Cómo usar esta plantilla','Completa una fila por alumno en la hoja Alumnos. No cambies los títulos de las columnas.'],['Nombre','Nombre y apellidos del alumno.'],['Correo','Correo único con el que ingresará al aula.'],['Contraseña','Opcional. Si queda vacía y envías el correo, el sistema crea una contraseña temporal segura.'],['Estado','Usa Activo o Deshabilitado.'],['Límite','Hasta 500 alumnos y 5 MB por archivo.']]);notes.getRow(1).font={bold:true,color:{argb:'FF544595'}};}else{sheet.eachRow((row,index)=>{if(index>1){row.alignment={vertical:'top'};if(index%2===0)row.eachCell(cell=>cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF3F6FA'}});}});}return Buffer.from(await workbook.xlsx.writeBuffer()); }
+async function studentWorkbook(rows=[],template=false,courses=[]) {
+  const workbook=new ExcelJS.Workbook();
+  workbook.creator='MALBA PMC';
+  const sheet=workbook.addWorksheet('Alumnos',{views:[{state:'frozen',ySplit:1}]});
+  const headers=['Nombre','Correo','Contraseña','Estado','Curso 1','Curso 2','Curso 3'];
+  sheet.addRow(headers);
+  for(const row of rows) {
+    const courseList=String(row.Cursos||'').split(' | ').filter(Boolean);
+    sheet.addRow([row.Nombre||'',row.Correo||'', '',row.Estado||'Activo',
+      row['Curso 1']||courseList[0]||'',row['Curso 2']||courseList[1]||'',row['Curso 3']||courseList[2]||'']);
+  }
+  sheet.columns=[{width:34},{width:38},{width:28},{width:20},{width:55},{width:55},{width:55}];
+  sheet.autoFilter='A1:G1';
+  sheet.getRow(1).height=32;
+  sheet.getRow(1).eachCell(cell=>{
+    cell.font={bold:true,color:{argb:'FFFFFFFF'}};
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF073F7C'}};
+    cell.alignment={vertical:'middle'};
+  });
+  const choices=workbook.addWorksheet('Cursos disponibles');
+  choices.columns=[{header:'Nombre del curso (selecciona en Alumnos)',key:'name',width:65},{header:'ID de curso',key:'id',width:42}];
+  const published=(courses||[]).filter(x=>x.status==='published'||x.published===true);
+  for(const course of published)choices.addRow({name:course.title||course.draft?.title||'',id:course.id});
+  choices.getRow(1).font={bold:true,color:{argb:'FF544595'}};
+  if(published.length)workbook.definedNames.add("'Cursos disponibles'!$A$2:$A$"+(published.length+1),'CursosMALBA');
+  if(template) {
+    for(let row=2;row<=501;row++) {
+      sheet.getCell('D'+row).dataValidation={type:'list',allowBlank:true,formulae:['"Activo,Deshabilitado"'],showErrorMessage:true,error:'Selecciona Activo o Deshabilitado.'};
+      if(published.length)for(const col of ['E','F','G']){
+        sheet.getCell(col+row).dataValidation={type:'list',allowBlank:true,formulae:['CursosMALBA'],showErrorMessage:true,error:'Selecciona un curso de la lista.'};
+      }
+    }
+    sheet.getCell('D2').value='Activo';
+  }
+  const instructions=workbook.addWorksheet('Instrucciones');
+  instructions.columns=[{width:26},{width:102}];
+  instructions.addRows([
+    ['MALBA PMC','IMPORTACIÓN DE ALUMNOS · aula virtual'],
+    ['Paso 1','Completa una fila por alumno en Alumnos, sin cambiar encabezados.'],
+    ['Paso 2','En Curso 1, Curso 2 y Curso 3 selecciona cursos publicados desde los desplegables. Puedes dejar los tres vacíos.'],
+    ['Paso 3','Si un alumno necesita más de tres cursos, agrégalo después desde Matrículas del dashboard.'],
+    ['Paso 4','Selecciona Activo o Deshabilitado. Deja Contraseña vacía para crear una temporal segura.'],
+    ['Paso 5','Sube este mismo .xlsx desde el dashboard. Solo se aceptarán cursos publicados.'],
+    ['Cursos disponibles','Consulta la hoja Cursos disponibles para ver las opciones e identificadores.'],
+    ['Límite','Máximo 500 alumnos y 5 MB por importación.']
+  ]);
+  instructions.getRow(1).font={bold:true,color:{argb:'FF544595'},size:13};
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
 
 function json(res,status,value,headers={}) { res.writeHead(status,{'Content-Type':MIME['.json'],'Cache-Control':'no-store','X-MALBA-API':'node','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin',...headers}); res.end(JSON.stringify(value)); }
 function text(res,status,value,type=MIME['.txt'],headers={}) { res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN','Referrer-Policy':'strict-origin-when-cross-origin',...headers}); res.end(value); }
@@ -316,8 +364,8 @@ async function lmsApi(req,res,url) {
   if(url.pathname.startsWith('/api/lms/admin')){const admin=requireAdmin(req,res);if(!admin)return true;if(req.method==='POST'&&!csrfOk(req,admin))return json(res,403,{error:'La sesión cambió. Recarga el panel.'});if(url.pathname==='/api/lms/admin')return json(res,200,await lmsAdminState());
     if(req.method==='GET'&&url.pathname==='/api/lms/admin/preview'){const c=await getCourse(url.searchParams.get('course'));return c?json(res,200,{course:c}):json(res,404,{error:'Curso no encontrado.'});}
     if(req.method==='GET'&&url.pathname==='/api/lms/admin/certificate-preview'){const c=await getCourse(url.searchParams.get('course'));if(!c)return json(res,404,{error:'Curso no encontrado.'});return text(res,200,simplePdf('VISTA PREVIA · '+c.certificate.title,'Alumno de ejemplo','VISTA-PREVIA'),'application/pdf',{'Content-Disposition':'inline; filename="vista-certificado.pdf"'});}
-    if(req.method==='GET'&&url.pathname==='/api/lms/admin/students/export'){const state=await lmsAdminState(),courseNames=new Map(state.courses.map(c=>[c.id,c.draft.title])),rows=state.students.map(student=>({'Nombre':student.name,'Correo':student.email,'Estado':student.deleted?'Papelera':student.active?'Activo':'Deshabilitado','Cursos':state.enrollments.filter(e=>e.student_id===student.id&&e.active).map(e=>courseNames.get(e.course_id)).filter(Boolean).join(', ')}));const file=await studentWorkbook(rows);return text(res,200,file,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',{'Content-Disposition':'attachment; filename="alumnos-malba-pmc.xlsx"'});}
-    if(req.method==='GET'&&url.pathname==='/api/lms/admin/students/template'){const file=await studentWorkbook([],true);return text(res,200,file,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',{'Content-Disposition':'attachment; filename="plantilla-alumnos-malba.xlsx"'});}
+    if(req.method==='GET'&&url.pathname==='/api/lms/admin/students/export'){const state=await lmsAdminState(),courseNames=new Map(state.courses.map(c=>[c.id,c.draft.title])),rows=state.students.map(student=>({'Nombre':student.name,'Correo':student.email,'Estado':student.deleted?'Papelera':student.active?'Activo':'Deshabilitado','Cursos':state.enrollments.filter(e=>e.student_id===student.id&&e.active).map(e=>courseNames.get(e.course_id)).filter(Boolean).join(', ')}));const file=await studentWorkbook(rows,false,state.courses.map(c=>({id:c.id,title:c.draft.title,published:c.published})));return text(res,200,file,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',{'Content-Disposition':'attachment; filename="alumnos-malba-pmc.xlsx"'});}
+    if(req.method==='GET'&&url.pathname==='/api/lms/admin/students/template'){const catalog=await supabase.from('lms_courses').select('id,title,status').eq('status','published').order('title');if(catalog.error)throw catalog.error;const file=await studentWorkbook([],true,catalog.data||[]);return text(res,200,file,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',{'Content-Disposition':'attachment; filename="plantilla-alumnos-malba.xlsx"'});}
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/upload'){const raw=await rawBody(req),name=decodeURIComponent(String(req.headers['x-file-name']||'material')),courseId=String(req.headers['x-course-id']||'');if(!/^[0-9a-f-]{36}$/i.test(courseId))throw new Error('Curso inválido.');const mime=String(req.headers['content-type']||'application/octet-stream');return json(res,200,await storeLmsFile(raw,courseId,name,mime));}
     const b=await requestBody(req);
     if(req.method==='POST'&&url.pathname==='/api/lms/admin/demo-course'){const existing=await getCourse(DEMO_COURSE.id);if(existing)return json(res,200,{ok:true,created:false,id:DEMO_COURSE.id});const result=await saveCourse(structuredClone(DEMO_COURSE),true);return json(res,200,{...result,created:true});}
@@ -397,6 +445,10 @@ async function lmsApi(req,res,url) {
       const rows=await parseExcelRows(raw);
       if(!rows.length)throw new Error('El Excel no contiene alumnos.');
       if(rows.length>500)throw new Error('Puedes importar hasta 500 alumnos por archivo.');
+      const catalog=await supabase.from('lms_courses').select('id,title,status').eq('status','published');
+      if(catalog.error)throw catalog.error;
+      const byName=new Map((catalog.data||[]).map(c=>[c.title.trim().toLocaleLowerCase('es'),c]));
+      const byId=new Map((catalog.data||[]).map(c=>[c.id,c]));
       const importCourse=b.courseId?await getCourse(b.courseId,true):null;
       if(b.courseId&&!importCourse)throw new Error('El curso debe estar publicado antes de importar matrículas.');
       const errors=[];let created=0,updated=0,enrolled=0,emailsSent=0;
@@ -407,6 +459,14 @@ async function lmsApi(req,res,url) {
           if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('correo inválido o vacío');
           const supplied=String(row.contraseña||row.password||''),password=supplied||`Malba-${crypto.randomBytes(8).toString('hex')}`;
           if(supplied&&supplied.length<12)throw new Error('la contraseña debe tener al menos 12 caracteres');
+          const labels=[row['curso 1'],row['curso 2'],row['curso 3']].map(v=>String(v||'').trim()).filter(Boolean);
+          const selectedCourses=[];
+          for(const label of labels){
+            const selected=byId.get(label)||byName.get(label.toLocaleLowerCase('es'));
+            if(!selected)throw new Error('Curso no publicado o no reconocido: '+label);
+            if(!selectedCourses.some(c=>c.id===selected.id))selectedCourses.push(selected);
+          }
+          if(importCourse&&!selectedCourses.some(c=>c.id===importCourse.id))selectedCourses.push({id:importCourse.id,title:importCourse.title});
           const authAccount=await authUserByEmail(email);
           const previous=authAccount?await studentRow(authAccount.id):null;
           if(authAccount&&!previous)throw new Error('el correo pertenece a una cuenta que no es alumno');
@@ -420,8 +480,8 @@ async function lmsApi(req,res,url) {
           const status=String(row.estado||'Activo').trim().toLocaleLowerCase('es'),active=!['deshabilitado','inactivo','no'].includes(status);
           const profile=await supabase.from('lms_students').upsert({id:ensured.user.id,full_name:name,email,active,deleted_at:null,force_password_change:forcePassword});
           if(profile.error)throw profile.error;
-          if(b.courseId){await saveEnrollment(ensured.user.id,b.courseId,active,'');enrolled++;}
-          if(b.sendEmail&&b.courseId&&active){const sent=await sendWelcomeEmail({name,email},importCourse,ensured.passwordChanged?password:'');if(sent.sent)emailsSent++;}
+          for(const selected of selectedCourses){await saveEnrollment(ensured.user.id,selected.id,active,'');enrolled++;}
+          if(b.sendEmail&&active&&selectedCourses.length){const welcome=importCourse||selectedCourses[0];const sent=await sendWelcomeEmail({name,email},welcome,ensured.passwordChanged?password:'');if(sent.sent)emailsSent++;}
           if(ensured.created)created++;else updated++;
         }catch(e){errors.push({row:i+2,message:String(e.message||e)});}
       }
