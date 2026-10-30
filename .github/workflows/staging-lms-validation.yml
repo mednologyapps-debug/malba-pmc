@@ -1,7 +1,7 @@
 name: Staging LMS validation
 on:
   push:
-    branches: [staging-hostinger, 'fix/student-account-recreate', 'fix/student-registration-html-response']
+    branches: ['fix/lms-clean-import-upload', staging-hostinger, 'fix/student-account-recreate', 'fix/student-registration-html-response']
   workflow_dispatch:
 permissions:
   contents: read
