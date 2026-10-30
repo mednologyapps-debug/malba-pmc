@@ -178,7 +178,9 @@ async function saveCourse(course,publish=false) {
   if(current.error)throw current.error;
   // Guardar ajustes de un curso ya publicado nunca debe quitarle el acceso al alumno.
   const status=publish||current.data?.status==='published'?'published':'draft';
-  const up=await supabase.from('lms_courses').upsert({id,slug:slugify(course.title)+'-'+id.slice(0,8),title:String(course.title).slice(0,180),description:course.description||'',introduction:course.introduction||'',instructor:course.instructor||'',cover_url:course.image||'',hours:Number(course.hours||0),certificate_enabled:!!cert.enabled,certificate_config:cert,status,source_program_id:course.sourceProgramId||null},{onConflict:'id'}).select('id').single();
+  // A new course must not become visible until its modules and lessons save successfully.
+  const initialStatus=current.data?.status||'draft';
+  const up=await supabase.from('lms_courses').upsert({id,slug:slugify(course.title)+'-'+id.slice(0,8),title:String(course.title).slice(0,180),description:course.description||'',introduction:course.introduction||'',instructor:course.instructor||'',cover_url:course.image||'',hours:Number(course.hours||0),certificate_enabled:!!cert.enabled,certificate_config:cert,status:initialStatus,source_program_id:course.sourceProgramId||null},{onConflict:'id'}).select('id').single();
   if(up.error)throw up.error;
 
   const oldMods=await supabase.from('lms_modules').select('id').eq('course_id',id);
@@ -208,6 +210,7 @@ async function saveCourse(course,publish=false) {
   if(removedLessons.length){const removed=await supabase.from('lms_lessons').delete().in('id',removedLessons);if(removed.error)throw removed.error;}
   const removedModules=oldModuleIds.filter(x=>!keptModuleIds.includes(x));
   if(removedModules.length){const removed=await supabase.from('lms_modules').delete().in('id',removedModules);if(removed.error)throw removed.error;}
+  if(initialStatus!==status){const finalized=await supabase.from('lms_courses').update({status}).eq('id',id);if(finalized.error)throw finalized.error;}
   return{ok:true,id,revision:1,published:status==='published'};
 }
 function studentFrom(req,res) { const s=sessionFrom(req,STUDENT_COOKIE,studentSessions);if(!s){json(res,401,{error:'Inicia sesión para acceder al aula.'});return null;}if(!csrfOk(req,s)){json(res,403,{error:'La sesión cambió. Vuelve a ingresar.'});return null;}return s; }
