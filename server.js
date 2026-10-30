@@ -115,7 +115,12 @@ async function rawBody(req) { const chunks=[];let size=0;for await(const chunk o
 function safeUploadName(value) { return path.basename(String(value||'material').replace(/[^a-zA-Z0-9._-]+/g,'-')).slice(0,120)||'material'; }
 async function storeLmsFile(raw,courseId,name,mime) {
   const id=`${asId(courseId)}--${crypto.randomUUID()}--${safeUploadName(name)}`;
-  if(supabase){const uploaded=await supabase.storage.from('malba-lms').upload(id,raw,{contentType:mime||'application/octet-stream',upsert:false});if(uploaded.error)throw uploaded.error;return{id,fileId:id,name:safeUploadName(name),size:raw.length};}
+  if(supabase){const ext=path.extname(name).toLowerCase();
+    const fileTypes={'.pdf':'application/pdf','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.mp4':'video/mp4','.zip':'application/zip','.txt':'text/plain','.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation'};
+    const contentType=fileTypes[ext];
+    if(!contentType)throw new Error('Formato no permitido. Usa PDF, imagen, MP4, ZIP, TXT, Word, Excel o PowerPoint.');
+    if(!raw.length||raw.length>100*1024*1024)throw new Error('El archivo está vacío o supera los 100 MB.');
+    const uploaded=await supabase.storage.from('malba-lms').upload(id,raw,{contentType,upsert:false});if(uploaded.error)throw new Error('No se pudo subir el material: '+uploaded.error.message);return{id,fileId:id,name:safeUploadName(name),size:raw.length};}
   const dir=path.join(ROOT,'.runtime','lms-files');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,id),raw);return{id,fileId:id,name:safeUploadName(name),size:raw.length};
 }
 async function downloadLmsFile(id) {
