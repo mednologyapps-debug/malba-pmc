@@ -194,7 +194,7 @@ async function saveCourse(course,publish=false) {
     if(mr.error)throw mr.error;
     for(let li=0;li<(m.lessons||[]).length;li++){
       const l=m.lessons[li],lid=asId(l.id);keptLessonIds.push(lid);
-      const lr=await supabase.from('lms_lessons').upsert({id:lid,module_id:mid,title:l.title||'Lección',lesson_type:l.type||'text',body:l.body||'',video_url:l.videoUrl||'',video_file_id:l.videoFileId||null,meeting_url:l.meetingUrl||'',minutes:Number(l.minutes||0),required:l.required!==false,quiz:l.quiz||null,sort_order:li},{onConflict:'id'});
+      const lr=await supabase.from('lms_lessons').upsert({id:lid,module_id:mid,title:l.title||'Lección',lesson_type:l.type||'text',body:l.body||'',video_url:l.videoUrl||'',video_file_id:l.videoFileId||null,meeting_url:l.meetingUrl||'',minutes:Number(l.minutes||0),required:l.required!==false,quiz:l.type==='quiz'?(l.quiz||{}):{},sort_order:li},{onConflict:'id'});
       if(lr.error)throw lr.error;
       const cleared=await supabase.from('lms_materials').delete().eq('lesson_id',lid);
       if(cleared.error)throw cleared.error;
