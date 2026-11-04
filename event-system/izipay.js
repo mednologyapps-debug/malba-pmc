@@ -17,12 +17,12 @@ function verifyHash(fields,key){
  return JSON.parse(raw);
 }
 function verifyAnswer(answer,session){
- if(String(answer.shopId)!==String(session.shop_id)||answer.mode!==session.mode||answer.orderDetails?.orderId!==session.provider_order_id)throw Error('El pago no corresponde al pedido.');
+ if(String(answer.shopId)!==String(session.shop_id)||answer.orderDetails?.mode!==session.mode||answer.orderDetails?.orderId!==session.provider_order_id)throw Error('El pago no corresponde al pedido.');
  if(Number(answer.orderDetails.orderTotalAmount)!==session.amount_minor||answer.orderDetails.orderCurrency!==session.currency)throw Error('Importe o moneda de pago incorrectos.');
  const paid=(answer.transactions||[]).filter(t=>t.status==='PAID');
  if(answer.orderStatus!=='PAID')return {paid:false};
  if(paid.length!==1)throw Error('Transacción de pago ambigua.');
- const t=paid[0];if(t.amount!==session.amount_minor||t.currency!==session.currency||!/^[-a-f0-9]{36}$/i.test(t.uuid))throw Error('Transacción de pago incorrecta.');
+ const t=paid[0];if(t.amount!==session.amount_minor||t.currency!==session.currency||!(/^[a-f0-9]{32}$/i.test(t.uuid)||/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(t.uuid)))throw Error('Transacción de pago incorrecta.');
  return {paid:true,transactionId:t.uuid};
 }
 async function createPayment(session,{email,name},origin,{env=process.env,fetcher=fetch}={}){

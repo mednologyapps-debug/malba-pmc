@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),crypto=requ
 const izi=require('../event-system/izipay'),c2u=require('../event-system/close2u'),create=require('../event-system/payments');
 const env={IZIPAY_SHOP_ID:'fixture-shop',IZIPAY_TEST_PASSWORD:'fixture-server-secret',IZIPAY_TEST_PUBLIC_KEY:'fixture-public',IZIPAY_TEST_HMAC:'fixture-browser-secret',STAGING_ORIGIN:'https://olivedrab-mouse-758184.hostingersite.com',C2U_RUC:'20123456789',C2U_USER:'fixture@example.invalid',C2U_PASSWORD:'fixture',C2U_ISSUER_EMAIL:'fixture@example.invalid',C2U_TRADE_NAME:'Fixture',C2U_LEGAL_NAME:'Fixture SAC',C2U_SERIE_FACTURA:'F001',C2U_SERIE_BOLETA:'B001'};
 const session={id:'12345678-1234-1234-1234-123456789012',provider_order_id:'MALBA-fixture',shop_id:env.IZIPAY_SHOP_ID,mode:'TEST',amount_minor:12900,currency:'PEN',status:'paid',billing:{type:'boleta'},email:'sandbox@example.com',customer_name:'Participante de prueba'};
-const answer={shopId:session.shop_id,mode:'TEST',orderStatus:'PAID',orderDetails:{orderId:session.provider_order_id,orderTotalAmount:12900,orderCurrency:'PEN'},transactions:[{uuid:'12345678-1234-1234-1234-123456789abc',status:'PAID',amount:12900,currency:'PEN'}]};
+const answer={shopId:session.shop_id,orderStatus:'PAID',orderDetails:{mode:'TEST',orderId:session.provider_order_id,orderTotalAmount:12900,orderCurrency:'PEN'},transactions:[{uuid:'12345678-1234-1234-1234-123456789abc',status:'PAID',amount:12900,currency:'PEN'}]};
 const fields=(a,key)=>{'use strict';const raw=JSON.stringify(a);return {'kr-answer':raw,'kr-hash':crypto.createHmac('sha256',key).update(raw).digest('hex')};};
 function dbFor(s){const calls=[];return{calls,from(table){const q=new Proxy({}, {get(_,k){if(k==='then')return resolve=>resolve({data:s,error:null});return(...args)=>{calls.push([table,k,args]);return q;};}});return q;},rpc(name,args){calls.push([name,args]);return Promise.resolve({data:{paid:true}});}};}
 async function call(api,path,{body,token,origin=env.STAGING_ORIGIN}={}){const req={method:body?'POST':'GET',headers:{origin,host:new URL(origin).host,'content-type':'application/json',authorization:token?'Bearer '+token:''},async *[Symbol.asyncIterator](){yield JSON.stringify(body);}},res={};await api(req,res,new URL(path,origin));return res;}
@@ -14,8 +14,8 @@ test('Izipay signatures distinguish browser HMAC from server IPN and reject tamp
  assert.throws(()=>izi.verifyHash({...f,'kr-hash-algorithm':'md5'},env.IZIPAY_TEST_PASSWORD));
 });
 test('payment reconciliation rejects wrong shop, mode, amount, currency and reference',()=>{
- assert.equal(izi.verifyAnswer(answer,session).paid,true);
- for(const x of [{shopId:'other'},{mode:'PRODUCTION'},{orderDetails:{...answer.orderDetails,orderTotalAmount:1}},{orderDetails:{...answer.orderDetails,orderCurrency:'USD'}},{orderDetails:{...answer.orderDetails,orderId:'other'}},{transactions:[...answer.transactions,...answer.transactions]}])assert.throws(()=>izi.verifyAnswer({...answer,...x},session));
+ assert.equal(izi.verifyAnswer(answer,session).paid,true);assert.equal(izi.verifyAnswer({...answer,transactions:[{...answer.transactions[0],uuid:'12345678123412341234123456789abc'}]},session).paid,true);
+ for(const x of [{shopId:'other'},{orderDetails:{...answer.orderDetails,mode:'PRODUCTION'}},{orderDetails:{...answer.orderDetails,orderTotalAmount:1}},{orderDetails:{...answer.orderDetails,orderCurrency:'USD'}},{orderDetails:{...answer.orderDetails,orderId:'other'}},{transactions:[...answer.transactions,...answer.transactions]}])assert.throws(()=>izi.verifyAnswer({...answer,...x},session));
  assert.equal(izi.verifyAnswer({...answer,orderStatus:'UNPAID',transactions:[]},session).paid,false);
 });
 test('CreatePayment uses authoritative amount and a per-order IPN URL',async()=>{
