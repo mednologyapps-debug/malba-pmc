@@ -39,3 +39,8 @@
 
 /* MALBA Simulator's card uses the supplied orange isotype. */
 .digital-card-isotype{display:block;width:46px;height:46px;object-fit:contain;flex-shrink:0;border-radius:10px}.digital-card-simulator{border-color:#f0d7b1}.digital-card-simulator .digital-card-image{background:#fff6e8}.digital-card-simulator .digital-card-image>span{background:#f28d01;color:#172b43}.digital-card-simulator .digital-card-features{border-color:#f4dfc1}.digital-card-simulator .digital-card-features li:before{color:#b36300}.digital-card-simulator .digital-card-copy .button{background:#f28d01;color:#172b43}.digital-card-simulator .digital-card-copy .button:hover{background:#ffac35;color:#172b43}.saas-outcome-image{margin:0;padding:14px;background:white;border:1px solid #dce5ef;border-radius:12px;box-shadow:0 16px 34px rgba(7,28,54,.1)}.saas-outcome-image img{display:block;width:100%;height:auto;border-radius:6px}.saas-outcome-image figcaption{padding:16px 8px 4px;color:#455c77;font-size:14px;line-height:1.6}@media(max-width:760px){.digital-card-isotype{width:40px;height:40px;border-radius:8px}.saas-outcome-image{padding:8px}.saas-outcome-image figcaption{padding:12px 6px 4px;font-size:12px}}
+
+/* Digital landing only: product licensing unavailable until public launch. */
+.digital-page #planes[hidden],.digital-page #saas-plan-dialog[hidden]{display:none!important}
+.digital-page .digital-coming-soon{display:inline-flex;align-items:center;justify-content:center;min-height:45px;padding:11px 18px;border-radius:8px;color:#5d4594;background:#f2eef9;border:1px solid #d7cbe8;font-weight:600;font-size:14px}
+.digital-page button.button{font-family:inherit;text-align:center;justify-content:center}
