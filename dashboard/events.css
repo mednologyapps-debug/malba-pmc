@@ -2,3 +2,16 @@
 .event-table td>.event-book-badge{display:inline-block;padding:6px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}.event-book-badge.purchased{color:#245d46;background:#e9f4ed}.event-book-badge.pending{color:#77571e;background:#fbf3e2}.event-book-badge.none{color:#676472;background:#f1eff4}.event-table td{vertical-align:middle}
 
 .event-filters label{display:flex;align-items:center;gap:8px;font-size:13px;white-space:nowrap}.event-filters label input{min-width:0;min-height:0;width:18px;height:18px;accent-color:#5d4594}
+
+.event-settings{padding:24px;background:#fff;border:1px solid #e5e1ed;border-radius:14px;margin:0 0 28px}
+.event-settings h2{font-size:21px;color:#173c6e;margin:0 0 8px}
+.event-settings-description{font-size:13px;color:#66768c;margin:0 0 20px;line-height:1.6}
+.event-settings-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.event-settings-field{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:600;color:#203e61;min-width:0}
+.event-settings-field input,.event-settings-field select{width:100%;height:44px;padding:10px 12px;border:1px solid #cfd7e4;border-radius:7px;font:400 14px Outfit,Arial,sans-serif;color:#183a60;background:#fff}
+.event-settings-toggle{display:flex;align-items:center;gap:10px;padding:12px 0;font-size:13px;color:#304866}
+.event-settings-toggle input{accent-color:#5d4594;width:17px;height:17px}
+.event-settings-health{font-size:12px;color:#6b597e;padding:12px 0;margin:12px 0}
+.event-settings-form [type=submit]{grid-column:1/-1;justify-self:start;min-width:210px;text-align:center;justify-content:center}
+.event-settings-result{margin-top:13px;font-size:13px;color:#5d4594}
+@media(max-width:700px){.event-settings{padding:16px}.event-settings-form{grid-template-columns:1fr}.event-settings-form [type=submit]{width:100%}}
