@@ -8,7 +8,7 @@ function credentials(env=process.env,mode='TEST'){
  if(Object.values(c).some(x=>!x))throw Error('Izipay todavía no está configurado.');
  return c;
 }
-function ready(env=process.env){try{credentials(env);return true;}catch{return false;}}
+function ready(env=process.env,mode='TEST'){try{credentials(env,mode);return true;}catch{return false;}}
 function verifyHash(fields,key){
  if(fields['kr-hash-algorithm']&&fields['kr-hash-algorithm']!=='sha256_hmac')throw Error('Algoritmo de firma no permitido.');
  const raw=String(fields['kr-answer']||'').replace(/\\\//g,'/'),hash=String(fields['kr-hash']||'').toLowerCase();
