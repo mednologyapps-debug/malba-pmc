@@ -1,19 +1,25 @@
-# Izipay y facturación: revisión del 4 de noviembre de 2026
+# Izipay y CLOSE2U · 4 de noviembre de 2026
 
-Se revisaron el repositorio, los nombres de variables disponibles, el snippet anterior de WordPress y la documentación aportada de tefacturo.
+Rama: `staging-hostinger`. Despliegue exclusivo en el dominio temporal de Hostinger.
 
-## Evidencia recuperada
+## Configuración recuperada
 
-- Izipay/Micuentaweb: snippet anterior del libro, con CreatePayment, formToken y constantes `VM_IZIPAY_*` en `wp-config.php`. Se identificaron referencias a `VM_IZIPAY_SHOP_ID`, `VM_IZIPAY_TEST_PASSWORD`, `VM_IZIPAY_TEST_PUBLIC_KEY`, `VM_IZIPAY_TEST_HMAC` y equivalentes de producción. No se validó que la configuración actualmente instalada siga siendo esa versión.
-- Facturador: tefacturo.pe / CLOSE2U. Manual «Integración Comprobantes API REST y UBL Versión 4.3» aportado por el propietario. Autenticación mediante RUC, correo y clave; falta confirmar cuenta, entorno, series y numeración vigentes. El manual no acredita credenciales operativas de MALBA.
-- El entorno actual no contiene claves Izipay ni CLOSE2U. No se accedió a la configuración privada del WordPress ni a sus claves actuales.
+Izipay vigente: WooCommerce / Micuentaweb, no las constantes históricas de wp-config. Se trasladaron únicamente comercio y credenciales TEST a variables privadas de la aplicación Node. No se publican claves en código ni documentación.
 
-## Próximo paso de integración
+CLOSE2U vigente: opción privada `malba_c2u_settings`. Conexión del WordPress verificada; configuración trasladada a variables privadas de Node: emisor, usuario, clave, series y medio de pago. Integración ERP, precios con IGV incluido, venta interna y operación gravada. El WordPress principal no fue modificado.
 
-Recuperar la configuración autorizada desde WordPress/Hostinger y trasladarla a variables privadas del servidor. Validar Izipay sandbox, firma del IPN, importe, moneda y referencia antes de habilitar pagos reales. Conectar emisión de boleta/factura solo después del pago verificado, con control de duplicados. Ningún cobro o comprobante real se habilitó en esta entrega.
+`IZIPAY_LIVE_ENABLED=false` y `C2U_LIVE_ENABLED=false`. No se habilitan cargos ni emisión fiscal reales.
 
-## Pruebas disponibles
+## Implementación
 
-En el dominio temporal, abrir `/evento/presentacion-libro/?prueba=1`. Se usan perfiles sintéticos, sin introducir datos personales. Las solicitudes solo envían identificador de fixture, modalidad y confirmaciones. El backend no persiste datos proporcionados por el visitante ni accede a Supabase, SMTP, Izipay o CLOSE2U.
+CreatePayment en servidor con importe PEN calculado por el evento. Formulario oficial Izipay. Retorno del navegador autenticado para mostrar estado; solo IPN firmado con contraseña privada puede conciliar. Se comprueban comercio, modo, referencia, importe, moneda y transacción. RPC con bloqueo de fila y deduplicación. Sesiones privadas con token firmado de 30 minutos; sin claves privadas en el navegador.
 
-En el administrador, Eventos → Ver pruebas. Registros temporales por proceso, hasta dos horas o hasta reiniciar Node; no consumen aforo ni afectan duplicados reales. La apertura del evento en la base real fue rechazada por la revisión automática y no se aplicó la modificación. Permanecen los requisitos del registro real, incluidos aforo y privacidad.
+CLOSE2U: autenticación con token reutilizable, validación de datos de boleta/factura y vista previa OFFLINE con número cero. La emisión ERP real requiere pago PRODUCTION verificado y bandera explícita; cola privada, reclamación condicional y revisión manual de respuestas ambiguas. Nunca se reintenta automáticamente una emisión ambigua.
+
+## Pruebas
+
+Abrir `/evento/presentacion-libro/?prueba=1`. Solo perfiles sintéticos. Con Izipay configurado, la opción de compra abre el formulario TEST del proveedor. Tras IPN verificado se ofrece vista previa de boleta en CLOSE2U; no se emite a SUNAT. Las sesiones de pasarela son duraderas; los registros sintéticos de participantes viven en memoria hasta dos horas o reinicio y se muestran en Eventos → Ver pruebas.
+
+El registro público real continúa cerrado: faltan aforo, correo administrativo y política de privacidad aprobada. No se eliminaron esos requisitos. La apertura previa fue rechazada por revisión automática y se sustituyó por pruebas aisladas.
+
+Validación automatizada: 25 pruebas Node pasan. La comprobación externa del formulario, IPN y PDF se documentará tras el despliegue; no debe confundirse configuración recuperada con flujo completo verificado.

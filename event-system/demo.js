@@ -1,7 +1,7 @@
 'use strict';
 const crypto=require('node:crypto');
 // Isolated synthetic fixtures. No database, SMTP, payment or invoice calls.
-module.exports=function createDemo({json,requireAdmin,csrfOk,sign,defaults,priceAt}){
+module.exports=function createDemo({json,requireAdmin,csrfOk,sign,defaults,priceAt,payments}){
  const fixtures=new Map(),registrations=new Map();
  const ttl=2*60*60*1000;
  function sweep(){const before=Date.now()-ttl;for(const [id,f]of fixtures)if(f.created<before){fixtures.delete(id);registrations.delete(id);}}
@@ -22,7 +22,7 @@ module.exports=function createDemo({json,requireAdmin,csrfOk,sign,defaults,price
     if(fixtures.size>=100)return json(res,429,{error:'Se alcanzó el límite de pruebas temporales. Intenta más tarde.'});
     const fixtureId=crypto.randomUUID();fixtures.set(fixtureId,{created:Date.now()});
     const {adminEmail,...safe}=defaults;
-    return json(res,200,{...safe,price:priceAt(defaults),launchPrice:defaults.price,testMode:true,registrationOpen:true,bookAvailable:true,paymentMode:'sandbox',profile:profile(fixtureId),fixtureId});
+    return json(res,200,{...safe,price:priceAt(defaults),launchPrice:defaults.price,testMode:true,paymentProvider:payments?.ready()?'izipay_test':'simulation',registrationOpen:true,bookAvailable:true,paymentMode:'sandbox',profile:profile(fixtureId),fixtureId});
    }
    if(route==='/api/events/demo/register'&&req.method==='POST'){
     const b=await body(req),f=fixtures.get(b.fixtureId);
@@ -33,6 +33,14 @@ module.exports=function createDemo({json,requireAdmin,csrfOk,sign,defaults,price
     registrations.set(b.fixtureId,{id,created_at:new Date().toISOString(),mode:b.mode,status:'registered',is_test:true,book_participants:{full_name:p.name,email:p.email,phone:p.phone,company:'Prueba',position:''},book_orders:orderId?[{id:orderId,status:'pending',amount:priceAt(defaults),delivery:'Recojo en el lugar del evento'}]:[]});
     return json(res,201,{status:'registered',orderId,amount:orderId?priceAt(defaults):null,paymentToken:orderId?orderId+'.'+sign('event-demo:'+orderId):null,testMode:true,emailQueued:false,emailSent:false});
    }
+   if(route==='/api/events/demo/payments/start'&&req.method==='POST'){
+    const b=await body(req),[id,mac]=String(b.token||'').split('.'),expected=sign('event-demo:'+id);
+    if(!mac||mac.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return json(res,403,{error:'Sesión de prueba inválida.'});
+    const reg=[...registrations.values()].find(r=>r.book_orders[0]?.id===id),order=reg?.book_orders[0];
+    if(!order||!payments?.ready())return json(res,409,{error:'El pago Izipay TEST todavía no está disponible.'});
+    if(!order.checkout)order.checkout=await payments.createSession({amount:order.amount,email:'sandbox@example.com',name:'Participante de prueba',billing:{type:'boleta'},mode:'TEST'});
+    return json(res,201,order.checkout);
+   }
    if(route==='/api/events/demo/simulate'&&req.method==='POST'){
     const b=await body(req),[id,mac]=String(b.token||'').split('.'),expected=sign('event-demo:'+id);
     if(!mac||mac.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return json(res,403,{error:'Sesión de prueba inválida.'});
@@ -40,11 +48,14 @@ module.exports=function createDemo({json,requireAdmin,csrfOk,sign,defaults,price
     if(!order)return json(res,400,{error:'La prueba venció. Recarga la página.'});
     const status={success:'simulated_paid',failed:'failed',pending:'pending'}[b.outcome];
     if(!status)return json(res,400,{error:'Resultado de prueba inválido.'});
+    if(order.checkout)return json(res,409,{error:'Este pedido debe verificarse mediante Izipay TEST.'});
     if(order.status!=='simulated_paid')order.status=status;
     return json(res,200,{status:order.status,simulated:true,message:'Prueba guardada. No se realizó ningún cobro ni se emitió un comprobante.'});
    }
    if(route==='/api/events/admin/demo/registrations'&&req.method==='GET'){
     const q=String(url.searchParams.get('q')||'').toLowerCase(),page=Math.max(0,Number(url.searchParams.get('page'))||0);
+    const sessions=await payments?.lookupStatuses([...registrations.values()].flatMap(r=>r.book_orders.map(o=>o.checkout?.sessionId).filter(Boolean)))||[];
+    for(const reg of registrations.values())for(const o of reg.book_orders){const s=sessions.find(s=>s.id===o.checkout?.sessionId);if(s?.status==='paid')o.status='simulated_paid';}
     const rows=[...registrations.values()].reverse().filter(r=>!q||(r.book_participants.full_name+' '+r.book_participants.email).toLowerCase().includes(q));
     return json(res,200,{rows:rows.slice(page*50,page*50+50),total:rows.length,page,temporary:true});
    }

@@ -1,6 +1,7 @@
 'use strict';
 const crypto=require('node:crypto');
 const createDemo=require('./demo');
+const createPayments=require('./payments');
 const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no garantiza el ingreso. Recomendamos llegar con anticipación y seguir las indicaciones de la organización. La adquisición del libro no otorga prioridad ni garantiza el acceso al evento.';
 const SLUG='presentacion-libro';
 const DELIVERY='Recojo en el lugar del evento';
@@ -37,13 +38,14 @@ function validateConfig(b){
 }
 module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign}){
  const limits=new Map();
- const demo=createDemo({json,requireAdmin,csrfOk,sign,defaults:DEFAULT,priceAt});
+ const payments=createPayments({db,json,text,requireAdmin,csrfOk,sign});
+ const demo=createDemo({json,requireAdmin,csrfOk,sign,defaults:DEFAULT,priceAt,payments});
  function rate(req,key,max){const now=Date.now(),id=crypto.createHash('sha256').update(String(req.socket.remoteAddress||'unknown')+key).digest('hex');if(limits.size>10000)for(const [k,v]of limits)if(v.until<now)limits.delete(k);let v=limits.get(id);if(!v||v.until<now){v={n:0,until:now+60000};limits.set(id,v);}return ++v.n<=max;}
  async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>12000)throw Error('La solicitud es demasiado grande.');chunks.push(chunk);}return JSON.parse(Buffer.concat(chunks).toString()||'{}');}
  async function query(q){const r=await q;if(r.error)throw Error(r.error.message);return r.data;}
  async function config(){return (await query(db.from('book_events').select('config,revision').eq('id',SLUG).single()));}
  function canRegister(c){return c.registrationOpen&&c.status==='published'&&c.date&&c.location&&c.capacity&&Date.parse(c.date)>Date.now()&&(!c.deadline||Date.parse(c.deadline)>Date.now());}
- function publicConfig(c){const {adminEmail,...safe}=c;return {...safe,launchPrice:c.price,price:priceAt(c),registrationOpen:!!canRegister(c),capacityNotice:CAPACITY,paymentMode:c.paymentMode==='sandbox'?'sandbox':'disabled'};}
+ function publicConfig(c){const {adminEmail,...safe}=c;return {...safe,paymentProvider:payments.ready()?'izipay_test':'simulation',launchPrice:c.price,price:priceAt(c),registrationOpen:!!canRegister(c),capacityNotice:CAPACITY,paymentMode:c.paymentMode==='sandbox'?'sandbox':'disabled'};}
  function paymentToken(orderId){const expires=Date.now()+30*60000;const raw=orderId+':'+expires;return raw+'.'+sign('book-payment:'+raw);}
  function validPaymentToken(value){const [raw,mac]=String(value||'').split('.');if(!raw||!mac)return null;const expected=sign('book-payment:'+raw);if(mac.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return null;const [id,expires]=raw.split(':');return Number(expires)>Date.now()&&/^[0-9a-f-]{36}$/.test(id)?id:null;}
  async function context(id){const reg=await query(db.from('book_registrations').select('*,book_participants(*),book_orders(*)').eq('id',id).single());return reg;}
@@ -71,6 +73,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
  }
  return async function eventApi(req,res,url){
   const route=url.pathname.replace(/\/$/,'');
+  if((route.startsWith('/api/events/payments/')&&route!=='/api/events/payments/start')||route.startsWith('/api/events/admin/payments/'))return payments.handler(req,res,url);
   if(route.startsWith('/api/events/demo/')||route.startsWith('/api/events/admin/demo/'))return demo(req,res,url);
   const adminRoute=route.startsWith('/api/events/admin');
   let admin;if(adminRoute){admin=requireAdmin(req,res);if(!admin)return;if(!csrfOk(req,admin))return json(res,403,{error:'Recarga el panel para renovar la sesión.'});}
@@ -78,6 +81,15 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   try{
    if(route==='/api/events/config'&&req.method==='GET')return json(res,200,publicConfig((await config()).config));
    if(req.method==='POST'&&!adminRoute){const origin=req.headers.origin;if(!origin||origin!==new URL(process.env.STAGING_ORIGIN||'https://olivedrab-mouse-758184.hostingersite.com').origin&&!(process.env.NODE_ENV!=='production'&&/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)))return json(res,403,{error:'Origen de solicitud inválido.'});if(!String(req.headers['content-type']).startsWith('application/json'))return json(res,415,{error:'Formato no permitido.'});if(!rate(req,route,route.endsWith('metrics')?600:120))return json(res,429,{error:'Demasiados intentos. Espera un minuto antes de reintentar.'});}
+   if(route==='/api/events/payments/start'&&req.method==='POST'){
+    const b=await body(req),id=validPaymentToken(b.token);if(!id)return json(res,403,{error:'La sesión de pago venció.'});
+    if(!payments.ready())return json(res,503,{error:'Izipay todavía no está disponible.'});
+    const c=(await config()).config;if(c.paymentMode!=='sandbox')throw Error('Los pagos de prueba no están habilitados.');
+    const o=await query(db.from('book_orders').select('*,book_registrations(book_participants(*))').eq('id',id).single());
+    if(!o||!['pending','failed'].includes(o.status))throw Error('El pedido no admite otro pago.');
+    const p=o.book_registrations.book_participants;
+    const session=await payments.createSession({orderId:o.id,amount:o.amount,email:p.email,name:p.full_name,billing:b.billing,mode:'TEST'});return json(res,201,session);
+   }
    if(route==='/api/events/register'&&req.method==='POST'){
     const p=validateRegistration(await body(req));if(!rate(req,'email:'+p.email,5))return json(res,429,{error:'Espera un minuto antes de volver a enviar tu solicitud.'});const r=await query(db.rpc('book_register',{payload:p}));
     if(r.duplicate)return json(res,200,{duplicate:true,message:'Si este correo ya está inscrito, conservamos su solicitud original. Revisa tu correo o contacta a la organización para modificarla.'});

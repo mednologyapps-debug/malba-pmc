@@ -63,3 +63,7 @@ Evento: 27 de noviembre de 2026, 19:00 (America/Lima), Consejo Nacional del Cole
 Título con jerarquía tipográfica, fecha/hora y sede agrupadas, precio junto a la opción de compra. IGV/vigencia solo en el resumen del pedido. Se comprobó el layout en 320 y 390 px sin desbordamiento horizontal.
 
 Pruebas: `/evento/presentacion-libro/?prueba=1`, con perfiles ficticios y pago simulado. Administrador → Eventos → Ver pruebas. Los registros de prueba viven en memoria durante dos horas o hasta reiniciar Node. No se modifican las restricciones ni el aforo de la base real. La revisión automática rechazó una propuesta inicial de habilitar pruebas en esa base; no se aplicó y se sustituyó por fixtures sin datos personales. Validación: 17 pruebas Node y ambos recorridos comprobados en navegador. Estado de credenciales: `PAYMENTS-INTEGRATION-STATUS.md`.
+
+## Adaptadores de pago y facturación (actualización)
+
+El estado histórico anterior queda sustituido por `PAYMENTS-INTEGRATION-STATUS.md`: credenciales TEST recuperadas del WordPress vigente y guardadas en Hostinger; adaptadores Izipay y CLOSE2U implementados, sin habilitar pagos reales ni alterar los requisitos del evento. Rama efectiva: `staging-hostinger`. Migraciones aditivas `book_izipay_sessions_and_invoice_queue` y `book_izipay_reconciliation_null_checks`, con RLS y acceso exclusivo del servidor. 25 pruebas Node pasan, incluidos controles de firma, conciliación, retorno sin autoridad de cobro y prohibición de emisión fiscal en TEST.
