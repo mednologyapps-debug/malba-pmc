@@ -13,7 +13,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
   return {preview:true,pdf:await previews.get(s.id)};
  }
  async function query(q){const r=await q;if(r.error)throw Error('No se pudo guardar el estado del pago.');return r.data;}
- function ready(mode='TEST'){return !!db&&izipay.ready(env,mode);}
+ function ready(mode='TEST'){const gateway=!!db&&izipay.ready(env,mode);return mode!=='PRODUCTION'?gateway:gateway&&env.C2U_LIVE_ENABLED==='true'&&!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD&&env.C2U_SERIE_FACTURA&&env.C2U_SERIE_BOLETA);}
  function origin(){const url=new URL(env.STAGING_ORIGIN||'https://olivedrab-mouse-758184.hostingersite.com');if(url.protocol!=='https:')throw Error('La pasarela requiere HTTPS.');return url.origin;}
  async function sessionByToken(token){
   const [id,expires,mac]=String(token||'').split('.');
