@@ -12,7 +12,6 @@
  function updateMode(){
   $('#purchase-fields').hidden=mode!=='book';
   document.querySelectorAll('.mode-switch button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
-  $('#flow-label').textContent=mode==='book'?'Asistencia sin costo · Libro por separado':'Asistencia sin costo';
   $('#form-title').textContent=mode==='book'?'Inscríbete y compra tu libro':'Inscríbete al evento';
   $('#form-intro').textContent=mode==='book'?'Completa tus datos una sola vez para registrar tu participación y preparar tu pedido.':'Completa tus datos para inscribirte.';
   const open=!!config?.registrationOpen;
@@ -36,9 +35,8 @@
   else{const s=showResult(data.status==='waitlist'?'Estás en lista de espera.':'Recibimos tu inscripción.',data.status==='waitlist'?'Registramos tu solicitud en lista de espera. La organización te informará sobre la disponibilidad.':data.emailSent?'Registramos tu participación. Revisa tu correo para ver los detalles y el aviso de aforo.':'Tu registro está guardado. El correo de confirmación está en proceso de envío.');addButton(s,'Listo, cerrar',()=>dialog.close());form.reset();}
  }catch(err){$('#form-error').textContent=err.message;$('#form-error').scrollIntoView({block:'nearest'});}finally{busy=false;updateMode();}});
  api('/api/events/config').then(c=>{config=c;document.querySelectorAll('a[data-privacy]').forEach(a=>{if(c.privacyUrl){a.href=c.privacyUrl;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='La organización confirmará la política antes de abrir inscripciones.';}});if(c.date){const date=new Date(c.date);$('#event-date').textContent=date.toLocaleString('es-PE',{timeZone:'America/Lima',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · Perú';}if(c.location)$('#event-location').textContent=c.location;
-  $('#availability').textContent=c.registrationOpen?'Inscripciones abiertas'+(c.waitlist?' · Lista de espera habilitada':''):'Próximamente: confirmaremos fecha, sede e inscripciones.';
   if(c.priceConfirmed&&c.price>0){$('#order-price').textContent=money(c.price);$('#order-total').textContent=money(c.price);}
   if(canBuy())$('#purchase-notice').textContent='Modo de prueba: el siguiente paso simula el pago. No ingreses datos de tarjeta. No se realizará ningún cobro.';
   updateMode();metric('visit');
- }).catch(()=>{$('#availability').textContent='No pudimos cargar las inscripciones. Intenta nuevamente en unos minutos.';});
+ }).catch(()=>{$('#form-error').textContent='No pudimos cargar las inscripciones. Intenta nuevamente en unos minutos.';});
 })();
