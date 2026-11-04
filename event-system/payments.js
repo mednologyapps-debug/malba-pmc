@@ -27,6 +27,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
   if(!db)throw Error('La pasarela requiere la conexión del servidor.');
   const creds=izipay.credentials(env,mode),amountMinor=Math.round(Number(amount)*100);if(!Number.isInteger(amountMinor)||amountMinor<=0)throw Error('Importe inválido.');
   if(orderId){const previous=await query(db.from('book_payment_sessions').select('*').eq('order_id',orderId).maybeSingle());if(previous){
+   if(previous.mode!==mode)throw Error('Este pedido tiene una sesión de otra modalidad de pago. Contacta a MALBA para reiniciarlo de forma segura.');
    if(previous.expires_at&&Date.parse(previous.expires_at)<Date.now())throw Error('La sesión de pago anterior venció. Contacta a la organización.');
    const expires=Date.parse(previous.expires_at),token=previous.id+'.'+expires+'.'+sign('izipay-session:'+previous.id+':'+expires);
    return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html#'+token};
