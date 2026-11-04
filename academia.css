@@ -444,3 +444,7 @@
   .main-navigation .nav-actions .header-cta { width:100%; min-height:48px; border-radius:6px; font-size:15px; }
   .main-navigation a:focus-visible,.main-navigation button:focus-visible { outline:3px solid #5d4594; outline-offset:2px; }
 }
+
+/* All programs remain informational until the next edition is announced. */
+.course-enrollment .course-next-edition{padding:12px 0 18px;font-size:14px;line-height:1.65;color:#69758a}
+.course-enrollment .button{display:flex;align-items:center;justify-content:center;text-align:center;width:100%}
