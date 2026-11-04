@@ -47,3 +47,13 @@ test('invalid or expired checkout tokens fail before reading private payment dat
  assert.equal((await call(api.handler,'/api/events/payments/status',{token:'bad'})).status,400);assert.equal(db.calls.length,0);
  const t=session.id+'.1.signature';assert.equal((await call(api.handler,'/api/events/payments/status',{token:t})).status,400);assert.equal(db.calls.length,0);
 });
+test('public receipt preview requires an authenticated paid TEST session and reuses its result',async()=>{
+ const expires=Date.now()+60000,token=session.id+'.'+expires+'.fixture-signature',client_hash=crypto.createHash('sha256').update(token).digest('hex');
+ for(const s of [{...session,status:'pending'},{...session,mode:'PRODUCTION'}]){
+  const db=dbFor({...s,client_hash}),api=create({...out,db,env,sign:()=> 'fixture-signature',requireAdmin:()=>null,csrfOk:()=>false,fetcher:async()=>{throw Error('Must not reach provider');}});
+  assert.equal((await call(api.handler,'/api/events/payments/preview',{token,body:{}})).status,400);
+ }
+ let calls=0;const db=dbFor({...session,client_hash}),api=create({...out,db,env,sign:()=> 'fixture-signature',requireAdmin:()=>null,csrfOk:()=>false,fetcher:async url=>{calls++;return url.endsWith('/token')?{ok:true,json:async()=>({c2uToken:'fixture-token'})}:{ok:true,text:async()=>JSON.stringify('JVBERfixture')};}});
+ const first=await call(api.handler,'/api/events/payments/preview',{token,body:{}}),again=await call(api.handler,'/api/events/payments/preview',{token,body:{}});
+ assert.equal(first.status,200);assert.equal(again.value.pdf,'JVBERfixture');assert.equal(calls,2);
+});

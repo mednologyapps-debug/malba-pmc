@@ -67,3 +67,7 @@ Pruebas: `/evento/presentacion-libro/?prueba=1`, con perfiles ficticios y pago s
 ## Adaptadores de pago y facturación (actualización)
 
 El estado histórico anterior queda sustituido por `PAYMENTS-INTEGRATION-STATUS.md`: credenciales TEST recuperadas del WordPress vigente y guardadas en Hostinger; adaptadores Izipay y CLOSE2U implementados, sin habilitar pagos reales ni alterar los requisitos del evento. Rama efectiva: `staging-hostinger`. Migraciones aditivas `book_izipay_sessions_and_invoice_queue` y `book_izipay_reconciliation_null_checks`, con RLS y acceso exclusivo del servidor. 25 pruebas Node pasan, incluidos controles de firma, conciliación, retorno sin autoridad de cobro y prohibición de emisión fiscal en TEST.
+
+## Verificación externa final
+
+Izipay TEST y boleta de vista previa CLOSE2U verificados en el dominio temporal. Importe S/129 = base S/109.32 + IGV S/19.68; cero emisión fiscal real. Pruebas automatizadas: 26/26. Se conserva el registro real cerrado y las banderas live desactivadas. Detalles y límites en `PAYMENTS-INTEGRATION-STATUS.md`.
