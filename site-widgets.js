@@ -51,7 +51,8 @@
   }
 
   const contact = make('a', 'malba-assistant-link', 'Escribir al WhatsApp');
-  contact.hidden = true; // Show only after reading a valid CMS WhatsApp configuration.
+  contact.href = 'https://wa.me/51932563293?text=' + encodeURIComponent('Hola, MALBA PMC. Quisiera recibir información.');
+  contact.hidden = false; // Existing public number; CMS can override it.
   contact.target = '_blank';
   contact.rel = 'noopener noreferrer';
   contact.setAttribute('aria-label', 'Hablar con MALBA por WhatsApp (abre en otra pestaña)');
