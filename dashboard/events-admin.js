@@ -1,10 +1,66 @@
 'use strict';
 let eventPage=0,eventQuery='',eventRequest=0,eventDemo=false;
+async function renderBookEventSettings(editor){
+ const section=el('section',{class:'event-settings'});
+ section.append(el('h2',{text:'Configuración del evento'}),el('p',{class:'event-settings-description',text:'Publica la inscripción gratuita y configura el libro desde aquí. El aforo y la política de privacidad son obligatorios para abrir el registro.'}));
+ editor.append(section);
+ try{
+  const [response,health]=await Promise.all([request('/api/events/admin/config'),request('/api/events/admin/payments/health')]);
+  const c=response.config||{},form=el('form',{class:'event-settings-form'});
+  const inputs={};
+  function field(name,label,type,value,extra={}){
+   const wrap=el('label',{class:'event-settings-field'}),input=el('input',{type,value:value??'',...extra});
+   input.name=name;inputs[name]=input;wrap.append(el('span',{text:label}),input);form.append(wrap);return input;
+  }
+  function toggle(name,label,value){
+   const wrap=el('label',{class:'event-settings-toggle'}),input=el('input',{type:'checkbox'});
+   input.name=name;input.checked=!!value;inputs[name]=input;wrap.append(input,el('span',{text:label}));form.append(wrap);return input;
+  }
+  function choice(name,label,value,values){
+   const wrap=el('label',{class:'event-settings-field'}),select=el('select');
+   select.name=name;inputs[name]=select;for(const [v,text]of values){const opt=el('option',{value:v,text});select.append(opt);}
+   select.value=value||values[0][0];wrap.append(el('span',{text:label}),select);form.append(wrap);return select;
+  }
+  const peruDate=iso=>{if(!iso)return '';const d=new Date(iso);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d).replace(' ','T');};
+  const toUtc=value=>value?new Date(value+':00-05:00').toISOString():null;
+  field('title','Nombre del evento','text',c.title,{required:true,maxLength:180});
+  field('date','Fecha y hora · Perú','datetime-local',peruDate(c.date),{required:true});
+  field('location','Lugar','text',c.location,{required:true,maxLength:300});
+  field('capacity','Aforo máximo','number',c.capacity,{required:true,min:1,max:100000});
+  field('adminEmail','Correo que recibe inscripciones','email',c.adminEmail,{required:true,maxLength:180});
+  field('privacyUrl','URL HTTPS de política de privacidad','url',c.privacyUrl,{required:true});
+  choice('status','Estado de publicación',c.status,[['draft','Borrador'],['published','Publicado'],['closed','Cerrado'],['cancelled','Cancelado']]);
+  toggle('registrationOpen','Habilitar inscripciones al evento',c.registrationOpen);
+  toggle('waitlist','Habilitar lista de espera al completar aforo',c.waitlist);
+  field('price','Precio del libro (S/)','number',c.price,{step:'0.01',min:'0.01'});
+  field('regularPrice','Precio regular (S/)','number',c.regularPrice,{step:'0.01',min:'0.01'});
+  toggle('priceConfirmed','Precio confirmado',c.priceConfirmed);
+  toggle('bookAvailable','Habilitar compra del libro físico',c.bookAvailable);
+  const payment=choice('paymentMode','Modalidad de pago',c.paymentMode,[['disabled','Deshabilitado'],['sandbox','Izipay TEST'],['production','Izipay LIVE']]);
+  if(!health.izipayProduction)payment.querySelector('[value=production]').disabled=true;
+  const healthLine=el('p',{class:'event-settings-health',text:'Izipay LIVE: '+(health.izipayProduction?'configurado':'no configurado')+' · Facturador: '+(health.close2uConfigured?'configurado':'no configurado')+' · Emisión fiscal LIVE: '+(health.realInvoices?'habilitada':'deshabilitada')});
+  const result=el('p',{class:'event-settings-result',role:'status'});
+  const submit=el('button',{type:'submit',class:'button button-purple',text:'Guardar configuración'});form.append(submit);section.append(healthLine,form,result);
+  form.addEventListener('submit',async e=>{
+   e.preventDefault();if(!form.reportValidity())return;submit.disabled=true;result.textContent='Guardando…';
+   try{
+    const next={...c};for(const [name,input]of Object.entries(inputs)){next[name]=input.type==='checkbox'?input.checked:input.value;}
+    next.date=toUtc(next.date);next.capacity=next.capacity?Number(next.capacity):null;
+    next.price=next.price?Number(next.price):null;next.regularPrice=next.regularPrice?Number(next.regularPrice):null;
+    const saved=await request('/api/events/admin/config',{revision:response.revision,config:next});
+    response.revision=saved.revision;c.title=saved.config.title;Object.assign(c,saved.config);
+    result.textContent='Configuración guardada. Los cambios ya se reflejan en la landing del evento.';
+   }catch(err){result.textContent=err.message;}
+   finally{submit.disabled=false;}
+  });
+ }catch(err){section.append(el('p',{class:'notice',role:'alert',text:'No se pudo cargar la configuración: '+err.message}));}
+}
 async function renderEventsEditor(){
  $('.actions').hidden=true;$('.status-row').hidden=true;
  $('#page-title').textContent='Participantes';
  $('#page-description').textContent='Presentación del libro';
  const editor=$('#editor');editor.replaceChildren();
+ await renderBookEventSettings(editor);
  const toolbar=el('div',{class:'event-toolbar event-filters'});
  const search=el('input',{type:'search',placeholder:'Buscar por nombre o correo','aria-label':'Buscar participantes',value:eventQuery});
  let timer;search.addEventListener('input',()=>{eventQuery=search.value;eventPage=0;clearTimeout(timer);timer=setTimeout(drawEventRows,300);});
