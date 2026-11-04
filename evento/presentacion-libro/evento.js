@@ -50,8 +50,8 @@
    const document=String(f.get('receiptDocument')||'').trim();
    const name=String(f.get('receiptBusinessName')||'').trim();
    const address=String(f.get('receiptAddress')||'').trim();
-   if(type==='factura'&&(!/^\\d{11}$/.test(document)||name.length<3||address.length<5))throw Error('Para factura, indica RUC de 11 dígitos, razón social y dirección fiscal.');
-   if(type==='boleta'&&document&&!/^\\d{8}$/.test(document))throw Error('Para boleta, el DNI debe tener 8 dígitos.');
+   if(type==='factura'&&(!/^\d{11}$/.test(document)||name.length<3||address.length<5))throw Error('Para factura, indica RUC de 11 dígitos, razón social y dirección fiscal.');
+   if(type==='boleta'&&document&&!/^\d{8}$/.test(document))throw Error('Para boleta, el DNI debe tener 8 dígitos.');
    billingDetails={type,document,name,address};
   }
   const data=await api('/api/events/register',demoMode?{fixtureId:config.fixtureId,mode,consent:f.has('consent'),capacity:f.has('capacity')}:{...Object.fromEntries(f),mode,consent:f.has('consent'),capacity:f.has('capacity'),utm});
