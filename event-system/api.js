@@ -2,11 +2,12 @@
 const crypto=require('node:crypto');
 const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no garantiza el ingreso. Recomendamos llegar con anticipación y seguir las indicaciones de la organización. La adquisición del libro no otorga prioridad ni garantiza el acceso al evento.';
 const SLUG='presentacion-libro';
-const DEFAULT={title:'Presentación del libro de Miguel Alba',date:null,location:'',capacity:null,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:150,priceConfirmed:false,bookAvailable:false,paymentMode:'disabled',deliveries:[],adminEmail:'',privacyUrl:''};
+const DELIVERY='Recojo en el lugar del evento';
+const DEFAULT={title:'Presentación del libro de Miguel Alba',date:null,location:'',capacity:null,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:150,priceConfirmed:false,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:''};
 const clean=(v,n)=>String(v||'').trim().slice(0,n);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function validateRegistration(b){
- const p={name:clean(b.name,150),email:clean(b.email,254).toLowerCase(),phone:clean(b.phone,20),company:clean(b.company,150),position:clean(b.position,120),mode:b.mode,delivery:clean(b.delivery,100),utm:{}};
+ const p={name:clean(b.name,150),email:clean(b.email,254).toLowerCase(),phone:clean(b.phone,20),company:clean(b.company,150),position:clean(b.position,120),mode:b.mode,delivery:b.mode==='book'?DELIVERY:'',utm:{}};
  if(p.name.length<3||!/^\S+@[^\s@]+\.[^\s@]+$/.test(p.email)||!/^\+?[\d ()-]{7,20}$/.test(p.phone)||p.phone.replace(/\D/g,'').length<7)throw Error('Revisa tu nombre, correo electrónico y celular.');
  if(!['free','book'].includes(p.mode)||b.consent!==true||b.capacity!==true)throw Error('Selecciona una modalidad y acepta la política y el aviso de aforo.');
  if(b.website)throw Error('No se pudo validar la solicitud.');
@@ -23,7 +24,7 @@ function validateConfig(b){
  if(c.capacity!==null&&(!Number.isInteger(c.capacity)||c.capacity<1||c.capacity>100000))throw Error('Configura un aforo válido.');
  if(c.price!==null&&(!Number.isFinite(c.price)||c.price<=0||c.price>99999))throw Error('Configura un precio válido.');
  if(c.adminEmail&&!/^\S+@[^\s@]+\.[^\s@]+$/.test(c.adminEmail))throw Error('Correo administrativo inválido.');
- c.deliveries=Array.isArray(b.deliveries)?[...new Set(b.deliveries.map(x=>clean(x,100)).filter(Boolean))].slice(0,5):[];
+ c.deliveries=[DELIVERY];
  if(c.privacyUrl&&!/^https:\/\/[^\s]+$/.test(c.privacyUrl))throw Error('Usa una URL HTTPS para la política de privacidad.');
  if(c.registrationOpen&&(!c.privacyUrl||!c.date||!c.location||!c.capacity||!c.adminEmail||c.status!=='published'||Date.parse(c.date)<=Date.now()))throw Error('Para abrir inscripciones completa fecha futura, sede, aforo, correo administrativo, política de privacidad y estado publicado.');
  if(c.deadline&&c.date&&Date.parse(c.deadline)>Date.parse(c.date))throw Error('El cierre no puede ser posterior al evento.');

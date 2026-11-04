@@ -49,3 +49,7 @@ Pendiente: desplegar y comprobar endpoint real en Hostinger, login de dashboard,
 ## Publicación temporal
 
 Conservar las variables actuales del runtime. Desplegar exclusivamente en `olivedrab-mouse-758184.hostingersite.com`. No modificar `main` ni `malba-pmc.com`. El contenido se sirve directamente desde Node; la ruta se registra antes del renderer de CMS para que no devuelva 404 por no pertenecer al catálogo de páginas Python. Reiniciar la aplicación Node tras actualizar el código. Confirmar `/health`, landing, login del dashboard y LMS existentes. El CLI `--port` es compatible con preview; `PORT` de Hostinger mantiene precedencia.
+
+## Ajuste de interfaz solicitado
+
+Botones con un solo título, aviso visible «La asistencia al evento es sin costo» y formulario «Inscríbete al evento». El libro se recoge en el lugar del evento; no hay selector de entrega y el servidor normaliza la modalidad. El administrador muestra únicamente la lista de participantes con búsqueda y paginación, diferenciando compra verificada, pendiente y simulada. Se retiraron de la interfaz configuración, indicadores, exportación y controles de asistencia/correo. Los datos del evento se completarán a partir de las indicaciones del propietario; no se asignaron fecha, sede ni aforo.

@@ -8,15 +8,15 @@
  const money=n=>new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'}).format(n);
  function metric(event){fetch('/api/events/metrics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,source:utm.utm_source||''}),keepalive:true}).catch(()=>{});}
  async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Error('El servicio de inscripción no está disponible. Intenta más tarde.');const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo completar la solicitud.');return data;}
- const canBuy=()=>config?.bookAvailable&&config?.priceConfirmed&&config?.price>0&&config?.paymentMode==='sandbox'&&config?.deliveries?.length;
+ const canBuy=()=>config?.bookAvailable&&config?.priceConfirmed&&config?.price>0&&config?.paymentMode==='sandbox';
  function updateMode(){
-  $('#purchase-fields').hidden=mode!=='book';$('#delivery').required=mode==='book'&&!!canBuy();
+  $('#purchase-fields').hidden=mode!=='book';
   document.querySelectorAll('.mode-switch button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
-  $('#flow-label').textContent=mode==='book'?'Inscripción + libro':'Inscripción gratuita';
-  $('#form-title').textContent=mode==='book'?'El conocimiento, contigo.':'Nos encantará verte.';
-  $('#form-intro').textContent=mode==='book'?'Completa tus datos una sola vez para registrar tu participación y preparar tu pedido.':'Completa tus datos para registrar tu interés en participar.';
+  $('#flow-label').textContent=mode==='book'?'Asistencia sin costo · Libro por separado':'Asistencia sin costo';
+  $('#form-title').textContent=mode==='book'?'Inscríbete y compra tu libro':'Inscríbete al evento';
+  $('#form-intro').textContent=mode==='book'?'Completa tus datos una sola vez para registrar tu participación y preparar tu pedido.':'Completa tus datos para inscribirte.';
   const open=!!config?.registrationOpen;
-  submit.disabled=!open||mode==='book'&&!canBuy();submit.textContent=!open?'Inscripciones próximamente':mode==='book'?'Registrar y continuar a prueba de pago':'Enviar inscripción gratuita';
+  submit.disabled=!open||mode==='book'&&!canBuy();submit.textContent=!open?'Inscripciones próximamente':mode==='book'?'Registrar y continuar a prueba de pago':'Confirmar inscripción';
   $('#form-error').textContent=!open?'Las inscripciones todavía no están abiertas. La organización confirmará los detalles del evento.':mode==='book'&&!canBuy()?'La compra aún no está habilitada. Puedes cambiar a «Solo evento» para inscribirte.':'';
  }
  function setMode(value,trigger){if(busy)return;mode=value;updateMode();if(!dialog.open){lastTrigger=trigger;$('#form-content').hidden=false;$('#result').hidden=true;dialog.showModal();metric(value==='book'?'click_book':'click_free');}}
@@ -37,8 +37,7 @@
  }catch(err){$('#form-error').textContent=err.message;$('#form-error').scrollIntoView({block:'nearest'});}finally{busy=false;updateMode();}});
  api('/api/events/config').then(c=>{config=c;document.querySelectorAll('a[data-privacy]').forEach(a=>{if(c.privacyUrl){a.href=c.privacyUrl;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='La organización confirmará la política antes de abrir inscripciones.';}});if(c.date){const date=new Date(c.date);$('#event-date').textContent=date.toLocaleString('es-PE',{timeZone:'America/Lima',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · Perú';}if(c.location)$('#event-location').textContent=c.location;
   $('#availability').textContent=c.registrationOpen?'Inscripciones abiertas'+(c.waitlist?' · Lista de espera habilitada':''):'Próximamente: confirmaremos fecha, sede e inscripciones.';
-  if(c.priceConfirmed&&c.price>0){$('#order-price').textContent=money(c.price);$('#order-total').textContent=money(c.price);$('#book-choice-note').textContent='Tu ejemplar físico · '+money(c.price);}
-  for(const d of c.deliveries||[]){const o=document.createElement('option');o.value=d;o.textContent=d;$('#delivery').append(o);}
+  if(c.priceConfirmed&&c.price>0){$('#order-price').textContent=money(c.price);$('#order-total').textContent=money(c.price);}
   if(canBuy())$('#purchase-notice').textContent='Modo de prueba: el siguiente paso simula el pago. No ingreses datos de tarjeta. No se realizará ningún cobro.';
   updateMode();metric('visit');
  }).catch(()=>{$('#availability').textContent='No pudimos cargar las inscripciones. Intenta nuevamente en unos minutos.';});
