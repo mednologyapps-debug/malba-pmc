@@ -90,35 +90,25 @@ arrowTextNodes.forEach((node) => {
     : node.nodeValue.replace(arrowGlyphs, "");
 });
 
-// Three-field contact modal, shared by all contact entry points.
-const quickContact = document.querySelector('#quick-contact-form');
-if (quickContact) {
-  quickContact.querySelector('[type="submit"]').disabled = false;
-  quickContact.addEventListener('submit', event => {
-    event.preventDefault();
-    for (const input of quickContact.querySelectorAll('[required]')) {
-      if (!input.value.trim()) {
-        input.setCustomValidity('Completa este campo.');
-        input.addEventListener('input', () => input.setCustomValidity(''), {once: true});
-      }
-    }
-    if (!quickContact.reportValidity()) return;
-    const destination = new URL(quickContact.dataset.contactUrl);
-    if (destination.protocol !== 'https:' || destination.hostname !== 'wa.me') return;
-    const fields = new FormData(quickContact);
-    destination.searchParams.set('text', [
-      'Hola, MALBA PMC. Quisiera información.',
-      'Nombre: ' + fields.get('contact_name').trim(),
-      'Correo: ' + fields.get('contact_email').trim(),
-      'Celular: ' + ((fields.get('contact_phone') || '').trim() || 'No indicado'),
-      'Consulta: ' + fields.get('contact_message').trim()
-    ].join('\n'));
-    const popup = window.open(destination.href, '_blank');
-    if (popup) popup.opener = null;
-    else window.location.assign(destination.href);
-  });
+// Shared contact modal: send a server-side email instead of opening WhatsApp.
+const quickContact=document.querySelector('#quick-contact-form');
+if(quickContact){
+ const send=quickContact.querySelector('[type=submit]'),note=quickContact.querySelector('.quick-contact-note');
+ send.disabled=false;send.textContent='Enviar consulta por correo';
+ if(note)note.textContent='Recibirás una respuesta a tu correo electrónico.';
+ quickContact.addEventListener('submit',async event=>{
+  event.preventDefault();if(!quickContact.reportValidity())return;
+  const f=new FormData(quickContact),original=send.textContent;
+  send.disabled=true;send.textContent='Enviando…';
+  try{
+   const r=await fetch('/api/public-contact',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({name:f.get('contact_name'),email:f.get('contact_email'),phone:f.get('contact_phone'),message:f.get('contact_message'),website:f.get('website')||'',source:'contacto-web'})});
+   const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo enviar la consulta.');
+   if(note){note.textContent=data.message||'Consulta enviada.';note.setAttribute('role','status');}
+   quickContact.reset();
+  }catch(error){if(note){note.textContent=error.message;note.setAttribute('role','alert');}}
+  finally{send.disabled=false;send.textContent=original;}
+ });
 }
-
 
 // Shared public-site assistant (not loaded inside the admin or student LMS).
 // Home already has a direct script tag; other public pages load it here.
