@@ -50,7 +50,7 @@
     quickLinks.append(link);
   }
 
-  const contact = make('a', 'malba-assistant-link', 'Hablar por WhatsApp');
+  const contact = make('a', 'malba-assistant-link', 'Escribir al WhatsApp');
   contact.hidden = true; // Show only after reading a valid CMS WhatsApp configuration.
   contact.target = '_blank';
   contact.rel = 'noopener noreferrer';
@@ -63,6 +63,7 @@
   const launcher = make('div', 'malba-assistant-launcher');
   const bubble = make('button', 'malba-assistant-bubble', '¿Cómo puedo ayudarte?');
   bubble.type = 'button';
+  bubble.setAttribute('aria-label', 'Abrir asistente MALBA');
   bubble.setAttribute('aria-controls', panel.id);
   bubble.setAttribute('aria-expanded', 'false');
   const trigger = make('button', 'malba-assistant-trigger');
@@ -79,6 +80,9 @@
   trigger.append(robot);
   launcher.append(bubble, trigger);
   root.append(panel, launcher);
+  // Automatically dismiss the introductory prompt; the robot stays available.
+  const bubbleTimer=window.setTimeout(()=>{bubble.hidden=true;},4500);
+  bubble.addEventListener('click',()=>{window.clearTimeout(bubbleTimer);bubble.hidden=true;});
   document.body.append(root);
 
   const toggle = (open, restoreFocus = false) => {
