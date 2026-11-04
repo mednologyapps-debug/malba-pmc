@@ -3,9 +3,10 @@ const crypto=require('node:crypto');
 const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no garantiza el ingreso. Recomendamos llegar con anticipación y seguir las indicaciones de la organización. La adquisición del libro no otorga prioridad ni garantiza el acceso al evento.';
 const SLUG='presentacion-libro';
 const DELIVERY='Recojo en el lugar del evento';
-const DEFAULT={title:'Presentación del libro de Miguel Alba',date:null,location:'',capacity:null,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:150,priceConfirmed:false,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:''};
+const DEFAULT={title:'Presentación del libro de Miguel Alba',date:'2026-11-27T19:00:00-05:00',location:'Consejo Nacional del Colegio de Ingenieros del Perú',capacity:null,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:129,regularPrice:169,launchUntil:'2026-11-28T00:00:00-05:00',taxIncluded:true,priceConfirmed:true,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:''};
 const clean=(v,n)=>String(v||'').trim().slice(0,n);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function priceAt(c,now=Date.now()){return c.regularPrice&&c.launchUntil&&now>=Date.parse(c.launchUntil)?Number(c.regularPrice):Number(c.price);}
 function validateRegistration(b){
  const p={name:clean(b.name,150),email:clean(b.email,254).toLowerCase(),phone:clean(b.phone,20),company:clean(b.company,150),position:clean(b.position,120),mode:b.mode,delivery:b.mode==='book'?DELIVERY:'',utm:{}};
  if(p.name.length<3||!/^\S+@[^\s@]+\.[^\s@]+$/.test(p.email)||!/^\+?[\d ()-]{7,20}$/.test(p.phone)||p.phone.replace(/\D/g,'').length<7)throw Error('Revisa tu nombre, correo electrónico y celular.');
@@ -19,10 +20,12 @@ function validateConfig(b){
  for(const k of ['registrationOpen','waitlist','priceConfirmed','bookAvailable'])c[k]=b[k]===true;
  c.status=['draft','published','closed','cancelled'].includes(b.status)?b.status:'draft';
  c.paymentMode=b.paymentMode==='sandbox'?'sandbox':'disabled'; // No live payment adapter is enabled.
- for(const k of ['date','deadline']){c[k]=b[k]?new Date(b[k]).toISOString():null;}
+ for(const k of ['date','deadline','launchUntil']){c[k]=b[k]?new Date(b[k]).toISOString():null;}
  c.capacity=b.capacity===''||b.capacity==null?null:Number(b.capacity);c.price=b.price===''||b.price==null?null:Number(b.price);
  if(c.capacity!==null&&(!Number.isInteger(c.capacity)||c.capacity<1||c.capacity>100000))throw Error('Configura un aforo válido.');
  if(c.price!==null&&(!Number.isFinite(c.price)||c.price<=0||c.price>99999))throw Error('Configura un precio válido.');
+ c.regularPrice=b.regularPrice==null?null:Number(b.regularPrice);c.taxIncluded=true;
+ if(c.regularPrice!==null&&(!Number.isFinite(c.regularPrice)||c.regularPrice<c.price||c.regularPrice>99999))throw Error('Configura un precio regular válido.');
  if(c.adminEmail&&!/^\S+@[^\s@]+\.[^\s@]+$/.test(c.adminEmail))throw Error('Correo administrativo inválido.');
  c.deliveries=[DELIVERY];
  if(c.privacyUrl&&!/^https:\/\/[^\s]+$/.test(c.privacyUrl))throw Error('Usa una URL HTTPS para la política de privacidad.');
@@ -38,7 +41,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
  async function query(q){const r=await q;if(r.error)throw Error(r.error.message);return r.data;}
  async function config(){return (await query(db.from('book_events').select('config,revision').eq('id',SLUG).single()));}
  function canRegister(c){return c.registrationOpen&&c.status==='published'&&c.date&&c.location&&c.capacity&&Date.parse(c.date)>Date.now()&&(!c.deadline||Date.parse(c.deadline)>Date.now());}
- function publicConfig(c){const {adminEmail,...safe}=c;return {...safe,registrationOpen:!!canRegister(c),capacityNotice:CAPACITY,paymentMode:c.paymentMode==='sandbox'?'sandbox':'disabled'};}
+ function publicConfig(c){const {adminEmail,...safe}=c;return {...safe,launchPrice:c.price,price:priceAt(c),registrationOpen:!!canRegister(c),capacityNotice:CAPACITY,paymentMode:c.paymentMode==='sandbox'?'sandbox':'disabled'};}
  function paymentToken(orderId){const expires=Date.now()+30*60000;const raw=orderId+':'+expires;return raw+'.'+sign('book-payment:'+raw);}
  function validPaymentToken(value){const [raw,mac]=String(value||'').split('.');if(!raw||!mac)return null;const expected=sign('book-payment:'+raw);if(mac.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return null;const [id,expires]=raw.split(':');return Number(expires)>Date.now()&&/^[0-9a-f-]{36}$/.test(id)?id:null;}
  async function context(id){const reg=await query(db.from('book_registrations').select('*,book_participants(*),book_orders(*)').eq('id',id).single());return reg;}
@@ -74,7 +77,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    if(route==='/api/events/register'&&req.method==='POST'){
     const p=validateRegistration(await body(req));if(!rate(req,'email:'+p.email,5))return json(res,429,{error:'Espera un minuto antes de volver a enviar tu solicitud.'});const r=await query(db.rpc('book_register',{payload:p}));
     if(r.duplicate)return json(res,200,{duplicate:true,message:'Si este correo ya está inscrito, conservamos su solicitud original. Revisa tu correo o contacta a la organización para modificarla.'});
-    let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:true,emailSent:mail.recipientSent===true,capacityNotice:CAPACITY});
+    let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,amount:r.amount??null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:true,emailSent:mail.recipientSent===true,capacityNotice:CAPACITY});
    }
    if(route==='/api/events/simulate'&&req.method==='POST'){
     const b=await body(req),id=validPaymentToken(b.token);if(!id)return json(res,403,{error:'La sesión de prueba venció. Contacta a la organización para reintentar.'});
@@ -113,3 +116,5 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
  };
 };
 module.exports.validateRegistration=validateRegistration;module.exports.validateConfig=validateConfig;module.exports.CAPACITY=CAPACITY;
+
+module.exports.priceAt=priceAt;

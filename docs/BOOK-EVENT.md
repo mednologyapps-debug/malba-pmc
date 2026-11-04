@@ -53,3 +53,7 @@ Conservar las variables actuales del runtime. Desplegar exclusivamente en `olive
 ## Ajuste de interfaz solicitado
 
 Botones con un solo título, aviso visible «La asistencia al evento es sin costo» y formulario «Inscríbete al evento». El libro se recoge en el lugar del evento; no hay selector de entrega y el servidor normaliza la modalidad. El administrador muestra únicamente la lista de participantes con búsqueda y paginación, diferenciando compra verificada, pendiente y simulada. Se retiraron de la interfaz configuración, indicadores, exportación y controles de asistencia/correo. Los datos del evento se completarán a partir de las indicaciones del propietario; no se asignaron fecha, sede ni aforo.
+
+## Fecha, sede y lanzamiento confirmados
+
+Evento: 27 de noviembre de 2026, 19:00 (America/Lima), Consejo Nacional del Colegio de Ingenieros del Perú. Libro: S/129 por lanzamiento hasta el final del 27 de noviembre, luego S/169 regular; ambos incluyen IGV. El precio efectivo se calcula en el servidor y en la transacción SQL, conservando el importe de cada pedido. SQL aplicado y reproducible: `scripts/sql/book-launch.sql`. No se abrieron inscripciones ni cobros: aforo, correo administrativo y política continúan pendientes. Verificados los importes 129/169 en una transacción SQL con rollback; 16 pruebas Node pasan.
