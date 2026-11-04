@@ -89,3 +89,23 @@ document.querySelectorAll('[data-course-switch]').forEach(component => {
   component.classList.add('is-enhanced');
   select(0);
 });
+
+// All course detail pages are informational until the next cohort is published.
+if(document.querySelector('.course-page')){
+ const card=document.querySelector('.course-enrollment');
+ if(card){
+  card.querySelectorAll('.course-price,.course-whatsapp').forEach(el=>el.remove());
+  card.querySelectorAll('a[href*="wa.me"],a[href*="checkout"],a[href*="cart"]').forEach(el=>el.remove());
+  const heading=card.querySelector('h2');if(heading)heading.textContent='Próximamente';
+  const note=document.createElement('p');note.className='course-next-edition';
+  note.textContent='Estamos preparando una nueva edición. Las fechas y el proceso de inscripción se anunciarán próximamente.';
+  if(heading)heading.after(note);else card.prepend(note);
+  const contact=document.createElement('button');contact.type='button';contact.className='button button-purple';
+  contact.textContent='Solicitar información por correo';
+  contact.addEventListener('click',()=>document.querySelector('[data-dialog="contact-dialog"]')?.click());
+  card.append(contact);
+ }
+ document.querySelectorAll('.course-facts dt').forEach(dt=>{
+  if(/inicio|horario|edición/i.test(dt.textContent)){const dd=dt.nextElementSibling;if(dd)dd.textContent='Por anunciar';}
+ });
+}
