@@ -13,7 +13,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
   return {preview:true,pdf:await previews.get(s.id)};
  }
  async function query(q){const r=await q;if(r.error)throw Error('No se pudo guardar el estado del pago.');return r.data;}
- function ready(){return !!db&&izipay.ready(env);}
+ function ready(mode='TEST'){return !!db&&izipay.ready(env,mode);}
  function origin(){const url=new URL(env.STAGING_ORIGIN||'https://olivedrab-mouse-758184.hostingersite.com');if(url.protocol!=='https:')throw Error('La pasarela requiere HTTPS.');return url.origin;}
  async function sessionByToken(token){
   const [id,expires,mac]=String(token||'').split('.');
@@ -68,7 +68,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
    if(path==='/api/events/payments/status'&&req.method==='GET')return json(res,200,await status(bearer));
    if(path==='/api/events/payments/return'&&req.method==='POST')return json(res,200,await notify(await readBody(req),true));
    if(path==='/api/events/payments/preview'&&req.method==='POST')return json(res,200,await preview(await sessionByToken(bearer)));
-   if(path==='/api/events/admin/payments/health'&&req.method==='GET')return json(res,200,{izipayTest:ready(),close2uConfigured:!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD),realInvoices:env.C2U_LIVE_ENABLED==='true'});
+   if(path==='/api/events/admin/payments/health'&&req.method==='GET')return json(res,200,{izipayTest:ready(),izipayProduction:ready('PRODUCTION'),close2uConfigured:!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD),realInvoices:env.C2U_LIVE_ENABLED==='true'});
    if(path==='/api/events/admin/payments/close2u-check'&&req.method==='POST'){await fiscal.token();return json(res,200,{connected:true});}
    if(path==='/api/events/admin/payments/invoice-preview'&&req.method==='POST'){
     const b=await readBody(req);return json(res,200,await preview(await sessionByToken(b.token)));
