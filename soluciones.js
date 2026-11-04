@@ -11,3 +11,20 @@ if(saasDialog){
  saasDialog.addEventListener('click',e=>{if(e.target===saasDialog){const r=saasDialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)saasDialog.close();}});
  form.addEventListener('submit',e=>{e.preventDefault();if(!form.reportValidity())return;const count=Number(quantity.value);if(!Number.isInteger(count)||count<1||count>1000)return;const message=`Hola, deseo información de MALBA Simulator. Plan ${names[selected]}, ${count} licencia(s). Quisiera confirmar la tarifa y disponibilidad. Entiendo que cada licencia está asociada a un correo.`;window.open('https://wa.me/51932563293?text='+encodeURIComponent(message),'_blank','noopener,noreferrer');});
 }
+
+// Digital solutions are informational while commercial access and licensing are unpublished.
+if(document.querySelector('.digital-page')){
+ const plans=document.getElementById('planes');if(plans)plans.hidden=true;
+ if(saasDialog)saasDialog.remove();
+ document.querySelectorAll('.digital-page [data-saas-plan],.digital-page a[href="#planes"]').forEach(old=>{
+  const control=document.createElement('span');control.className=old.className+' digital-coming-soon';
+  control.textContent='Próximamente';control.setAttribute('aria-label','Acceso próximamente');
+  old.replaceWith(control);
+ });
+ document.querySelectorAll('.digital-page a[href*="wa.me"]').forEach(anchor=>{
+  const button=document.createElement('button');button.type='button';button.className=anchor.className;
+  button.textContent='Solicitar información por correo';
+  button.addEventListener('click',()=>document.querySelector('[data-dialog="contact-dialog"]')?.click());
+  anchor.replaceWith(button);
+ });
+}
