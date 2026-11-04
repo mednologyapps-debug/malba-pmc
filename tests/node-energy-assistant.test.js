@@ -37,7 +37,7 @@ function mountAssistant(settings){
     createElement:tag=>new Element(tag),
     addEventListener:(name,fn)=>{listeners[name]=fn;}
   };
-  const window={};
+  const window={setTimeout:(fn)=>{listeners.greetingTimer=fn;return 1;},clearTimeout:()=>{}};
   const fetch=(url,opts)=>{
     assert.equal(url,'/api/public-settings');
     assert.equal(opts.cache,'no-store');
@@ -90,11 +90,13 @@ test('bubble opens accessible FAQ panel and links to real MALBA sections',async(
   assert.equal(contact.rel,'noopener noreferrer');
 });
 
-test('FAQs stay available if CMS disables WhatsApp',async()=>{
+test('FAQs and public WhatsApp fallback remain available if CMS preferences are absent',async()=>{
   const widget=mountAssistant({whatsappEnabled:false,whatsappNumber:'51932563293'});
   await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(widget.find('malba-assistant-link').hidden,true);
+  assert.equal(widget.find('malba-assistant-link').hidden,false);
   assert.equal(widget.find('malba-assistant-quicklinks').children.length,4);
+  widget.listeners.greetingTimer();
+  assert.equal(widget.find('malba-assistant-bubble').hidden,true);
   widget.find('malba-assistant-trigger').click();
   assert.equal(widget.find('malba-assistant-panel').hidden,false);
 });
