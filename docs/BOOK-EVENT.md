@@ -57,3 +57,9 @@ Botones con un solo título, aviso visible «La asistencia al evento es sin cost
 ## Fecha, sede y lanzamiento confirmados
 
 Evento: 27 de noviembre de 2026, 19:00 (America/Lima), Consejo Nacional del Colegio de Ingenieros del Perú. Libro: S/129 por lanzamiento hasta el final del 27 de noviembre, luego S/169 regular; ambos incluyen IGV. El precio efectivo se calcula en el servidor y en la transacción SQL, conservando el importe de cada pedido. SQL aplicado y reproducible: `scripts/sql/book-launch.sql`. No se abrieron inscripciones ni cobros: aforo, correo administrativo y política continúan pendientes. Verificados los importes 129/169 en una transacción SQL con rollback; 16 pruebas Node pasan.
+
+## Recomposición y pruebas aisladas
+
+Título con jerarquía tipográfica, fecha/hora y sede agrupadas, precio junto a la opción de compra. IGV/vigencia solo en el resumen del pedido. Se comprobó el layout en 320 y 390 px sin desbordamiento horizontal.
+
+Pruebas: `/evento/presentacion-libro/?prueba=1`, con perfiles ficticios y pago simulado. Administrador → Eventos → Ver pruebas. Los registros de prueba viven en memoria durante dos horas o hasta reiniciar Node. No se modifican las restricciones ni el aforo de la base real. La revisión automática rechazó una propuesta inicial de habilitar pruebas en esa base; no se aplicó y se sustituyó por fixtures sin datos personales. Validación: 17 pruebas Node y ambos recorridos comprobados en navegador. Estado de credenciales: `PAYMENTS-INTEGRATION-STATUS.md`.

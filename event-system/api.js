@@ -1,5 +1,6 @@
 'use strict';
 const crypto=require('node:crypto');
+const createDemo=require('./demo');
 const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no garantiza el ingreso. Recomendamos llegar con anticipación y seguir las indicaciones de la organización. La adquisición del libro no otorga prioridad ni garantiza el acceso al evento.';
 const SLUG='presentacion-libro';
 const DELIVERY='Recojo en el lugar del evento';
@@ -36,6 +37,7 @@ function validateConfig(b){
 }
 module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign}){
  const limits=new Map();
+ const demo=createDemo({json,requireAdmin,csrfOk,sign,defaults:DEFAULT,priceAt});
  function rate(req,key,max){const now=Date.now(),id=crypto.createHash('sha256').update(String(req.socket.remoteAddress||'unknown')+key).digest('hex');if(limits.size>10000)for(const [k,v]of limits)if(v.until<now)limits.delete(k);let v=limits.get(id);if(!v||v.until<now){v={n:0,until:now+60000};limits.set(id,v);}return ++v.n<=max;}
  async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>12000)throw Error('La solicitud es demasiado grande.');chunks.push(chunk);}return JSON.parse(Buffer.concat(chunks).toString()||'{}');}
  async function query(q){const r=await q;if(r.error)throw Error(r.error.message);return r.data;}
@@ -68,7 +70,9 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   }transport.close();return{sent,recipientSent};
  }
  return async function eventApi(req,res,url){
-  const route=url.pathname.replace(/\/$/,'');const adminRoute=route.startsWith('/api/events/admin');
+  const route=url.pathname.replace(/\/$/,'');
+  if(route.startsWith('/api/events/demo/')||route.startsWith('/api/events/admin/demo/'))return demo(req,res,url);
+  const adminRoute=route.startsWith('/api/events/admin');
   let admin;if(adminRoute){admin=requireAdmin(req,res);if(!admin)return;if(!csrfOk(req,admin))return json(res,403,{error:'Recarga el panel para renovar la sesión.'});}
   if(!db){if(route==='/api/events/config'&&req.method==='GET')return json(res,200,{...publicConfig(DEFAULT),configured:false});return json(res,503,{error:'Las inscripciones estarán disponibles cuando termine la configuración.'});}
   try{

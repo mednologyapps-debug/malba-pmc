@@ -5,9 +5,10 @@
  document.querySelectorAll('.capacity-copy').forEach(x=>x.textContent=notice);
  const utm={};for(const key of ['utm_source','utm_medium','utm_campaign','utm_content','utm_term']){const v=new URLSearchParams(location.search).get(key);if(v)utm[key]=v.slice(0,100);}
  let config=null,mode='free',busy=false,lastTrigger=null,paymentToken=null,orderAmount=null;
+ const demoMode=new URLSearchParams(location.search).get('prueba')==='1';
  const money=n=>new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'}).format(n);
- function metric(event){fetch('/api/events/metrics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,source:utm.utm_source||''}),keepalive:true}).catch(()=>{});}
- async function api(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Error('El servicio de inscripción no está disponible. Intenta más tarde.');const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo completar la solicitud.');return data;}
+ function metric(event){if(demoMode)return;fetch('/api/events/metrics',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,source:utm.utm_source||''}),keepalive:true}).catch(()=>{});}
+ async function api(path,body){if(demoMode)path=path.replace('/api/events/','/api/events/demo/');const r=await fetch(path,{method:body?'POST':'GET',headers:{'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store'});if(!r.headers.get('content-type')?.includes('application/json'))throw Error('El servicio de inscripción no está disponible. Intenta más tarde.');const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo completar la solicitud.');return data;}
  const canBuy=()=>config?.bookAvailable&&config?.priceConfirmed&&config?.price>0&&config?.paymentMode==='sandbox';
  function updateMode(){
   $('#purchase-fields').hidden=mode!=='book';
@@ -15,7 +16,7 @@
   $('#form-title').textContent=mode==='book'?'Inscríbete y compra tu libro':'Inscríbete al evento';
   $('#form-intro').textContent=mode==='book'?'Completa tus datos una sola vez para registrar tu participación y preparar tu pedido.':'Completa tus datos para inscribirte.';
   const open=!!config?.registrationOpen;
-  submit.disabled=!open||mode==='book'&&!canBuy();submit.textContent=!open?'Inscripciones próximamente':mode==='book'?'Registrar y continuar a prueba de pago':'Confirmar inscripción';
+  submit.disabled=!open||mode==='book'&&!canBuy();submit.textContent=!open?'Inscripciones próximamente':mode==='book'?'Continuar a pago de prueba':'Confirmar inscripción';
   $('#form-error').textContent=!open?'Las inscripciones todavía no están abiertas. La organización confirmará los detalles del evento.':mode==='book'&&!canBuy()?'La compra aún no está habilitada. Puedes cambiar a «Solo evento» para inscribirte.':'';
  }
  function setMode(value,trigger){if(busy)return;mode=value;updateMode();if(!dialog.open){lastTrigger=trigger;$('#form-content').hidden=false;$('#result').hidden=true;dialog.showModal();metric(value==='book'?'click_book':'click_free');}}
@@ -29,17 +30,19 @@
   for(const [outcome,label]of [['success','Simular pago aprobado'],['failed','Simular pago fallido'],['pending','Simular pago pendiente']])addButton(actions,label,async()=>{if(busy)return;busy=true;actions.querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await api('/api/events/simulate',{token:paymentToken,outcome});const view=showResult(r.status==='simulated_paid'?'Prueba completada.':r.status==='failed'?'El pago de prueba falló.':'Pago de prueba pendiente.',r.message);if(r.status!=='simulated_paid')addButton(view,'Reintentar pago de prueba',paymentView);addButton(view,'Cerrar',()=>dialog.close());}catch(e){const p=document.createElement('p');p.textContent=e.message;actions.after(p);actions.querySelectorAll('button').forEach(b=>b.disabled=false);}finally{busy=false;}});
  }
  form.addEventListener('submit',async e=>{e.preventDefault();if(busy||!form.reportValidity())return;if(!config?.registrationOpen||mode==='book'&&!canBuy())return;busy=true;submit.disabled=true;submit.textContent='Registrando…';$('#form-error').textContent='';const f=new FormData(form);try{
-  const data=await api('/api/events/register',{...Object.fromEntries(f),mode,consent:f.has('consent'),capacity:f.has('capacity'),utm});
+  const data=await api('/api/events/register',demoMode?{fixtureId:config.fixtureId,mode,consent:f.has('consent'),capacity:f.has('capacity')}:{...Object.fromEntries(f),mode,consent:f.has('consent'),capacity:f.has('capacity'),utm});
   if(data.duplicate){const s=showResult('Revisemos tu inscripción.',data.message);addButton(s,'Cerrar',()=>dialog.close());}
   else if(data.orderId){paymentToken=data.paymentToken;orderAmount=data.amount;paymentView();}
-  else{const s=showResult(data.status==='waitlist'?'Estás en lista de espera.':'Recibimos tu inscripción.',data.status==='waitlist'?'Registramos tu solicitud en lista de espera. La organización te informará sobre la disponibilidad.':data.emailSent?'Registramos tu participación. Revisa tu correo para ver los detalles y el aviso de aforo.':'Tu registro está guardado. El correo de confirmación está en proceso de envío.');addButton(s,'Listo, cerrar',()=>dialog.close());form.reset();}
+  else{const s=showResult(data.status==='waitlist'?'Estás en lista de espera.':'Recibimos tu inscripción.',data.testMode?'Tu registro de prueba está guardado. Puedes revisarlo en el administrador.':data.status==='waitlist'?'Registramos tu solicitud en lista de espera. La organización te informará sobre la disponibilidad.':data.emailSent?'Registramos tu participación. Revisa tu correo para ver los detalles y el aviso de aforo.':'Tu registro está guardado. El correo de confirmación está en proceso de envío.');addButton(s,'Listo, cerrar',()=>dialog.close());if(!demoMode)form.reset();}
  }catch(err){$('#form-error').textContent=err.message;$('#form-error').scrollIntoView({block:'nearest'});}finally{busy=false;updateMode();}});
- api('/api/events/config').then(c=>{config=c;document.querySelectorAll('a[data-privacy]').forEach(a=>{if(c.privacyUrl){a.href=c.privacyUrl;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='La organización confirmará la política antes de abrir inscripciones.';}});if(c.date){const date=new Date(c.date);$('#event-date').textContent=date.toLocaleString('es-PE',{timeZone:'America/Lima',day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true})+' · Perú';}if(c.location)$('#event-location').textContent=c.location;
+ api('/api/events/config').then(c=>{config=c;document.querySelectorAll('a[data-privacy]').forEach(a=>{if(c.privacyUrl){a.href=c.privacyUrl;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='La organización confirmará la política antes de abrir inscripciones.';}});if(c.date){const date=new Date(c.date);$('#event-date').textContent=date.toLocaleString('es-PE',{timeZone:'America/Lima',day:'numeric',month:'long',year:'numeric'});$('#event-time').textContent=date.toLocaleTimeString('es-PE',{timeZone:'America/Lima',hour:'numeric',minute:'2-digit',hour12:true})+' · Hora de Perú';}if(c.location)$('#event-location').textContent=c.location;
+  $('#test-notice').hidden=!c.testMode;
+  if(c.testMode){for(const [name,value]of Object.entries(c.profile)){const input=form.elements[name];if(input){input.value=value;input.readOnly=true;}}$('.optional-fields').hidden=true;$('#registration-consent').textContent='Entiendo que este es un registro de prueba y usaré datos ficticios.';}
   if(c.priceConfirmed&&c.price>0){
    $('#order-price').textContent=money(c.price);$('#order-total').textContent=money(c.price);
    document.querySelectorAll('[data-book-price]').forEach(x=>x.textContent=money(c.price));
    const launch=Number(c.regularPrice)>Number(c.price);
-   document.querySelectorAll('[data-price-label]').forEach(x=>x.textContent=launch?'Precio de lanzamiento':'Precio del libro');
+   document.querySelectorAll('[data-price-label]').forEach(x=>x.textContent=launch?'Libro a precio de lanzamiento':'Libro físico');
    document.querySelectorAll('[data-regular-wrap]').forEach(x=>x.hidden=!launch);
    document.querySelectorAll('[data-regular-price]').forEach(x=>x.textContent=money(c.regularPrice));
    const lastDay=c.launchUntil?new Date(Date.parse(c.launchUntil)-1).toLocaleDateString('es-PE',{timeZone:'America/Lima',day:'numeric',month:'long',year:'numeric'}):'';

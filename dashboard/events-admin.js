@@ -1,5 +1,5 @@
 'use strict';
-let eventPage=0,eventQuery='',eventRequest=0;
+let eventPage=0,eventQuery='',eventRequest=0,eventDemo=false;
 async function renderEventsEditor(){
  $('.actions').hidden=true;$('.status-row').hidden=true;
  $('#page-title').textContent='Participantes';
@@ -8,23 +8,23 @@ async function renderEventsEditor(){
  const toolbar=el('div',{class:'event-toolbar event-filters'});
  const search=el('input',{type:'search',placeholder:'Buscar por nombre o correo','aria-label':'Buscar participantes',value:eventQuery});
  let timer;search.addEventListener('input',()=>{eventQuery=search.value;eventPage=0;clearTimeout(timer);timer=setTimeout(drawEventRows,300);});
- toolbar.append(search);editor.append(toolbar,el('div',{id:'event-records','aria-live':'polite'}));
+ const demoCheck=el('input',{type:'checkbox'});demoCheck.checked=eventDemo;demoCheck.addEventListener('change',()=>{eventDemo=demoCheck.checked;eventPage=0;drawEventRows();});toolbar.append(search,el('label',{},[demoCheck,el('span',{text:'Ver pruebas'})]));editor.append(toolbar,el('div',{id:'event-records','aria-live':'polite'}));
  await drawEventRows();
 }
 async function drawEventRows(){
  const sequence=++eventRequest,root=$('#event-records');if(!root)return;
  try{
   const params=new URLSearchParams({page:eventPage,q:eventQuery});
-  const r=await request('/api/events/admin/registrations?'+params);
+  const r=await request((eventDemo?'/api/events/admin/demo/registrations?':'/api/events/admin/registrations?')+params);
   if(sequence!==eventRequest||area!=='events')return;
-  root.replaceChildren(el('p',{class:'catalog-count',text:r.total+' participantes'}));
+  root.replaceChildren(el('p',{class:'catalog-count',text:r.total+' participantes'+(r.temporary?' · Pruebas temporales: se conservan hasta 2 horas o hasta reiniciar el servidor.':'')}));
   if(!r.rows.length){root.append(el('div',{class:'cms-empty'},[el('h3',{text:eventQuery?'No encontramos participantes':'Aún no hay participantes'}),el('p',{text:eventQuery?'Prueba con otro nombre o correo.':'Las inscripciones aparecerán aquí.'})]));return;}
   const scroll=el('div',{class:'event-table-wrap'}),table=el('table',{class:'event-table'}),head=el('tr');
   for(const title of ['Participante','Contacto','Empresa y cargo','Inscripción','Libro'])head.append(el('th',{scope:'col',text:title}));
   table.append(el('thead',{},[head]));const tbody=el('tbody');
   for(const reg of r.rows){
    const p=reg.book_participants,o=reg.book_orders?.[0],row=el('tr');
-   const person=el('td',{},[el('strong',{text:p.full_name})]);
+   const person=el('td',{},[el('strong',{text:p.full_name})]);if(reg.is_test)person.append(el('small',{text:'Registro de prueba'}));
    const contact=el('td',{},[el('span',{text:p.email}),el('span',{text:p.phone})]);
    const company=el('td',{},[el('span',{text:p.company||'—'}),el('small',{text:p.position||''})]);
    const status=el('td',{},[el('span',{text:{registered:'Inscrito',waitlist:'Lista de espera',cancelled:'Cancelado'}[reg.status]||reg.status})]);

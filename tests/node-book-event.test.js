@@ -22,3 +22,21 @@ test('launch price includes all November 27 in Peru then returns to regular pric
  assert.equal(create.priceAt(c,Date.parse('2026-11-28T00:00:00-05:00')),169);
  assert.equal(create.priceAt({price:150},Date.now()),150);
 });
+
+test('isolated event demo registers only synthetic fixtures and requires admin to list them',async()=>{
+ const a=setup(()=>{throw Error('Demo must never access the database');},{admin:true});
+ const headers={host:'olivedrab-mouse-758184.hostingersite.com'};
+ const c=await a.call('/api/events/demo/config',undefined,headers);
+ assert.equal(c.status,200);assert.equal(c.value.testMode,true);assert.equal(c.value.registrationOpen,true);
+ const r=await a.call('/api/events/demo/register',{fixtureId:c.value.fixtureId,mode:'book',consent:true,capacity:true,name:'Private name',email:'private@actual.test'},headers);
+ assert.equal(r.status,201);assert.equal(r.value.amount,129);assert.equal(r.value.emailQueued,false);
+ const paid=await a.call('/api/events/demo/simulate',{token:r.value.paymentToken,outcome:'success'},headers);
+ assert.equal(paid.value.status,'simulated_paid');
+ const list=await a.call('/api/events/admin/demo/registrations',undefined,headers);
+ assert.equal(list.value.total,1);assert.equal(list.value.rows[0].book_participants.full_name,'Participante de prueba');
+ assert(list.value.rows[0].book_participants.email.endsWith('@example.invalid'));
+ assert.equal(a.db.calls.length,0);
+ const anon=setup(()=>{throw Error('No DB');});assert.equal((await anon.call('/api/events/admin/demo/registrations',undefined,headers)).status,401);
+ assert.equal((await a.call('/api/events/demo/register',{fixtureId:c.value.fixtureId,mode:'free',consent:true,capacity:true},{...headers,origin:'https://other.invalid'})).status,403);
+ assert.equal((await a.call('/api/events/demo/config',undefined,{host:'malba-pmc.com'})).status,404);
+});
