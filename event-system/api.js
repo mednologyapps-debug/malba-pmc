@@ -21,7 +21,7 @@ function validateConfig(b){
  const c={...DEFAULT};for(const k of ['title','location','adminEmail','privacyUrl'])c[k]=clean(b[k],k==='location'?300:180);
  for(const k of ['registrationOpen','waitlist','priceConfirmed','bookAvailable'])c[k]=b[k]===true;
  c.status=['draft','published','closed','cancelled'].includes(b.status)?b.status:'draft';
- c.paymentMode=b.paymentMode==='sandbox'?'sandbox':'disabled'; // No live payment adapter is enabled.
+ c.paymentMode=['sandbox','production'].includes(b.paymentMode)?b.paymentMode:'disabled';
  for(const k of ['date','deadline','launchUntil']){c[k]=b[k]?new Date(b[k]).toISOString():null;}
  c.capacity=b.capacity===''||b.capacity==null?null:Number(b.capacity);c.price=b.price===''||b.price==null?null:Number(b.price);
  if(c.capacity!==null&&(!Number.isInteger(c.capacity)||c.capacity<1||c.capacity>100000))throw Error('Configura un aforo válido.');
@@ -33,7 +33,7 @@ function validateConfig(b){
  if(c.privacyUrl&&!/^https:\/\/[^\s]+$/.test(c.privacyUrl))throw Error('Usa una URL HTTPS para la política de privacidad.');
  if(c.registrationOpen&&(!c.privacyUrl||!c.date||!c.location||!c.capacity||!c.adminEmail||c.status!=='published'||Date.parse(c.date)<=Date.now()))throw Error('Para abrir inscripciones completa fecha futura, sede, aforo, correo administrativo, política de privacidad y estado publicado.');
  if(c.deadline&&c.date&&Date.parse(c.deadline)>Date.parse(c.date))throw Error('El cierre no puede ser posterior al evento.');
- if(c.bookAvailable&&(!c.priceConfirmed||!c.price||!c.deliveries.length||c.paymentMode!=='sandbox'))throw Error('Confirma precio, entrega y modo de prueba antes de habilitar la compra simulada.');
+ if(c.bookAvailable&&(!c.priceConfirmed||!c.price||!c.deliveries.length||!['sandbox','production'].includes(c.paymentMode)))throw Error('Confirma precio, entrega y modalidad de pago antes de habilitar la compra.');
  return c;
 }
 module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign}){
@@ -45,7 +45,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
  async function query(q){const r=await q;if(r.error)throw Error(r.error.message);return r.data;}
  async function config(){return (await query(db.from('book_events').select('config,revision').eq('id',SLUG).single()));}
  function canRegister(c){return c.registrationOpen&&c.status==='published'&&c.date&&c.location&&c.capacity&&Date.parse(c.date)>Date.now()&&(!c.deadline||Date.parse(c.deadline)>Date.now());}
- function publicConfig(c){const {adminEmail,...safe}=c;return {...safe,paymentProvider:payments.ready()?'izipay_test':'simulation',launchPrice:c.price,price:priceAt(c),registrationOpen:!!canRegister(c),capacityNotice:CAPACITY,paymentMode:c.paymentMode==='sandbox'?'sandbox':'disabled'};}
+ function publicConfig(c){const {adminEmail,...safe}=c;const live=c.paymentMode==='production',configured=payments.ready(live?'PRODUCTION':'TEST');return {...safe,paymentProvider:configured?(live?'izipay_live':'izipay_test'):'simulation',launchPrice:c.price,price:priceAt(c),registrationOpen:!!canRegister(c),capacityNotice:CAPACITY,paymentMode:configured?c.paymentMode:'disabled'};}
  function paymentToken(orderId){const expires=Date.now()+30*60000;const raw=orderId+':'+expires;return raw+'.'+sign('book-payment:'+raw);}
  function validPaymentToken(value){const [raw,mac]=String(value||'').split('.');if(!raw||!mac)return null;const expected=sign('book-payment:'+raw);if(mac.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return null;const [id,expires]=raw.split(':');return Number(expires)>Date.now()&&/^[0-9a-f-]{36}$/.test(id)?id:null;}
  async function context(id){const reg=await query(db.from('book_registrations').select('*,book_participants(*),book_orders(*)').eq('id',id).single());return reg;}
@@ -83,12 +83,11 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    if(req.method==='POST'&&!adminRoute){const origin=req.headers.origin;if(!origin||origin!==new URL(process.env.STAGING_ORIGIN||'https://olivedrab-mouse-758184.hostingersite.com').origin&&!(process.env.NODE_ENV!=='production'&&/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)))return json(res,403,{error:'Origen de solicitud inválido.'});if(!String(req.headers['content-type']).startsWith('application/json'))return json(res,415,{error:'Formato no permitido.'});if(!rate(req,route,route.endsWith('metrics')?600:120))return json(res,429,{error:'Demasiados intentos. Espera un minuto antes de reintentar.'});}
    if(route==='/api/events/payments/start'&&req.method==='POST'){
     const b=await body(req),id=validPaymentToken(b.token);if(!id)return json(res,403,{error:'La sesión de pago venció.'});
-    if(!payments.ready())return json(res,503,{error:'Izipay todavía no está disponible.'});
-    const c=(await config()).config;if(c.paymentMode!=='sandbox')throw Error('Los pagos de prueba no están habilitados.');
+    const c=(await config()).config;const gatewayMode=c.paymentMode==='production'?'PRODUCTION':'TEST';if(!['sandbox','production'].includes(c.paymentMode)||!payments.ready(gatewayMode))return json(res,503,{error:'La pasarela no está disponible para esta modalidad de pago.'});
     const o=await query(db.from('book_orders').select('*,book_registrations(book_participants(*))').eq('id',id).single());
     if(!o||!['pending','failed'].includes(o.status))throw Error('El pedido no admite otro pago.');
     const p=o.book_registrations.book_participants;
-    const session=await payments.createSession({orderId:o.id,amount:o.amount,email:p.email,name:p.full_name,billing:b.billing,mode:'TEST'});return json(res,201,session);
+    const session=await payments.createSession({orderId:o.id,amount:o.amount,email:p.email,name:p.full_name,billing:b.billing,mode:gatewayMode});return json(res,201,session);
    }
    if(route==='/api/events/register'&&req.method==='POST'){
     const p=validateRegistration(await body(req));if(!rate(req,'email:'+p.email,5))return json(res,429,{error:'Espera un minuto antes de volver a enviar tu solicitud.'});const r=await query(db.rpc('book_register',{payload:p}));
