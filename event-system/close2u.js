@@ -1,5 +1,5 @@
 'use strict';
-const BASE='https://jarvis.tefacturo.pe';
+const BASE='https://tefacturo.pe';
 function billing(value={}){
  const type=value.type==='factura'?'factura':'boleta',document=String(value.document||'').trim(),name=String(value.name||'').trim().slice(0,150),address=String(value.address||'').trim().slice(0,250);
  if(type==='factura'&&(!/^\d{11}$/.test(document)||name.length<3||address.length<5))throw Error('Completa RUC, razón social y dirección fiscal.');

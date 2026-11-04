@@ -27,7 +27,7 @@
    try{await api('return',{'kr-answer':data.rawClientAnswer,'kr-hash':data.hash});container.hidden=true;check.hidden=false;await refresh();pollTimer=setInterval(()=>{if(++polls>=12){clearInterval(pollTimer);return;}refresh();},5000);}catch(e){status.textContent=e.message;check.hidden=false;}
    return false;
   });
-  await window.KR.renderElements('#payment-container');status.textContent=form.mode==='TEST'?'Formulario Izipay TEST listo. Utiliza una tarjeta de prueba.':'Completa el pago en el formulario seguro.';
+  status.textContent=form.mode==='TEST'?'Formulario Izipay TEST listo. Utiliza una tarjeta de prueba.':'Completa el pago en el formulario seguro.';
  }catch(e){status.textContent=e.message;container.hidden=true;}
  window.addEventListener('pagehide',()=>clearInterval(pollTimer));
 })();
