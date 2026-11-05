@@ -105,10 +105,9 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
      return json(res,400,{error:'Revisa tu nombre, correo, celular y aceptación de privacidad.'});
     }
     if(!rate(req,'book-email:'+email,5))return json(res,429,{error:'Espera un minuto antes de reintentar.'});
-    const {published}=await getDocument();
-    const defaults=require('../content/publicaciones.json').book;
-    const book=published?.publications?.book||defaults;
-    const amount=book.physicalPrice??(Object.hasOwn(book,'physicalPrice')?defaults.physicalPrice:book.price??defaults.physicalPrice);
+    const commercial=(await config()).config;
+    const amount=priceAt(commercial);
+    if(!commercial.bookAvailable||commercial.paymentMode!=='production')return json(res,503,{error:'La compra del libro está temporalmente deshabilitada.'});
     if(typeof amount!=='number'||!Number.isFinite(amount)||amount<0.01||amount>=100000||Number(amount.toFixed(2))!==amount)return json(res,503,{error:'El precio del libro no está disponible.'});
     if(b.expectedPrice!==amount)return json(res,409,{error:'El precio cambió. Recarga Publicaciones para revisar el importe actualizado.'});
     if(!['boleta','factura'].includes(b.billing?.type))return json(res,400,{error:'Selecciona el tipo de comprobante.'});
