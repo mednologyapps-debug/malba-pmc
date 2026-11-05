@@ -17,7 +17,11 @@
  try{
   if(!/^[a-f0-9-]{36}\.\d+\.[a-f0-9]+$/i.test(token))throw Error('Abre el pago desde el formulario original para iniciar una sesión válida.');
   const form=await api('checkout');
-  if(form.retail){const back=$('#checkout-back');back.href='/publicaciones/#comprar-libro';back.textContent='Volver a Publicaciones';}
+  if(form.retail){
+   const back=$('#checkout-back');
+   if(back){back.href='/publicaciones/#comprar-libro';back.textContent='Volver a Publicaciones';}
+   $('#checkout-help').textContent='La confirmación del pago se valida con Izipay. Después podrás coordinar la entrega por WhatsApp.';
+  }
   if(form.paid){await refresh();return;}
   $('#checkout-mode').textContent=form.mode==='TEST'?'Izipay · Modo de prueba':'Pago seguro con Izipay';
   $('#checkout-notice').hidden=form.mode!=='TEST';$('#checkout-total').textContent=new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'}).format(form.amount);
