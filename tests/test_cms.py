@@ -375,7 +375,6 @@ class CMSIntegrationTests(unittest.TestCase):
         self.assertIn('data-price="150"',self.call('/publicaciones/')[1])
         self.assertEqual(self.call('/api/publish',body)[0],200)
         self.assertIn('data-price="1"',self.call('/publicaciones/')[1])
-        self.assertIn('<p class="book-home-price">S/ 1.00</p>',self.call('/')[1])
 
     def test_new_solution_requires_url_and_only_creates_card(self):
         self.login();current=self.call('/api/content')[1];data=current['data']

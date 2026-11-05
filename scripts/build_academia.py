@@ -322,10 +322,7 @@ def _render_outputs(data, home=None, preview=False):
         lambda m: m[1]+''.join(cards)+m[2], home, count=1, flags=re.S)
     if count != 1: raise ValueError('No se encontró el bloque de programas destacados en la portada.')
     from build_publications import content,render_publications
-    publications=content(data)
-    outputs.update(render_publications(publications,programs))
-    book_price=f"S/ {publications['book']['physicalPrice']:,.2f}"
-    home=re.sub(r'(<p class="book-home-price">).*?(</p>)',lambda m:m[1]+book_price+m[2],home,count=1)
+    outputs.update(render_publications(content(data),programs))
     from build_solutions import render_solutions
     outputs.update(render_solutions(programs,data.get('digitalCards')))
     from build_consulting import render_consulting
