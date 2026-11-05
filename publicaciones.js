@@ -2,35 +2,21 @@
 (() => {
  const form = document.querySelector('#book-checkout-form');
  if (!form) return;
- const mobile = matchMedia('(max-width:760px)');
- const steps = [...form.querySelectorAll('[data-step]')];
- const back = form.querySelector('.book-step-back');
- const next = form.querySelector('.book-step-next');
  const submit = form.querySelector('[type=submit]');
  const error = document.querySelector('#book-checkout-error');
  const invoice = document.querySelector('#book-invoice-fields');
  const boleta = document.querySelector('#book-boleta-fields');
  const fields = form.elements;
- let step = 1;
+ // The classic checkout is a single continuous form on all screen sizes.
+ form.removeAttribute('data-wizard');
+ form.removeAttribute('data-active-step');
+ form.querySelectorAll('[data-step]').forEach(section=>{ section.hidden=false; });
+ form.querySelector('.book-wizard-progress')?.remove();
+ form.querySelector('.book-wizard-actions')?.remove();
+ submit.hidden=false;
+ const note=form.querySelector('.book-checkout-note');
+ if(note)note.hidden=false;
 
- function drawStep(focus = false) {
-  form.dataset.wizard = String(mobile.matches);
-  form.dataset.activeStep = step;
-  steps.forEach((section, index) => { section.hidden = mobile.matches && index !== step - 1; });
-  form.querySelectorAll('[data-progress]').forEach(item => {
-   if (Number(item.dataset.progress) === step) item.setAttribute('aria-current', 'step');
-   else item.removeAttribute('aria-current');
-   item.classList.toggle('completed', Number(item.dataset.progress) < step);
-  });
-  back.hidden = step === 1;
-  next.hidden = step === steps.length;
-  submit.hidden = mobile.matches && step !== steps.length;
-  form.querySelector('.book-checkout-note').hidden = submit.hidden;
-  if (focus && mobile.matches) {
-   form.scrollIntoView({block:'start'});
-   steps[step - 1].querySelector('legend,h3').focus({preventScroll:true});
-  }
- }
  function selectReceipt() {
   const isInvoice = fields.receipt_type.value === 'factura';
   invoice.hidden = !isInvoice;
@@ -38,12 +24,8 @@
   for (const input of invoice.querySelectorAll('input')) input.disabled = !isInvoice;
   for (const input of boleta.querySelectorAll('input')) input.disabled = isInvoice;
  }
- next.addEventListener('click', () => { step = 2; drawStep(true); });
- back.addEventListener('click', () => { step = 1; drawStep(true); });
- mobile.addEventListener('change', () => drawStep());
  fields.receipt_type.addEventListener('change', selectReceipt);
  selectReceipt();
- drawStep();
  submit.disabled = true;
  async function refreshPrice(){
   try{
@@ -64,7 +46,6 @@
  form.addEventListener('submit', async event => {
   event.preventDefault();
   if (submit.disabled) return;
-  if (mobile.matches && step === 1) { step = 2; drawStep(true); return; }
   if (!form.reportValidity()) return;
   error.hidden = true;
   submit.disabled = true;
