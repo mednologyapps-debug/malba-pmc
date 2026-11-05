@@ -5,7 +5,7 @@ const createPayments=require('./payments');
 const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no garantiza el ingreso. Recomendamos llegar con anticipación y seguir las indicaciones de la organización. La adquisición del libro no otorga prioridad ni garantiza el acceso al evento.';
 const SLUG='presentacion-libro';
 const DELIVERY='Recojo en el lugar del evento';
-const DEFAULT={title:'Presentación del libro de Miguel Alba',date:'2026-11-27T19:00:00-05:00',location:'Consejo Nacional del Colegio de Ingenieros del Perú',capacity:null,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:129,regularPrice:169,launchUntil:'2026-11-28T00:00:00-05:00',taxIncluded:true,priceConfirmed:true,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:''};
+const DEFAULT={title:'Presentación del libro de Miguel Alba',date:'2026-11-27T19:00:00-05:00',location:'Consejo Nacional del Colegio de Ingenieros del Perú',capacity:50,deadline:null,status:'published',registrationOpen:true,waitlist:false,price:129,regularPrice:169,launchUntil:'2026-11-28T00:00:00-05:00',taxIncluded:true,priceConfirmed:true,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:'https://olivedrab-mouse-758184.hostingersite.com/evento/presentacion-libro/privacidad.html'};
 const clean=(v,n)=>String(v||'').trim().slice(0,n);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function priceAt(c,now=Date.now()){return c.regularPrice&&c.launchUntil&&now>=Date.parse(c.launchUntil)?Number(c.regularPrice):Number(c.price);}
@@ -31,7 +31,7 @@ function validateConfig(b){
  if(c.adminEmail&&!/^\S+@[^\s@]+\.[^\s@]+$/.test(c.adminEmail))throw Error('Correo administrativo inválido.');
  c.deliveries=[DELIVERY];
  if(c.privacyUrl&&!/^https:\/\/[^\s]+$/.test(c.privacyUrl))throw Error('Usa una URL HTTPS para la política de privacidad.');
- if(c.registrationOpen&&(!c.privacyUrl||!c.date||!c.location||!c.capacity||!c.adminEmail||c.status!=='published'||Date.parse(c.date)<=Date.now()))throw Error('Para abrir inscripciones completa fecha futura, sede, aforo, correo administrativo, política de privacidad y estado publicado.');
+ if(c.registrationOpen&&(!c.privacyUrl||!c.date||!c.location||!c.capacity||!(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER)||c.status!=='published'||Date.parse(c.date)<=Date.now()))throw Error('Para abrir inscripciones completa fecha futura, sede, aforo, correo administrativo, política de privacidad y estado publicado.');
  if(c.deadline&&c.date&&Date.parse(c.deadline)>Date.parse(c.date))throw Error('El cierre no puede ser posterior al evento.');
  if(c.bookAvailable&&(!c.priceConfirmed||!c.price||!c.deliveries.length||!['sandbox','production'].includes(c.paymentMode)))throw Error('Confirma precio, entrega y modalidad de pago antes de habilitar la compra.');
  return c;
@@ -56,7 +56,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   const jobs=await query(q);let sent=0,recipientSent=false;
   const transport=nodemailer.createTransport({host,port:Number(process.env.SMTP_PORT||465),secure:process.env.SMTP_SECURE?process.env.SMTP_SECURE==='true':Number(process.env.SMTP_PORT||465)===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:15000});
   for(const job of jobs){
-   if(job.kind==='admin'&&!c.adminEmail)continue;
+   if(job.kind==='admin'&&!(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER))continue;
    const claimed=await query(db.from('book_mail_outbox').update({status:'sending',attempts:job.attempts+1,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','pending').select('id'));if(!claimed.length)continue;
    try{const reg=await context(job.registration_id),p=reg.book_participants,o=reg.book_orders?.[0];
     if(job.kind==='purchase'&&o?.status!=='paid')throw Error('No existe un pago real verificado.');
@@ -66,7 +66,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
     const description=reg.status==='waitlist'?'Tu solicitud está en lista de espera. No es una confirmación de ingreso.':'Tu inscripción ha sido registrada. Recuerda que no garantiza el ingreso.';
     const order=o?`<p>Pedido: ${escape(o.id)}<br>Libro físico · S/ ${Number(o.amount).toFixed(2)}<br>Entrega: ${escape(o.delivery)}<br>Estado: ${o.status==='paid'?'Pago verificado':o.status==='simulated_paid'?'Simulación completada, sin cobro real':'Pendiente de pago (prueba, sin cobro real)'}</p>`:'';
     const html=`<!doctype html><html lang="es"><body style="margin:0;background:#f4f2f7;font-family:Arial,sans-serif;color:#25364a"><div style="max-width:600px;margin:auto;padding:36px 24px;background:white;border-top:5px solid #5d4594"><p style="color:#5d4594;font-weight:bold">MALBA PMC</p><h1 style="font-size:26px">${title}</h1><p>Hola, ${escape(p.full_name)}.</p><p>${description}</p><h2 style="font-size:18px">${escape(c.title)}</h2><p>${escape(eventDate)} (hora de Perú)<br>${escape(c.location||'Sede por confirmar')}</p>${order}<p style="background:#f0edf6;padding:18px;font-size:12px">${CAPACITY}</p>${job.kind==='admin'?`<p>Participante: ${escape(p.full_name)}<br>Correo: ${escape(p.email)}<br>Celular: ${escape(p.phone)}<br>Modalidad: ${reg.mode==='book'?'Evento + libro':'Solo evento'}</p>`:''}${c.adminEmail?`<p>Consultas: <a href="mailto:${escape(c.adminEmail)}">${escape(c.adminEmail)}</a></p>`:''}<p>MALBA PMC</p></div></body></html>`;
-    await transport.sendMail({from:{name:'MALBA PMC',address:process.env.SMTP_FROM||user},to:job.kind==='admin'?c.adminEmail:p.email,subject,html,text:`${title}\nHola, ${p.full_name}.\n${description}\n${eventDate}\n${c.location}\n${CAPACITY}`,messageId:`<malba-event-${job.id}@malba-pmc.com>`});
+    await transport.sendMail({from:{name:'MALBA PMC',address:process.env.SMTP_FROM||user},to:job.kind==='admin'?(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER):p.email,subject,html,text:`${title}\nHola, ${p.full_name}.\n${description}\n${eventDate}\n${c.location}\n${CAPACITY}`,messageId:`<malba-event-${job.id}@malba-pmc.com>`});
     await query(db.from('book_mail_outbox').update({status:'sent',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id));sent++;if(job.kind==='registration')recipientSent=true;
    }catch(e){await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
   }transport.close();return{sent,recipientSent};
