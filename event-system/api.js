@@ -5,7 +5,7 @@ const createPayments=require('./payments');
 const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no garantiza el ingreso. Recomendamos llegar con anticipación y seguir las indicaciones de la organización. La adquisición del libro no otorga prioridad ni garantiza el acceso al evento.';
 const SLUG='presentacion-libro';
 const DELIVERY='Recojo en el lugar del evento';
-const DEFAULT={title:'Presentación del libro de Miguel Alba',date:'2026-11-27T19:00:00-05:00',location:'Consejo Nacional del Colegio de Ingenieros del Perú',capacity:50,deadline:null,status:'published',registrationOpen:true,waitlist:false,price:129,regularPrice:169,launchUntil:'2026-11-28T00:00:00-05:00',taxIncluded:true,priceConfirmed:true,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:'https://olivedrab-mouse-758184.hostingersite.com/evento/presentacion-libro/privacidad.html'};
+const DEFAULT={title:'Presentación del libro de Miguel Alba',date:'2026-11-27T19:00:00-05:00',location:'Consejo Nacional del Colegio de Ingenieros del Perú',capacity:50,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:129,regularPrice:169,launchUntil:'2026-11-28T00:00:00-05:00',taxIncluded:true,priceConfirmed:true,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:'https://olivedrab-mouse-758184.hostingersite.com/evento/presentacion-libro/privacidad.html'};
 const clean=(v,n)=>String(v||'').trim().slice(0,n);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function priceAt(c,now=Date.now()){return c.regularPrice&&c.launchUntil&&now>=Date.parse(c.launchUntil)?Number(c.regularPrice):Number(c.price);}
