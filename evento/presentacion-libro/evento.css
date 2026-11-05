@@ -21,3 +21,8 @@
 #registration-form .billing-identification{margin-top:11px}
 #registration-form .invoice-extra{display:grid;gap:11px;margin-top:11px}
 #registration-form .submit{display:flex;align-items:center;justify-content:center;width:100%;text-align:center}
+
+/* Official portrait 3D book: natural proportions, no cropping or horizontal overflow. */
+.hero-art{min-width:0;overflow:visible;align-items:center;padding-top:8px}
+.hero-book{display:block;width:100%;height:auto;max-width:530px;max-height:660px;margin-inline:auto;object-fit:contain;filter:drop-shadow(0 16px 22px rgba(14,34,76,.08))}
+@media(max-width:760px){.hero-book{width:min(100%,380px);max-height:460px;margin-inline:auto}.hero-art{padding-top:12px}}
