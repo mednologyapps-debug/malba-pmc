@@ -17,6 +17,45 @@
  const note=form.querySelector('.book-checkout-note');
  if(note)note.hidden=false;
 
+ // Keep the real payment action reachable while this long, single-page form is on screen.
+ // This button submits the SAME form; it never starts a separate checkout request.
+ const floating=document.createElement('button');
+ floating.type='button';
+ floating.className='book-floating-pay';
+ floating.textContent='Continuar al pago seguro';
+ floating.setAttribute('aria-label','Continuar al pago seguro');
+ floating.hidden=true;
+ document.body.append(floating);
+ let scheduled=false;
+ function updateFloating(){
+  scheduled=false;
+  const rect=form.getBoundingClientRect(),real=submit.getBoundingClientRect();
+  const viewport=window.innerHeight||document.documentElement.clientHeight;
+  const formVisible=rect.top<viewport-64&&rect.bottom>96;
+  const realVisible=real.top<viewport-14&&real.bottom>12;
+  floating.hidden=!formVisible||realVisible;
+  floating.disabled=submit.disabled;
+  if(!floating.hidden){
+   const available=Math.max(0,window.innerWidth-24);
+   const w=Math.min(Math.max(rect.width,0),available);
+   floating.style.width=w+'px';
+   floating.style.left=Math.max(12,Math.min(rect.left,window.innerWidth-12-w))+'px';
+  }
+ }
+ function scheduleFloating(){
+  if(scheduled)return;
+  scheduled=true;
+  window.requestAnimationFrame(updateFloating);
+ }
+ floating.addEventListener('click',()=>{
+  if(submit.disabled)return;
+  form.requestSubmit(submit);
+ });
+ window.addEventListener('scroll',scheduleFloating,{passive:true});
+ window.addEventListener('resize',scheduleFloating);
+ new MutationObserver(scheduleFloating).observe(submit,{attributes:true,attributeFilter:['disabled'],childList:true});
+ scheduleFloating();
+
  function selectReceipt() {
   const isInvoice = fields.receipt_type.value === 'factura';
   invoice.hidden = !isInvoice;
@@ -39,7 +78,8 @@
    const badge=form.querySelector('.book-launch-notice');if(badge)badge.hidden=!promo;
    const compare=form.querySelector('.book-original-price');if(compare){compare.hidden=!promo;if(promo)compare.querySelector('.book-regular-value').textContent=amount.format(Number(cfg.regularPrice));}
    submit.disabled=false;
-  }catch(e){error.textContent=e.message||'No se pudo comprobar el precio.';error.hidden=false;submit.disabled=true;}
+   scheduleFloating();
+  }catch(e){error.textContent=e.message||'No se pudo comprobar el precio.';error.hidden=false;submit.disabled=true;scheduleFloating();}
  }
  refreshPrice();
 
@@ -50,6 +90,8 @@
   error.hidden = true;
   submit.disabled = true;
   submit.textContent = 'Preparando el pago…';
+  floating.textContent = submit.textContent;
+  floating.disabled = true;
   const type = fields.receipt_type.value;
   try {
    const response = await fetch('/api/events/payments/book', {
@@ -69,6 +111,8 @@
    error.hidden = false;
    submit.disabled = false;
    submit.textContent = 'Continuar al pago seguro';
+   floating.textContent = submit.textContent;
+   scheduleFloating();
   }
  });
 })();
