@@ -11,7 +11,7 @@ function normalized(value){
  }catch{throw Error('La URL pública de pagos debe ser HTTPS y no incluir rutas ni parámetros.');}
 }
 function publicOrigin(env=process.env){
- const chosen=env.MALBA_PUBLIC_ORIGIN||env.PUBLIC_SITE_ORIGIN||(env.NODE_ENV==='production'?MAIN:(env.STAGING_ORIGIN||STAGING));
+ const chosen=env.MALBA_PUBLIC_ORIGIN||env.PUBLIC_SITE_ORIGIN||((env.NODE_ENV==='production'||env.IZIPAY_LIVE_ENABLED==='true')?MAIN:(env.STAGING_ORIGIN||STAGING));
  const origin=normalized(chosen);
  if(![MAIN,STAGING].includes(origin))throw Error('El dominio público de pagos no está autorizado.');
  return origin;
