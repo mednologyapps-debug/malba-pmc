@@ -32,6 +32,20 @@ test('promotional checkout uses physical collection and concise UX',()=>{
 test('original desktop checkout layout preserved while scroll clip is removed',()=>{
  const css=fs.readFileSync('publicaciones.css','utf8');
  const js=fs.readFileSync('publicaciones.js','utf8');
- assert.match(js,/form\.dataset\.wizard = String\(mobile\.matches\)/);
+ assert.match(js,/form\.removeAttribute\('data-wizard'\)/);
  assert.match(css,/\.publications-page \.book-purchase\{position:static;top:auto;max-height:none;overflow:visible/);
+});
+
+test('original checkout displays summary and contact without wizard tabs or next button',()=>{
+ const script=fs.readFileSync('scripts/build_publications.py','utf8');
+ const staticPage=fs.readFileSync('publicaciones/index.html','utf8');
+ const js=fs.readFileSync('publicaciones.js','utf8');
+ for(const source of [script,staticPage]){
+  assert.doesNotMatch(source,/class="book-wizard-progress"/);
+  assert.doesNotMatch(source,/class="book-wizard-actions"/);
+  assert.match(source,/name="receipt_type"/);
+  assert.match(source,/book-checkout-step book-contact/);
+ }
+ assert.match(js,/form\.querySelectorAll\('\[data-step\]'\)\.forEach/);
+ assert.doesNotMatch(js,/next\.addEventListener/);
 });
