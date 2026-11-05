@@ -1138,3 +1138,7 @@ body:has(#video-dialog[open]) { overflow: hidden; }
   .event-slide-details { gap: 12px; }
 }
 .book-copy .book-home-price { margin-top: 10px; font-size: 21px; font-weight: 600; }
+.learn-video-card:last-child { scroll-snap-align: end; }
+@media (min-width:761px) {
+  .event-slide-inner, .book-slide .book-slide-inner { padding-inline: clamp(78px, 7vw, 104px); }
+}

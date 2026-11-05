@@ -116,7 +116,9 @@ document.querySelectorAll('[data-collection]').forEach((controls) => {
   function move(direction) {
     if (!list.firstElementChild) return;
     const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
-    list.scrollBy({left: direction * (list.firstElementChild.getBoundingClientRect().width + gap), behavior: motionPreference.matches ? 'instant' : 'smooth'});
+    const step = list.firstElementChild.getBoundingClientRect().width + gap;
+    const left = Math.max(0, Math.min(list.scrollWidth - list.clientWidth, list.scrollLeft + direction * step));
+    list.scrollTo({left, behavior: motionPreference.matches ? 'instant' : 'smooth'});
   }
   buttons.forEach((button) => button.addEventListener('click', () => move(Number(button.dataset.collectionStep))));
   list.addEventListener('keydown', (event) => {
