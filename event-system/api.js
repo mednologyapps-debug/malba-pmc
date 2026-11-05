@@ -53,7 +53,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   const c=(await config()).config;const host=process.env.SMTP_HOST,user=process.env.SMTP_USER,pass=process.env.SMTP_PASSWORD||process.env.SMTP_PASS;
   if(!host||!user||!pass)return {sent:0,pending:true};
   let q=db.from('book_mail_outbox').select('*').eq('status','pending').order('updated_at').limit(20);if(registrationId)q=q.eq('registration_id',registrationId);
-  const jobs=await query(q);let sent=0,recipientSent=false;
+  const jobs=await query(q);let sent=0,recipientSent=false,failed=0;
   const transport=nodemailer.createTransport({host,port:Number(process.env.SMTP_PORT||465),secure:process.env.SMTP_SECURE?process.env.SMTP_SECURE==='true':Number(process.env.SMTP_PORT||465)===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:15000});
   for(const job of jobs){
    if(job.kind==='admin'&&!(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER))continue;
@@ -68,8 +68,8 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
     const html=`<!doctype html><html lang="es"><body style="margin:0;background:#f4f2f7;font-family:Arial,sans-serif;color:#25364a"><div style="max-width:600px;margin:auto;padding:36px 24px;background:white;border-top:5px solid #5d4594"><p style="color:#5d4594;font-weight:bold">MALBA PMC</p><h1 style="font-size:26px">${title}</h1><p>Hola, ${escape(p.full_name)}.</p><p>${description}</p><h2 style="font-size:18px">${escape(c.title)}</h2><p>${escape(eventDate)} (hora de Perú)<br>${escape(c.location||'Sede por confirmar')}</p>${order}<p style="background:#f0edf6;padding:18px;font-size:12px">${CAPACITY}</p>${job.kind==='admin'?`<p>Participante: ${escape(p.full_name)}<br>Correo: ${escape(p.email)}<br>Celular: ${escape(p.phone)}<br>Modalidad: ${reg.mode==='book'?'Evento + libro':'Solo evento'}</p>`:''}${c.adminEmail?`<p>Consultas: <a href="mailto:${escape(c.adminEmail)}">${escape(c.adminEmail)}</a></p>`:''}<p>MALBA PMC</p></div></body></html>`;
     await transport.sendMail({from:require('../mail-sender').sender(process.env),to:job.kind==='admin'?(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER):p.email,subject,html,text:`${title}\nHola, ${p.full_name}.\n${description}\n${eventDate}\n${c.location}\n${CAPACITY}`,messageId:`<malba-event-${job.id}@malba-pmc.com>`});
     await query(db.from('book_mail_outbox').update({status:'sent',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id));sent++;if(job.kind==='registration')recipientSent=true;
-   }catch(e){await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
-  }transport.close();return{sent,recipientSent};
+   }catch(e){failed++;console.error('MALBA event SMTP failed:',String(e.code||e.message||'Error').slice(0,200));await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
+  }transport.close();return{sent,recipientSent,failed};
  }
  return async function eventApi(req,res,url){
   const route=url.pathname.replace(/\/$/,'');
@@ -92,7 +92,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    if(route==='/api/events/register'&&req.method==='POST'){
     const p=validateRegistration(await body(req));if(!rate(req,'email:'+p.email,5))return json(res,429,{error:'Espera un minuto antes de volver a enviar tu solicitud.'});const r=await query(db.rpc('book_register',{payload:p}));
     if(r.duplicate)return json(res,200,{duplicate:true,message:'Si este correo ya está inscrito, conservamos su solicitud original. Revisa tu correo o contacta a la organización para modificarla.'});
-    let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,amount:r.amount??null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:true,emailSent:mail.recipientSent===true,capacityNotice:CAPACITY});
+    let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,amount:r.amount??null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:mail.recipientSent!==true&&mail.failed!==true,emailSent:mail.recipientSent===true,emailFailed:mail.failed>0,capacityNotice:CAPACITY});
    }
    if(route==='/api/events/simulate'&&req.method==='POST'){
     const b=await body(req),id=validPaymentToken(b.token);if(!id)return json(res,403,{error:'La sesión de prueba venció. Contacta a la organización para reintentar.'});
