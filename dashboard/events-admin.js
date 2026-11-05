@@ -8,7 +8,13 @@ async function renderEventsEditor(){
  const toolbar=el('div',{class:'event-toolbar event-filters'});
  const search=el('input',{type:'search',placeholder:'Buscar por nombre o correo','aria-label':'Buscar participantes',value:eventQuery});
  let timer;search.addEventListener('input',()=>{eventQuery=search.value;eventPage=0;clearTimeout(timer);timer=setTimeout(drawEventRows,300);});
- const demoCheck=el('input',{type:'checkbox'});demoCheck.checked=eventDemo;demoCheck.addEventListener('change',()=>{eventDemo=demoCheck.checked;eventPage=0;drawEventRows();});toolbar.append(search,el('label',{},[demoCheck,el('span',{text:'Ver pruebas'})]));editor.append(toolbar,el('div',{id:'event-records','aria-live':'polite'}));
+ const demoCheck=el('input',{type:'checkbox'});demoCheck.checked=eventDemo;demoCheck.addEventListener('change',()=>{eventDemo=demoCheck.checked;eventPage=0;drawEventRows();});const retry=el('button',{type:'button',class:'button secondary',text:'Reintentar correos fallidos'});
+ const emailStatus=el('span',{class:'event-mail-status',role:'status'});
+ retry.addEventListener('click',async()=>{retry.disabled=true;emailStatus.textContent='Enviando…';
+  try{const result=await request('/api/events/admin/mail',{retry:true});emailStatus.textContent='Correos enviados: '+Number(result.sent||0)+'. '+(result.failed?'Algunos envíos siguen fallando; revisa SMTP.':'');}
+  catch(e){emailStatus.textContent=e.message;}finally{retry.disabled=false;}
+ });
+ toolbar.append(search,el('label',{},[demoCheck,el('span',{text:'Ver pruebas'})]),retry,emailStatus);editor.append(toolbar,el('div',{id:'event-records','aria-live':'polite'}));
  await drawEventRows();
 }
 async function drawEventRows(){
