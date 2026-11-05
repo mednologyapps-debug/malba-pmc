@@ -27,7 +27,7 @@ module.exports=async function contact(req,res,{json}){
  const plain=entries.map(([k,v])=>k+': '+v).join('\n');
  const html='<div style="font:14px/1.7 Arial,sans-serif;color:#183b62;max-width:620px;margin:auto"><h2 style="color:#5d4594">Nueva consulta · MALBA PMC</h2>'+entries.map(([k,v])=>'<p><strong>'+esc(k)+'</strong><br>'+esc(v).replace(/\n/g,'<br>')+'</p>').join('')+'</div>';
  try{
-  await transport.sendMail({from:{name:'MALBA PMC',address:env.SMTP_FROM||user},to,replyTo:{name,address:email},subject:'Nueva consulta desde la web MALBA PMC',text:plain,html});
+  await transport.sendMail({from:require('./mail-sender').sender(env),to,replyTo:{name,address:email},subject:'Nueva consulta desde la web MALBA PMC',text:plain,html});
   return json(res,200,{ok:true,message:'Recibimos tu consulta. Nuestro equipo se pondrá en contacto contigo.'});
  }catch(e){console.error('MALBA contact SMTP:',String(e?.code||e?.name||'error'));return json(res,502,{error:'No pudimos enviar tu consulta. Intenta nuevamente más tarde.'});}
 };
