@@ -175,8 +175,51 @@ function renderPublicationsOverview(){const editor=$('#editor');editor.replaceCh
  const search=el('input',{type:'search',placeholder:'Buscar publicación…','aria-label':'Buscar publicaciones'});search.value=publicationQuery;const grid=el('div',{class:'cms-program-grid cms-publication-grid'});
  const draw=()=>{grid.replaceChildren();const records=data.publications.items.filter(p=>(publicationFilter==='all'?visibility(p)!=='deleted':visibility(p)===publicationFilter)&&[p.title,p.edition,p.description].join(' ').toLocaleLowerCase('es').includes(publicationQuery.toLocaleLowerCase('es')));for(const p of records){const select=el('button',{type:'button',class:'cms-program-select','aria-label':'Editar '+p.title},[el('img',{src:asset(p.imageSmall),alt:'',loading:'lazy'}),el('span',{class:'cms-program-info'},[el('small',{class:'visibility-badge '+visibility(p),text:visibilityLabels[visibility(p)]}),el('strong',{text:p.title}),el('span',{text:p.edition+' · '+p.pages+' páginas'})])]);select.disabled=visibility(p)==='deleted';select.addEventListener('click',()=>selectEditor('publication:'+p.id));const actions=el('div',{class:'cms-card-actions'});for(const [title,kind] of visibility(p)==='deleted'?[['Restaurar','restore']]:[['Editar','edit'],[visibility(p)==='public'?'Deshabilitar':'Habilitar','toggle'],['Eliminar','delete']]){const b=el('button',{type:'button',text:title,class:kind==='edit'?'card-primary':''});b.addEventListener('click',()=>kind==='edit'?selectEditor('publication:'+p.id):manageProgram(p,kind));actions.append(b);}grid.append(el('article',{class:'cms-program-card'},[select,actions]));}if(!records.length)grid.append(el('div',{class:'cms-empty'},[el('h3',{text:'No hay publicaciones en esta vista'}),el('p',{text:'Cambia el filtro o añade una publicación.'})]));};search.addEventListener('input',()=>{publicationQuery=search.value;draw();});editor.append(el('div',{class:'cms-catalog-toolbar'},[filters,search]),grid);draw();
 }
+function renderBookPriceEditor(){
+ const box=el('details',{class:'panel malba-price-editor'});
+ box.open=true;
+ const summary=el('summary',{text:'Precio del libro · Publicaciones y evento'});
+ const body=el('div',{class:'panel-body'});
+ const description=el('p',{class:'field-hint',text:'Un único precio para Publicaciones, la presentación del libro y los cobros Izipay. Se aplica al instante, sin publicar nuevamente el CMS.'});
+ const form=el('form',{class:'book-price-edit-form'});
+ const launch=el('input',{type:'number',min:'0.01',max:'99999.99',step:'0.01',required:true,'aria-label':'Precio de lanzamiento en soles'});
+ const regular=el('input',{type:'number',min:'0.01',max:'99999.99',step:'0.01',required:true,'aria-label':'Precio regular en soles'});
+ const launchWrap=el('label',{},[el('span',{text:'Precio de lanzamiento (S/)'}),launch]);
+ const regularWrap=el('label',{},[el('span',{text:'Precio regular (S/)'}),regular]);
+ const until=el('p',{class:'field-hint'});
+ const feedback=el('p',{class:'price-update-feedback',role:'status'});
+ const save=el('button',{type:'submit',class:'button primary',text:'Actualizar precio en ambas páginas'});
+ form.append(launchWrap,regularWrap,until,save,feedback);
+ body.append(description,form);box.append(summary,body);
+ let current=null;
+ (async()=>{
+   try{
+    current=await request('/api/book-prices');
+    launch.value=Number(current.launchPrice).toFixed(2);
+    regular.value=Number(current.regularPrice).toFixed(2);
+    until.textContent=current.launchUntil
+      ?'Precio promocional vigente hasta '+new Date(current.launchUntil).toLocaleString('es-PE',{timeZone:'America/Lima',dateStyle:'long',timeStyle:'short'})+' (Perú).'
+      :'No hay fecha de finalización de la promoción.';
+   }catch(err){feedback.textContent=err.message;save.disabled=true;}
+ })();
+ form.addEventListener('submit',async e=>{
+   e.preventDefault();
+   if(!current||!form.reportValidity())return;
+   if(unsaved){feedback.textContent='Guarda o descarta primero los otros cambios del CMS para actualizar el precio sin perderlos.';return;}
+   const a=Number(launch.value),r=Number(regular.value);
+   if(!(a>0&&r>=a)){feedback.textContent='El precio regular debe ser mayor o igual al precio de lanzamiento.';return;}
+   save.disabled=true;save.textContent='Actualizando…';feedback.textContent='';
+   try{
+    await request('/api/book-prices',{launchPrice:a,regularPrice:r,cmsRevision:current.cmsRevision,eventRevision:current.eventRevision});
+    await loadContent();
+    message('Precio actualizado simultáneamente en Publicaciones, el evento y el checkout.');
+   }catch(err){feedback.textContent=err.message;}
+   finally{save.disabled=false;save.textContent='Actualizar precio en ambas páginas';}
+ });
+ return box;
+}
 function renderPublicationEditor(){if(selected==='overview'){renderPublicationsOverview();return;}const editor=$('#editor');editor.replaceChildren();const back=el('button',{type:'button',class:'cms-back',text:'← Publicaciones / Biblioteca'});back.addEventListener('click',()=>selectEditor('overview'));editor.append(back);$('#page-description').textContent='Guarda, revisa la vista previa y publica los cambios de contenido.';
- if(selected==='publication-banner'){$('#page-title').textContent='Libro y publicaciones';const book=data.publications.book;editor.append(panel('Libro destacado',book,['publications','book'],['title','subtitle','description','author','image','imageSmall','imageAlt'],true),panel('Compra del libro',book,['publications','book'],['physicalPrice','previewUrl'],true),panel('Información y temas',book,['publications','book'],['benefits','chapters'],true));editor.append(panel('Fondo editorial',data.publications,['publications'],['image','imageSmall','imageAlt'],true),panel('Catálogo',data.publications,['publications'],['catalogTitle','catalogText'],true));return;}
+ if(selected==='publication-banner'){$('#page-title').textContent='Libro y publicaciones';const book=data.publications.book;editor.append(panel('Libro destacado',book,['publications','book'],['title','subtitle','description','author','image','imageSmall','imageAlt'],true),renderBookPriceEditor(),panel('Muestra del libro',book,['publications','book'],['previewUrl'],true),panel('Información y temas',book,['publications','book'],['benefits','chapters'],true));editor.append(panel('Fondo editorial',data.publications,['publications'],['image','imageSmall','imageAlt'],true),panel('Catálogo',data.publications,['publications'],['catalogTitle','catalogText'],true));return;}
  const index=data.publications.items.findIndex(p=>'publication:'+p.id===selected),p=data.publications.items[index];if(!p){selected='overview';renderPublicationsOverview();return;}$('#page-title').textContent=p.title;editor.append(el('div',{class:'editor-program-summary'},[el('img',{src:asset(p.imageSmall),alt:''}),el('span',{class:'visibility-badge '+visibility(p),text:visibilityLabels[visibility(p)]}),el('a',{href:asset(p.pdfUrl),target:'_blank',rel:'noopener',text:'Abrir PDF ↗'})]));editor.append(panel('Información de la revista',p,['publications','items',index],['title','edition','description','pages'],true),panel('Portada',p,['publications','items',index],['image','imageSmall','imageAlt'],true),panel('Archivo PDF',p,['publications','items',index],['pdfUrl'],true));
  const tools=el('div',{class:'program-order'});for(const [title,delta] of [['← Mover antes',-1],['Mover después →',1]]){const b=el('button',{type:'button',text:title});b.disabled=index+delta<0||index+delta>=data.publications.items.length;b.addEventListener('click',()=>{const items=data.publications.items;[items[index],items[index+delta]]=[items[index+delta],items[index]];markChanged();renderPublicationEditor();});tools.append(b);}for(const [title,kind] of [[visibility(p)==='public'?'Deshabilitar':'Habilitar','toggle'],['Eliminar','delete']]){const b=el('button',{type:'button',text:title});b.addEventListener('click',()=>manageProgram(p,kind));tools.append(b);}editor.append(tools);
 }
