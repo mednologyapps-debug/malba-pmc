@@ -346,14 +346,49 @@ async function cmsApi(req,res,url) {
   const admin=requireAdmin(req,res);if(!admin)return true;if(req.method==='POST'&&!csrfOk(req,admin))return json(res,403,{error:'La sesión cambió. Recarga el panel.'});
   if(req.method==='GET'&&url.pathname==='/api/lms/admin')return json(res,200,await lmsAdminState());
   if(req.method==='GET'&&url.pathname==='/api/content'){const d=await getDocument();return json(res,200,{data:d.draft,revision:d.revision,updated:Date.parse(d.updated_at||'')/1000||Date.now()/1000,publishedAt:Date.parse(d.published_at||'')/1000||null,publishedIds:(d.published?.programs||[]).map(x=>x.id),dirty:JSON.stringify(d.draft)!==JSON.stringify(d.published)});}
+  if(req.method==='GET'&&url.pathname==='/api/book-prices'){
+    if(!supabase)return json(res,503,{error:'La configuración de precios no está disponible.'});
+    const [ev,doc]=await Promise.all([
+      supabase.from('book_events').select('config,revision').eq('id','presentacion-libro').single(),
+      supabase.from('cms_documents').select('revision').eq('id','site').single()
+    ]);
+    if(ev.error||doc.error)return json(res,503,{error:'No se pudo consultar el precio vigente. Intenta nuevamente.'});
+    return json(res,200,{launchPrice:Number(ev.data.config.price),regularPrice:Number(ev.data.config.regularPrice),
+      launchUntil:ev.data.config.launchUntil,cmsRevision:doc.data.revision,eventRevision:ev.data.revision});
+  }
   if(req.method==='GET'&&url.pathname==='/api/history'){const rows=supabase?(await supabase.from('cms_history').select('id,revision,username,created_at').order('created_at',{ascending:false}).limit(30)).data:fallbackHistory;return json(res,200,(rows||[]).map(x=>({id:x.id,revision:x.revision,username:x.username,created:x.created_at})));}
   if(req.method==='GET'&&url.pathname==='/api/export'){const d=await getDocument();return text(res,200,JSON.stringify({draft:d.draft,published:d.published,revision:d.revision},null,2),'application/json; charset=utf-8',{'Content-Disposition':'attachment; filename="malba-pmc-contenido.json"'});}
   if((req.method==='GET'||req.method==='POST')&&url.pathname==='/api/preview')return json(res,200,{url:new URL('/',`http://${req.headers.host||'localhost'}`).toString()});
   const b=await requestBody(req);
+  if(req.method==='POST'&&url.pathname==='/api/book-prices'){
+    if(!supabase)return json(res,503,{error:'La actualización del precio requiere Supabase.'});
+    const launchPrice=Number(b.launchPrice),regularPrice=Number(b.regularPrice);
+    if(!Number.isFinite(launchPrice)||!Number.isFinite(regularPrice)||launchPrice<=0||regularPrice<launchPrice||regularPrice>=100000
+      ||Math.round(launchPrice*100)!==launchPrice*100||Math.round(regularPrice*100)!==regularPrice*100)
+      return json(res,400,{error:'Indica precios válidos: máximo dos decimales y el precio regular no menor al de lanzamiento.'});
+    if(!Number.isInteger(b.cmsRevision)||!Number.isInteger(b.eventRevision))return json(res,400,{error:'Recarga los precios antes de guardarlos.'});
+    const {data:changed,error}=await supabase.rpc('malba_set_book_prices',{
+      p_launch_price:launchPrice,p_regular_price:regularPrice,
+      p_cms_revision:b.cmsRevision,p_event_revision:b.eventRevision
+    });
+    if(error){
+      console.error('Book price update rejected:',error.code||'invalid');
+      return json(res,error.code==='P0001'?409:503,{error:/modificados|Recarga/.test(error.message||'')
+        ?'El precio fue modificado en otra sesión. Recarga el panel antes de guardar.':'No se pudo guardar el precio. Verifica la configuración del libro e inténtalo de nuevo.'});
+    }
+    publicPageCache=null;publicPageCacheTime=0;
+    return json(res,200,{ok:true,...changed});
+  }
   if(req.method==='POST'&&url.pathname==='/api/site-settings'){const saved=await saveSiteSettings(b);return json(res,200,{ok:true,settings:saved.published.siteSettings,revision:saved.revision});}
   if(req.method==='POST'&&(url.pathname==='/api/upload'||url.pathname==='/api/upload-pdf')){const raw=Buffer.from(String(b.content||''),'base64');if(!raw.length)throw new Error('Archivo vacío.');const isPdf=url.pathname.endsWith('pdf');if(isPdf&&!raw.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('El archivo no es un PDF válido.');return json(res,200,await storeCmsFile(raw,isPdf,isPdf?'application/pdf':'image/webp'));}
   if(req.method==='POST'&&['/api/draft','/api/publish'].includes(url.pathname)){const d=await getDocument();if(Number(b.revision)!==Number(d.revision))return json(res,409,{error:'Hay una edición más reciente. Recarga el panel.'});const publishing=url.pathname==='/api/publish';
     // Validate and compile all public pages before committing a publication.
+    // Book pricing is managed only through the dedicated atomic price endpoint.
+    // Never allow a stale CMS snapshot to overwrite the shared commercial price.
+    const eventPrices=supabase?await supabase.from('book_events').select('config').eq('id','presentacion-libro').single():null;
+    if(eventPrices?.data?.config&&b.data?.publications?.book){
+      b.data.publications.book.physicalPrice=Number(eventPrices.data.config.price);
+    }
     const generated=publishing?compilePublicPages(b.data):null;
     const saved=await saveDocument({...d,draft:b.data},publishing);
     if(publishing){publicPageCache={version:String(saved.published_at||'')+':'+String(saved.revision||0),pages:generated};publicPageCacheTime=Date.now();}
