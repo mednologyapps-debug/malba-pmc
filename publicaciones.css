@@ -66,3 +66,12 @@
  .publications-page .book-purchase{position:static;top:auto;max-height:none;overflow:visible;scrollbar-width:auto}
  .publications-page .book-order-card{overflow:visible;box-sizing:border-box}
 }
+
+/* Existing checkout visuals: understated launch-price detail, without redesigning the form. */
+.book-launch-notice{display:inline-flex;align-items:center;gap:7px;padding:5px 9px;margin:7px 0;border-radius:6px;background:#f3eef9;color:#5d4594;font-size:12px;font-weight:600}
+.book-launch-notice[hidden],.book-original-price[hidden]{display:none!important}
+.book-launch-dot{width:6px;height:6px;background:#5d4594;border-radius:50%}
+.book-original-price{margin:3px 0 10px;color:#758298;font-size:12px}
+.book-price-value{font-weight:700;color:#003b73}
+.book-price-label{display:block;font-size:13px}
+.book-total-line dt small{display:block;font-size:11px;color:#728098;font-weight:400}
