@@ -364,7 +364,7 @@ async function cmsApi(req,res,url) {
     if(!supabase)return json(res,503,{error:'La actualización del precio requiere Supabase.'});
     const launchPrice=Number(b.launchPrice),regularPrice=Number(b.regularPrice);
     if(!Number.isFinite(launchPrice)||!Number.isFinite(regularPrice)||launchPrice<=0||regularPrice<launchPrice||regularPrice>=100000
-      ||Math.round(launchPrice*100)!==launchPrice*100||Math.round(regularPrice*100)!==regularPrice*100)
+      ||Math.abs(Math.round(launchPrice*100)-launchPrice*100)>1e-7||Math.abs(Math.round(regularPrice*100)-regularPrice*100)>1e-7)
       return json(res,400,{error:'Indica precios válidos: máximo dos decimales y el precio regular no menor al de lanzamiento.'});
     if(!Number.isInteger(b.cmsRevision)||!Number.isInteger(b.eventRevision))return json(res,400,{error:'Recarga los precios antes de guardarlos.'});
     const {data:changed,error}=await supabase.rpc('malba_set_book_prices',{
