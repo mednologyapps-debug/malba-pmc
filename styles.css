@@ -30,7 +30,7 @@
 .course-whatsapp > span[aria-hidden="true"] {
   display: none !important;
 }
-.collection-controls button,
+.collection-controls:not([data-collection="learn-video-list"]) button,
 .knowledge-controls button {
   display: none !important;
 }

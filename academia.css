@@ -24,7 +24,7 @@
 .academy-catalog-heading { margin-bottom: 26px; }
 .academy-catalog-heading h2 { margin: 0; font-size: clamp(29px,3vw,40px); line-height: 1.12; letter-spacing: -.7px; font-weight: 400; }
 .academy-catalog-heading p { margin: 12px 0 0; max-width: 680px; font-size: 16px; line-height: 1.6; }
-.academy-program-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 22px; }
+.academy-program-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; }
 .academy-program-card { min-width: 0; border: 1px solid rgba(7,63,124,.14); border-radius: 10px; overflow: hidden; background: var(--white); display: flex; flex-direction: column; box-shadow: 0 4px 18px rgba(7,63,124,.035); transition: border-color .2s ease, box-shadow .2s ease; }
 .academy-program-card:hover, .academy-program-card:focus-within { border-color: var(--purple); box-shadow: 0 8px 24px rgba(84,69,149,.09); }
 .academy-card-media { position: relative; aspect-ratio: 1.5; overflow: hidden; flex-shrink: 0; }

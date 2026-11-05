@@ -29,3 +29,36 @@ test('production payment mode remains gated by explicit credentials',()=>{
  assert.match(api,/payments\.ready\(gatewayMode\)/);
  assert.match(api,/mode:gatewayMode/);
 });
+
+test('contact behind the production proxy sends one notice and one acknowledgment', async t => {
+ const nodemailer = require('nodemailer');
+ const contact = require('../contact-api');
+ const env = {SMTP_HOST:'smtp.example.invalid',SMTP_USER:'sender@example.invalid',SMTP_PASSWORD:'fixture',MALBA_CONTACT_RECIPIENT:'team@example.invalid',NODE_ENV:'production'};
+ const previous = Object.fromEntries(Object.keys(env).map(key => [key, process.env[key]]));
+ Object.assign(process.env, env);
+ t.after(() => {
+  for (const [key, value] of Object.entries(previous)) {
+   if (value === undefined) delete process.env[key];
+   else process.env[key] = value;
+  }
+ });
+ const messages = [];
+ t.mock.method(nodemailer,'createTransport',() => ({sendMail:async message => {
+  messages.push(message);
+  return {accepted:[message.to]};
+ }}));
+ const request = {
+  method:'POST', socket:{remoteAddress:'127.0.0.1'},
+  headers:{origin:'https://malba-pmc.com',host:'olivedrab-mouse-758184.hostingersite.com','content-type':'application/json'},
+  async *[Symbol.asyncIterator]() {
+   yield Buffer.from(JSON.stringify({name:'Participante QA',email:'visitor@example.invalid',message:'Consulta de prueba de contacto.'}));
+  }
+ };
+ const result = await contact(request,{}, {json:(_,status,body) => ({status,body})});
+ assert.equal(result.status,200);
+ assert.equal(messages.length,2);
+ assert.equal(messages[0].to,'team@example.invalid');
+ assert.equal(messages[0].replyTo.address,'visitor@example.invalid');
+ assert.equal(messages[1].to.address,'visitor@example.invalid');
+ assert.match(result.body.message,/confirmación/);
+});

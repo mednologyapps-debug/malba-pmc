@@ -511,7 +511,7 @@ async function lmsApi(req,res,url) {
   return json(res,404,{error:'Ruta LMS no encontrada.'});
 }
 
-const eventApi=require('./event-system/api')({db:supabase,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign});
+const eventApi=require('./event-system/api')({db:supabase,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign,getDocument});
 async function api(req,res,url) { if(url.pathname==='/api/public-contact')return require('./contact-api')(req,res,{json}); if(url.pathname.startsWith('/api/events/'))return eventApi(req,res,url); if(url.pathname.startsWith('/api/public-asset/'))return publicAsset(req,res,url);if(url.pathname.startsWith('/api/lms/'))return lmsApi(req,res,url);return cmsApi(req,res,url); }
 const server=http.createServer(async(req,res)=>{const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);try{if(req.method==='GET'&&url.pathname==='/health')return json(res,200,{ok:true,service:'malba-pmc',version:APP_VERSION,supabase:!!supabase});if((req.method==='GET'||req.method==='HEAD')&&REDIRECTS[url.pathname]){res.writeHead(301,{'Location':REDIRECTS[url.pathname],'Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'});return res.end();}if(url.pathname.startsWith('/api/')){const handled=await api(req,res,url);if(handled!==false)return;}if(req.method!=='GET'&&req.method!=='HEAD')return text(res,405,'Método no permitido.');
     if((req.method==='GET'||req.method==='HEAD')&&/^\/evento\/presentacion-libro(?:\/|\/index.html)?$/.test(url.pathname)){return serve(res,path.join(ROOT,'evento/presentacion-libro/index.html'));}

@@ -82,6 +82,8 @@ def statistics(items, program=None):
     return '<div class="course-stats">' + ''.join(f'<div><strong>{esc(x["value"])}</strong><span>{esc(x["label"])}</span></div>' for x in items) + '</div>' if items else ''
 
 def price(program):
+    if program['status']=='proximamente':
+        return '<span class="course-price-unconfirmed">Inversión por confirmar</span>'
     pricing = program['pricing']
     regular, launch, end = pricing.get('regular'), pricing.get('launch'), pricing.get('launchEndsAt')
     use_launch = launch is not None and end and datetime.now(timezone.utc) < datetime.fromisoformat(end)
@@ -102,7 +104,7 @@ def action(program, secondary=False):
 def image_badges(items):
     clock = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>'
     calendar = '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16m-11 4h2m2 0h2"/>'
-    return '<div class="academy-image-meta">' + ''.join(f'<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{clock if label.endswith('horas') else calendar}</svg>{esc(label)}</span>' for i,label in enumerate(items)) + '</div>'
+    return '<div class="academy-image-meta">' + ''.join(f'<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{clock if label.endswith("horas") else calendar}</svg>{esc(label)}</span>' for i,label in enumerate(items)) + '</div>'
 
 def card(program, prefix):
     state = {'proximamente': 'Próximamente', 'consultar': 'Consultar próxima edición', 'abierto': 'Inscripciones abiertas', 'agotado': 'Inscripciones cerradas'}[program['status']]
@@ -185,15 +187,15 @@ def catalog_controls():
 
 def academy(data):
     a, ps, prefix = data['academy'], data['programs'], '../'
-    forthcoming = data['upcoming']
     main = hero(a,prefix,actions='<a class="button button-white academy-classroom-cta" href="../aula-virtual/">Aula virtual</a>')
     main += f'<section class="academy-catalog section-container" id="programas" aria-labelledby="programs-title"><div class="academy-catalog-heading"><h2 id="programs-title">{esc(a["programsTitle"])}</h2><p>{esc(a["programsText"])}</p></div><div class="academy-program-grid" data-academy-track tabindex="0" aria-label="Programas de la Academia MALBA">'
     main += ''.join(card(p,prefix) for p in ps)
-    main += f'''<article class="academy-program-card academy-upcoming-card"><div class="academy-card-media"><a class="academy-card-image" href="proximos/" tabindex="-1" aria-hidden="true">{picture(forthcoming['image'],forthcoming['imageSmall'],'',prefix)}</a><span class="academy-card-status">Nuevas convocatorias</span>{image_badges(['Fechas por confirmar'])}</div><div class="academy-card-content"><h3><a href="proximos/">{esc(forthcoming['title'])}</a></h3><p>{esc(forthcoming.get('cardDescription',forthcoming['description']))}</p><div class="academy-card-bottom"><div class="academy-card-price"><span>Tu próxima especialización</span></div><a class="button button-purple academy-card-button" href="proximos/">Explorar programas <span class="academy-button-arrow" aria-hidden="true">→</span></a></div></div></article></div>{catalog_controls()}</section>'''
+    main += f'</div>{catalog_controls()}</section>'
     schema = {'@context':'https://schema.org','@graph':[{'@type':'CollectionPage','name':a['title'],'url':ORIGIN+'academia/','description':a['subtitle']}, {'@type':'ItemList','itemListElement':[{'@type':'ListItem','position':i,'item':course_schema(p)} for i,p in enumerate(ps,1)]}, breadcrumbs(a['title'],'academia/')]}
     return document(a['title'],a['subtitle'],'academia/',prefix,main,ps,'academy',schema,a['image'],a['imageAlt'])
 
 def start_label(program):
+    if program['status']=='proximamente':return 'Por confirmar'
     if not program.get('startDate'):return program.get('startLabel', 'Fechas por confirmar')
     date = datetime.fromisoformat(program['startDate'])
     months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
@@ -203,7 +205,7 @@ def start_label(program):
 def program_page(p, programs):
     prefix = '../'
     main = f'<div class="course-page" style="{theme_style(p,prefix)}"><nav class="course-breadcrumb section-container" aria-label="Ruta de navegación"><a href="../">Inicio</a><span aria-hidden="true">/</span><a href="../academia/">Academia</a><span aria-hidden="true">/</span><span>'+esc(p['category'])+'</span></nav>'
-    main += f'''<section class="course-hero" aria-labelledby="course-title">{picture(p.get('imageWide',p['image']),p['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="course-hero-layout section-container"><div class="course-hero-copy"><h1 id="course-title">{esc(p['title'])}</h1><p class="course-summary">{esc(p['description'])}</p><dl class="course-facts"><div><dt>Inicio</dt><dd>{esc(start_label(p))}</dd></div><div><dt>Duración</dt><dd>{esc(p['hours'])} horas · {esc(p['sessions'])} sesiones</dd></div><div><dt>Modalidad</dt><dd>{esc(p['modality'])}</dd></div><div><dt>Horario</dt><dd>{esc(p['schedule'])}</dd></div>{'<div><dt>Edición</dt><dd>'+esc(p['edition'])+'</dd></div>' if p.get('edition') else ''}</dl><a class="button button-white" href="{esc(safe_url(p['brochureUrl']))}" target="_blank" rel="noopener noreferrer">Descargar brochure <span aria-hidden="true">↓</span></a></div><aside class="course-enrollment" aria-label="Información de inscripción"><h2>{'Próximamente' if p['status']=='proximamente' else 'Tu próxima especialización'}</h2>{price(p)}{paras([p['pricing']['note']]) if p['pricing']['regular'] is not None else ''}{action(p)}<a class="course-whatsapp" href="{esc(safe_url(p['whatsappUrl']))}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp <span aria-hidden="true">↗</span></a><p class="course-enrollment-note">{esc(p['registrationNote'])}</p></aside></div></section>'''
+    main += f'''<section class="course-hero" aria-labelledby="course-title">{picture(p.get('imageWide',p['image']),p['imageSmall'],'',prefix,'academy-hero-background',True)}<div class="course-hero-layout section-container"><div class="course-hero-copy"><h1 id="course-title">{esc(p['title'])}</h1><p class="course-summary">{esc(p['description'])}</p><dl class="course-facts"><div><dt>Inicio</dt><dd>{esc(start_label(p))}</dd></div><div><dt>Duración</dt><dd>{esc(p['hours'])} horas · {esc(p['sessions'])} sesiones</dd></div><div><dt>Modalidad</dt><dd>{esc(p['modality'])}</dd></div><div><dt>Horario</dt><dd>{esc(p['schedule'])}</dd></div>{'<div><dt>Edición</dt><dd>'+esc(p['edition'])+'</dd></div>' if p.get('edition') and p['status']!='proximamente' else ''}</dl><a class="button button-white" href="{esc(safe_url(p['brochureUrl']))}" target="_blank" rel="noopener noreferrer">Descargar brochure <span aria-hidden="true">↓</span></a></div><aside class="course-enrollment" aria-label="Información de inscripción"><h2>{'Próximamente' if p['status']=='proximamente' else 'Tu próxima especialización'}</h2>{price(p)}{paras([p['pricing']['note']]) if p['pricing']['regular'] is not None and p['status']!='proximamente' else ''}{action(p)}<a class="course-whatsapp" href="{esc(safe_url(p['whatsappUrl']))}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp <span aria-hidden="true">↗</span></a><p class="course-enrollment-note">{esc(p['registrationNote'])}</p></aside></div></section>'''
     main += '<nav class="course-jumpnav" aria-label="Secciones del programa"><div class="section-container"><a href="#aprendizaje">Qué aprenderás</a><a href="#contenido-del-programa">Contenido</a><a href="#docentes">Docentes</a><a href="#metodologia">Metodología</a></div></nav>'
     def section(ident,content,tint=False):
         return f'<section class="course-section course-section-photo{ " course-section-tint" if tint else ""}{ " course-section-dark" if ident in ["metodologia", "respaldo"] else ""}" id="{ident}"><div class="section-container">{content}</div></section>'
@@ -311,7 +313,8 @@ def _render_outputs(data, home=None, preview=False):
         title=esc(p['title'])
         summary=esc(p.get('cardDescription') or p.get('description') or '')
         slug=esc(p['slug'])
-        cards.append(f'<article class="program-card"><div class="program-art"><img src="{image}" alt="{alt}" loading="lazy" decoding="async"></div><div class="program-card-copy"><h3>{title}</h3><p>{summary}</p><a class="text-link" href="{slug}/">Ver programa <span aria-hidden="true">↗</span></a></div></article>')
+        upcoming_badge='<p class="program-upcoming-label">Próximamente</p>' if p['status']=='proximamente' else ''
+        cards.append(f'<article class="program-card"><div class="program-art"><img src="{image}" alt="{alt}" loading="lazy" decoding="async"></div><div class="program-card-copy">{upcoming_badge}<h3>{title}</h3><p>{summary}</p><a class="text-link" href="{slug}/">Ver programa <span aria-hidden="true">↗</span></a></div></article>')
     if not cards:
         cards=['<article class="program-card"><div class="program-card-copy"><h3>Próximas convocatorias</h3><p>Estamos preparando nuevas oportunidades de formación.</p><a class="text-link" href="academia/proximos/">Mantenerme informado →</a></div></article>']
     home, count = re.subn(
@@ -319,7 +322,10 @@ def _render_outputs(data, home=None, preview=False):
         lambda m: m[1]+''.join(cards)+m[2], home, count=1, flags=re.S)
     if count != 1: raise ValueError('No se encontró el bloque de programas destacados en la portada.')
     from build_publications import content,render_publications
-    outputs.update(render_publications(content(data),programs))
+    publications=content(data)
+    outputs.update(render_publications(publications,programs))
+    book_price=f"S/ {publications['book']['physicalPrice']:,.2f}"
+    home=re.sub(r'(<p class="book-home-price">).*?(</p>)',lambda m:m[1]+book_price+m[2],home,count=1)
     from build_solutions import render_solutions
     outputs.update(render_solutions(programs,data.get('digitalCards')))
     from build_consulting import render_consulting

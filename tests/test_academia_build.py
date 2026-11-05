@@ -21,7 +21,7 @@ class AcademiaPublishingTests(unittest.TestCase):
             page=build.program_page(p,self.data['programs'])
             self.assertIn('disabled>Inscripciones próximamente',page);self.assertNotIn('href="'+str(p['checkoutUrl'])+'"',page)
     def test_expired_launch_price_is_not_published(self):
-        p=self.data['programs'][0];p['pricing']['launchEndsAt']='2000-08-06T00:00:00-05:00'
+        p=self.data['programs'][0];p['status']='abierto';p['pricing']['launchEndsAt']='2000-08-06T00:00:00-05:00'
         self.assertIn('US$ 350',build.price(p));self.assertNotIn('US$ 300',build.price(p))
     def test_content_is_escaped_and_unsafe_urls_rejected(self):
         p=self.data['programs'][0];p['title']='<script>alert(1)</script>'

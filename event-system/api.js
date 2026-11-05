@@ -36,7 +36,7 @@ function validateConfig(b){
  if(c.bookAvailable&&(!c.priceConfirmed||!c.price||!c.deliveries.length||!['sandbox','production'].includes(c.paymentMode)))throw Error('Confirma precio, entrega y modalidad de pago antes de habilitar la compra.');
  return c;
 }
-module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign}){
+module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign,getDocument}){
  const limits=new Map();
  const payments=createPayments({db,json,text,requireAdmin,csrfOk,sign});
  const demo=createDemo({json,requireAdmin,csrfOk,sign,defaults:DEFAULT,priceAt,payments});
@@ -90,7 +90,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
  recoveryTimer.unref?.();
  return async function eventApi(req,res,url){
   const route=url.pathname.replace(/\/$/,'');
-  if((route.startsWith('/api/events/payments/')&&route!=='/api/events/payments/start')||route.startsWith('/api/events/admin/payments/'))return payments.handler(req,res,url);
+  if((route.startsWith('/api/events/payments/')&&!['/api/events/payments/start','/api/events/payments/book'].includes(route))||route.startsWith('/api/events/admin/payments/'))return payments.handler(req,res,url);
   if(route.startsWith('/api/events/demo/')||route.startsWith('/api/events/admin/demo/'))return demo(req,res,url);
   const adminRoute=route.startsWith('/api/events/admin');
   let admin;if(adminRoute){admin=requireAdmin(req,res);if(!admin)return;if(!csrfOk(req,admin))return json(res,403,{error:'Recarga el panel para renovar la sesión.'});}
@@ -98,6 +98,23 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   try{
    if(route==='/api/events/config'&&req.method==='GET')return json(res,200,publicConfig((await config()).config));
    if(req.method==='POST'&&!adminRoute){const origin=req.headers.origin;if(!require('./public-origin').allowedBrowserOrigin(origin,process.env))return json(res,403,{error:'Origen de solicitud inválido.'});if(!String(req.headers['content-type']).startsWith('application/json'))return json(res,415,{error:'Formato no permitido.'});if(!rate(req,route,route.endsWith('metrics')?600:120))return json(res,429,{error:'Demasiados intentos. Espera un minuto antes de reintentar.'});}
+   if(route==='/api/events/payments/book'&&req.method==='POST'){
+    if(!payments.ready('PRODUCTION'))return json(res,503,{error:'La compra del libro no está disponible en este momento.'});
+    const b=await body(req),name=clean(b?.name,120),email=clean(b?.email,254).toLowerCase(),phone=clean(b?.phone,20);
+    if(b?.consent!==true||name.length<3||!/^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(email)||!/^\+?[\d ()-]{7,20}$/.test(phone)||phone.replace(/\D/g,'').length<7){
+     return json(res,400,{error:'Revisa tu nombre, correo, celular y aceptación de privacidad.'});
+    }
+    if(!rate(req,'book-email:'+email,5))return json(res,429,{error:'Espera un minuto antes de reintentar.'});
+    const {published}=await getDocument();
+    const defaults=require('../content/publicaciones.json').book;
+    const book=published?.publications?.book||defaults;
+    const amount=book.physicalPrice??(Object.hasOwn(book,'physicalPrice')?defaults.physicalPrice:book.price??defaults.physicalPrice);
+    if(typeof amount!=='number'||!Number.isFinite(amount)||amount<0.01||amount>=100000||Number(amount.toFixed(2))!==amount)return json(res,503,{error:'El precio del libro no está disponible.'});
+    if(b.expectedPrice!==amount)return json(res,409,{error:'El precio cambió. Recarga Publicaciones para revisar el importe actualizado.'});
+    if(!['boleta','factura'].includes(b.billing?.type))return json(res,400,{error:'Selecciona el tipo de comprobante.'});
+    const session=await payments.createSession({amount,email,name,billing:b.billing,retailPhone:phone,mode:'PRODUCTION'});
+    return json(res,201,{checkoutUrl:session.checkoutUrl});
+   }
    if(route==='/api/events/payments/start'&&req.method==='POST'){
     const b=await body(req),id=validPaymentToken(b.token);if(!id)return json(res,403,{error:'La sesión de pago venció.'});
     const c=(await config()).config;const gatewayMode=c.paymentMode==='production'?'PRODUCTION':'TEST';if(!['sandbox','production'].includes(c.paymentMode)||!payments.ready(gatewayMode))return json(res,503,{error:'La pasarela no está disponible para esta modalidad de pago.'});

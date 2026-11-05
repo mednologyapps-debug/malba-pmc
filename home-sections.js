@@ -41,7 +41,7 @@ function updateHeroSlide(index) {
     dot.classList.toggle("is-active", number === index);
     dot.setAttribute("aria-pressed", String(number === index));
   });
-  sliderStatus.textContent = `Banner ${index + 1} de 2: ${index === 0 ? "MALBA PMC" : "Libro de Miguel Alba"}`;
+  sliderStatus.textContent = `Banner ${heroSlides[index].getAttribute("aria-label")}`;
   fitHeroHeight();
 }
 function goToHeroSlide(index) {

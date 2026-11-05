@@ -57,3 +57,18 @@ test('public receipt preview requires an authenticated paid TEST session and reu
  const first=await call(api.handler,'/api/events/payments/preview',{token,body:{}}),again=await call(api.handler,'/api/events/payments/preview',{token,body:{}});
  assert.equal(first.status,200);assert.equal(again.value.pdf,'JVBERfixture');assert.equal(calls,2);
 });
+
+test('signed production IPN enqueues a retail receipt without changing event enrollment', async () => {
+ const live = {...env, IZIPAY_LIVE_ENABLED:'true', IZIPAY_PROD_PASSWORD:'fixture-live-secret', IZIPAY_PROD_PUBLIC_KEY:'fixture-live-public', IZIPAY_PROD_HMAC:'fixture-live-browser'};
+ const sale = {...session, mode:'PRODUCTION', order_id:null, billing:{type:'boleta',retailPhone:'999888777'}};
+ const db = dbFor(sale);
+ const api = create({...out,db,env:live,sign:()=>'',requireAdmin:()=>null,csrfOk:()=>false});
+ const paid = {...answer,orderDetails:{...answer.orderDetails,mode:'PRODUCTION'}};
+ const forged = await call(api.handler,'/api/events/payments/ipn',{body:fields(paid,live.IZIPAY_PROD_HMAC)});
+ assert.equal(forged.status,400);
+ assert.equal(db.calls.some(c=>c[0]==='book_invoice_jobs'),false);
+ const valid = await call(api.handler,'/api/events/payments/ipn',{body:fields(paid,live.IZIPAY_PROD_PASSWORD)});
+ assert.equal(valid.status,200);
+ const writes = db.calls.filter(c=>c[0]==='book_invoice_jobs');
+ assert.deepEqual(writes,[['book_invoice_jobs','upsert',[{session_id:sale.id},{onConflict:'session_id',ignoreDuplicates:true}]]]);
+});

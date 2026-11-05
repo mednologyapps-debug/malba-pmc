@@ -23,7 +23,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
   const s=await query(db.from('book_payment_sessions').select('*').eq('id',id).single());
   if(!s||s.client_hash!==hash(token))throw Error('Sesión de pago inválida.');return s;
  }
- async function createSession({orderId=null,amount,email,name,billing={},mode='TEST'}){
+ async function createSession({orderId=null,amount,email,name,billing={},retailPhone='',mode='TEST'}){
   if(!db)throw Error('La pasarela requiere la conexión del servidor.');
   const creds=izipay.credentials(env,mode),amountMinor=Math.round(Number(amount)*100);if(!Number.isInteger(amountMinor)||amountMinor<=0)throw Error('Importe inválido.');
   if(orderId){const previous=await query(db.from('book_payment_sessions').select('*').eq('order_id',orderId).maybeSingle());if(previous){
@@ -33,7 +33,9 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
    return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html#'+token};
   }}
   const id=crypto.randomUUID(),expires=Date.now()+30*60000,token=id+'.'+expires+'.'+sign('izipay-session:'+id+':'+expires);
-  const s={id,order_id:orderId,provider_order_id:'MALBA-'+id,shop_id:creds.shopId,mode,amount_minor:amountMinor,currency:'PEN',client_hash:hash(token),email,customer_name:name,billing:c2u.billing(billing),expires_at:new Date(expires).toISOString()};
+  const receipt=c2u.billing(billing);
+  if(retailPhone)receipt.retailPhone=retailPhone;
+  const s={id,order_id:orderId,provider_order_id:'MALBA-'+id,shop_id:creds.shopId,mode,amount_minor:amountMinor,currency:'PEN',client_hash:hash(token),email,customer_name:name,billing:receipt,expires_at:new Date(expires).toISOString()};
   await query(db.from('book_payment_sessions').insert(s));
   return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html#'+token};
  }
@@ -47,10 +49,15 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
   if(!s)throw Error('Pedido de pago no encontrado.');
   const creds=izipay.credentials(env,s.mode),answer=izipay.verifyHash(fields,browser?creds.hmac:creds.password),check=izipay.verifyAnswer(answer,s);
   // Browser return is authenticated for display only. Only server IPN settles an order.
-  if(check.paid&&!browser)await query(db.rpc('book_finish_izipay',{session_id:s.id,tx_id:check.transactionId,paid_amount:s.amount_minor,paid_currency:s.currency,paid_mode:s.mode,paid_shop:s.shop_id,paid_reference:s.provider_order_id}));
+  if(check.paid&&!browser){
+   await query(db.rpc('book_finish_izipay',{session_id:s.id,tx_id:check.transactionId,paid_amount:s.amount_minor,paid_currency:s.currency,paid_mode:s.mode,paid_shop:s.shop_id,paid_reference:s.provider_order_id}));
+   if(s.mode==='PRODUCTION'&&!s.order_id&&s.billing?.retailPhone){
+    await query(db.from('book_invoice_jobs').upsert({session_id:s.id},{onConflict:'session_id',ignoreDuplicates:true}));
+   }
+  }
   return {verified:true,waitingForNotification:browser&&check.paid};
  }
- async function status(token){const s=await sessionByToken(token);return {status:s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency};}
+ async function status(token){const s=await sessionByToken(token);return {status:s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone};}
  async function handler(req,res,url){
   const path=url.pathname.replace(/\/$/,'');
   try{
@@ -63,8 +70,8 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
    if(req.method==='POST'&&!require('./public-origin').allowedBrowserOrigin(req.headers.origin,env))return json(res,403,{error:'Origen no permitido.'});
    const bearer=String(req.headers.authorization||'').replace(/^Bearer /,'');
    if(path==='/api/events/payments/checkout'&&req.method==='GET'){
-    const s=await sessionByToken(bearer);if(s.status==='paid')return json(res,200,{paid:true,mode:s.mode});
-    const form=await izipay.createPayment(s,{email:s.email,name:s.customer_name},origin(),{env,fetcher});return json(res,200,{...form,amount:s.amount_minor/100,currency:s.currency});
+    const s=await sessionByToken(bearer);if(s.status==='paid')return json(res,200,{paid:true,mode:s.mode,retail:!!s.billing?.retailPhone});
+    const form=await izipay.createPayment(s,{email:s.email,name:s.customer_name},origin(),{env,fetcher});return json(res,200,{...form,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone});
    }
    if(path==='/api/events/payments/status'&&req.method==='GET')return json(res,200,await status(bearer));
    if(path==='/api/events/payments/return'&&req.method==='POST')return json(res,200,await notify(await readBody(req),true));
