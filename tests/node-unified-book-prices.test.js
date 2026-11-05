@@ -49,3 +49,15 @@ test('original checkout displays summary and contact without wizard tabs or next
  assert.match(js,/form\.querySelectorAll\('\[data-step\]'\)\.forEach/);
  assert.doesNotMatch(js,/next\.addEventListener/);
 });
+
+test('payment CTA stays accessible without changing single-form checkout or duplicating payment requests',()=>{
+ const js=fs.readFileSync('publicaciones.js','utf8');
+ const css=fs.readFileSync('publicaciones.css','utf8');
+ assert.match(js,/form\.requestSubmit\(submit\)/);
+ assert.match(js,/window\.addEventListener\('scroll',scheduleFloating/);
+ assert.match(js,/const realVisible=real\.top<viewport/);
+ assert.match(js,/floating\.disabled=submit\.disabled/);
+ assert.match(css,/\.book-floating-pay\[hidden\]\{display:none!important\}/);
+ assert.match(js,/form\.removeAttribute\('data-wizard'\)/);
+ assert.equal((js.match(/fetch\('\/api\/events\/payments\/book'/g)||[]).length,1);
+});
