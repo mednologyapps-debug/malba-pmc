@@ -36,6 +36,7 @@ BEGIN
  UPDATE public.book_events
  SET config=new_event,revision=revision+1,updated_at=now_at
  WHERE id='presentacion-libro';
+ INSERT INTO public.cms_history(data,revision,username) VALUES(doc.draft,doc.revision,'admin · precio libro');
  UPDATE public.cms_documents
  SET draft=jsonb_set(draft,'{publications,book,physicalPrice}',to_jsonb(p_launch_price),true),
  published=jsonb_set(published,'{publications,book,physicalPrice}',to_jsonb(p_launch_price),true),
