@@ -92,7 +92,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    if(route==='/api/events/register'&&req.method==='POST'){
     const p=validateRegistration(await body(req));if(!rate(req,'email:'+p.email,5))return json(res,429,{error:'Espera un minuto antes de volver a enviar tu solicitud.'});const r=await query(db.rpc('book_register',{payload:p}));
     if(r.duplicate)return json(res,200,{duplicate:true,message:'Si este correo ya está inscrito, conservamos su solicitud original. Revisa tu correo o contacta a la organización para modificarla.'});
-    let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,amount:r.amount??null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:mail.recipientSent!==true&&mail.failed!==true,emailSent:mail.recipientSent===true,emailFailed:mail.failed>0,capacityNotice:CAPACITY});
+    let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,amount:r.amount??null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:mail.recipientSent!==true&&!(mail.failed>0),emailSent:mail.recipientSent===true,emailFailed:mail.failed>0,capacityNotice:CAPACITY});
    }
    if(route==='/api/events/simulate'&&req.method==='POST'){
     const b=await body(req),id=validPaymentToken(b.token);if(!id)return json(res,403,{error:'La sesión de prueba venció. Contacta a la organización para reintentar.'});
