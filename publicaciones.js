@@ -14,9 +14,9 @@
  let step = 1;
 
  function drawStep(focus = false) {
-  form.dataset.wizard = 'true';
+  form.dataset.wizard = String(mobile.matches);
   form.dataset.activeStep = step;
-  steps.forEach((section, index) => { section.hidden = index !== step - 1; });
+  steps.forEach((section, index) => { section.hidden = mobile.matches && index !== step - 1; });
   form.querySelectorAll('[data-progress]').forEach(item => {
    if (Number(item.dataset.progress) === step) item.setAttribute('aria-current', 'step');
    else item.removeAttribute('aria-current');
@@ -24,9 +24,9 @@
   });
   back.hidden = step === 1;
   next.hidden = step === steps.length;
-  submit.hidden = step !== steps.length;
+  submit.hidden = mobile.matches && step !== steps.length;
   form.querySelector('.book-checkout-note').hidden = submit.hidden;
-  if (focus) {
+  if (focus && mobile.matches) {
    form.scrollIntoView({block:'start'});
    steps[step - 1].querySelector('legend,h3').focus({preventScroll:true});
   }
@@ -45,33 +45,26 @@
  selectReceipt();
  drawStep();
  submit.disabled = true;
- next.disabled = true;
- const money=value=>new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'}).format(value);
- async function loadPrice(){
+ async function refreshPrice(){
   try{
    const response=await fetch('/api/events/config',{cache:'no-store',headers:{Accept:'application/json'}});
    const cfg=await response.json();
-   if(!response.ok)throw Error('No se pudo confirmar el precio vigente.');
-   const current=Number(cfg.price),regular=Number(cfg.regularPrice);
-   if(!Number.isFinite(current)||current<=0||cfg.paymentMode!=='production'||cfg.bookAvailable!==true)
-     throw Error('La compra no está disponible en este momento.');
-   form.dataset.price=String(current);
-   const price=form.querySelector('.book-price-value'),label=form.querySelector('.book-price-label');
-   if(price)price.textContent=money(current);
-   const promo=Number.isFinite(regular)&&regular>current;
-   if(label)label.textContent=promo?'Precio de lanzamiento':'Precio regular';
-   const notice=form.querySelector('.book-launch-notice');if(notice)notice.hidden=!promo;
-   const original=form.querySelector('.book-original-price');
-   if(original){original.hidden=!promo;if(promo)original.querySelector('.book-regular-value').textContent=money(regular);}
-   error.hidden=true;submit.disabled=false;next.disabled=false;
-  }catch(err){error.textContent=err.message||'No se pudo comprobar el precio. Recarga la página.';error.hidden=false;submit.disabled=true;next.disabled=true;}
+   if(!response.ok||cfg.paymentMode!=='production'||!cfg.bookAvailable||!(Number(cfg.price)>0))throw Error('La compra no está disponible en este momento.');
+   form.dataset.price=String(cfg.price);
+   const amount=new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'});
+   const price=form.querySelector('.book-price-value');if(price)price.textContent=amount.format(Number(cfg.price));
+   const promo=Number(cfg.regularPrice)>Number(cfg.price);
+   const badge=form.querySelector('.book-launch-notice');if(badge)badge.hidden=!promo;
+   const compare=form.querySelector('.book-original-price');if(compare){compare.hidden=!promo;if(promo)compare.querySelector('.book-regular-value').textContent=amount.format(Number(cfg.regularPrice));}
+   submit.disabled=false;
+  }catch(e){error.textContent=e.message||'No se pudo comprobar el precio.';error.hidden=false;submit.disabled=true;}
  }
- loadPrice();
+ refreshPrice();
 
  form.addEventListener('submit', async event => {
   event.preventDefault();
   if (submit.disabled) return;
-  if (step === 1) { step = 2; drawStep(true); return; }
+  if (mobile.matches && step === 1) { step = 2; drawStep(true); return; }
   if (!form.reportValidity()) return;
   error.hidden = true;
   submit.disabled = true;
