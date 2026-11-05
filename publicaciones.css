@@ -60,3 +60,38 @@
   .publications-page .book-purchase { order: 1; }
   .publications-page .book-content-panel, .publications-page .book-author-panel, .publications-page .publication-catalog { order: 2; }
 }
+
+/* MALBA launch book · clean scroll behavior and a concise two-step checkout. */
+.book-launch-notice{display:inline-flex;align-items:center;gap:9px;margin:0 0 12px;padding:8px 12px;border-radius:999px;background:#f2ecfb;color:#5d4594;font-size:12px;font-weight:700}
+.book-launch-notice[hidden],.book-original-price[hidden]{display:none!important}
+.book-launch-dot{width:7px;height:7px;flex:none;border-radius:50%;background:#5d4594}
+.book-price-lines{margin:15px 0 6px}
+.book-total-line{align-items:center;gap:15px}
+.book-total-line dt{display:grid;gap:4px}
+.book-total-line dt small{font-size:12px;color:#718096;font-weight:400}
+.book-price-value{font-size:clamp(23px,2.25vw,29px);font-weight:750;letter-spacing:-.04em;white-space:nowrap;color:#003b73}
+.book-original-price{margin:2px 0 14px;color:#63738a;font-size:12px}
+.book-original-price s{margin-left:5px}
+.book-summary-footnote{padding:12px 14px;border-radius:9px;background:#f4f6fa;font-size:12px;line-height:1.55;color:#52657c}
+.book-summary-footnote strong{color:#214a77}
+.book-checkout-form[data-wizard=true] .book-wizard-progress{display:flex;list-style:none;margin:14px 0 18px;padding:0;gap:9px}
+.book-checkout-form[data-wizard=true] .book-wizard-progress li{flex:1;padding:9px 5px;border-bottom:3px solid #e2e7ef;text-align:center;font-size:12px;color:#718096}
+.book-checkout-form[data-wizard=true] .book-wizard-progress li[aria-current=step]{font-weight:700;color:#5d4594;border-bottom-color:#5d4594}
+.book-checkout-form[data-wizard=true] .book-wizard-progress li.completed{color:#164576;border-color:#164576}
+.book-checkout-form[data-wizard=true] .book-wizard-actions{display:flex;gap:10px;justify-content:flex-end;margin:18px 0 10px}
+.book-checkout-form[data-wizard=true] .book-step-next{display:inline-flex;align-items:center;justify-content:center;min-height:46px;flex:1;max-width:290px;border-radius:9px}
+.book-checkout-form .book-step-back[hidden],.book-checkout-form .book-step-next[hidden]{display:none!important}
+.book-checkout-form .book-step-back{min-height:44px;border-radius:9px}
+.book-order-card.book-checkout-form{border:1px solid #e0e6ef;border-top:4px solid #5d4594;border-radius:16px;box-shadow:0 14px 35px rgba(8,46,85,.07);background:#fff}
+.book-checkout-form .book-checkout-step[hidden]{display:none!important}
+.book-checkout-form .book-price-lines dd{margin:0}
+@media(min-width:761px){
+ .publications-page .book-purchase{position:sticky;top:100px;max-height:none;overflow:visible;scrollbar-width:auto}
+ .publications-page .book-purchase:has(.book-checkout-form[data-active-step="2"]){position:relative;top:auto}
+ .publications-page .book-checkout-step{margin-bottom:12px;padding-bottom:14px}
+}
+@media(max-width:760px){
+ .publications-page .book-purchase{position:static;max-height:none;overflow:visible}
+ .book-checkout-form[data-wizard=true] .book-wizard-actions{margin-top:14px}
+ .book-total-line{flex-wrap:wrap}
+}
