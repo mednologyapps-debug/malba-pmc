@@ -32,7 +32,7 @@
   const rect=form.getBoundingClientRect(),real=submit.getBoundingClientRect();
   const viewport=window.innerHeight||document.documentElement.clientHeight;
   const formVisible=rect.top<viewport-64&&rect.bottom>96;
-  const realVisible=real.top<viewport-14&&real.bottom>12;
+  const realVisible=real.top<viewport-50&&real.bottom>55;
   floating.hidden=!formVisible||realVisible;
   floating.disabled=submit.disabled;
   if(!floating.hidden){
