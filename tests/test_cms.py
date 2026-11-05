@@ -349,7 +349,7 @@ class CMSIntegrationTests(unittest.TestCase):
     def test_physical_book_checkout_and_export_script(self):
         self.login()
         page=self.call('/publicaciones/')[1]
-        for text in ['Información de contacto','Libro físico','billing_email','publicaciones.js','por WhatsApp']:
+        for text in ['Información de contacto','Libro físico','billing_email','publicaciones.js','Consejo Nacional del Colegio de Ingenieros']:
             self.assertIn(text,page)
         for text in ['name="book_format"','Ir a las revistas','Formato PDF']:
             self.assertNotIn(text,page)
