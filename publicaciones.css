@@ -75,3 +75,13 @@
 .book-price-value{font-weight:700;color:#003b73}
 .book-price-label{display:block;font-size:13px}
 .book-total-line dt small{display:block;font-size:11px;color:#728098;font-weight:400}
+
+/* Classic book checkout: both sections visible together. Only fix clipped border on scroll. */
+.publications-page .book-checkout-form .book-wizard-progress,
+.publications-page .book-checkout-form .book-wizard-actions{display:none!important}
+.publications-page .book-checkout-form .book-checkout-step{display:block;visibility:visible}
+.publications-page .book-checkout-form .book-contact{display:grid}
+.publications-page .book-checkout-form .book-checkout-step[hidden]{display:block!important}
+.publications-page .book-checkout-form .book-contact[hidden]{display:grid!important}
+.publications-page .book-purchase{overflow:visible!important;max-height:none!important}
+.publications-page .book-order-card{overflow:visible;box-sizing:border-box}
