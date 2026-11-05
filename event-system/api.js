@@ -71,6 +71,23 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    }catch(e){failed++;console.error('MALBA event SMTP failed:',String(e.code||e.message||'Error').slice(0,200));await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
   }transport.close();return{sent,recipientSent,failed};
  }
+ // Retry only delivery attempts definitively rejected by the previous malformed
+ // SMTP sender. No duplicate enrollment or payment action is performed.
+ async function retryLegacySenderFailuresOnce(){
+  if(!db||!process.env.SMTP_HOST||!process.env.SMTP_USER||!(process.env.SMTP_PASSWORD||process.env.SMTP_PASS))return;
+  try{
+   const failures=await query(db.from('book_mail_outbox').select('id,last_error,attempts').eq('status','failed').lte('attempts',2).limit(20));
+   let count=0;
+   for(const job of failures){
+    if(!/553 5\\.7\\.1/.test(String(job.last_error||''))||!/Sender address rejected/.test(String(job.last_error||'')))continue;
+    const changed=await query(db.from('book_mail_outbox').update({status:'pending',updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','failed').select('id'));
+    if(changed.length)count++;
+   }
+   if(count){const sent=await flushMail();console.info('MALBA recovered SMTP notices:',{requeued:count,sent:sent.sent,failed:sent.failed});}
+  }catch(e){console.error('MALBA SMTP recovery error:',String(e.message||e).slice(0,180));}
+ }
+ const recoveryTimer=setTimeout(retryLegacySenderFailuresOnce,12000);
+ recoveryTimer.unref?.();
  return async function eventApi(req,res,url){
   const route=url.pathname.replace(/\/$/,'');
   if((route.startsWith('/api/events/payments/')&&route!=='/api/events/payments/start')||route.startsWith('/api/events/admin/payments/'))return payments.handler(req,res,url);
