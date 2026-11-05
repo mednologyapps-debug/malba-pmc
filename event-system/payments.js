@@ -14,7 +14,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
  }
  async function query(q){const r=await q;if(r.error)throw Error('No se pudo guardar el estado del pago.');return r.data;}
  function ready(mode='TEST'){const gateway=!!db&&izipay.ready(env,mode);return mode!=='PRODUCTION'?gateway:gateway&&env.C2U_LIVE_ENABLED==='true'&&!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD&&env.C2U_SERIE_FACTURA&&env.C2U_SERIE_BOLETA);}
- function origin(){const url=new URL(env.STAGING_ORIGIN||'https://olivedrab-mouse-758184.hostingersite.com');if(url.protocol!=='https:')throw Error('La pasarela requiere HTTPS.');return url.origin;}
+ function origin(){return require('./public-origin').publicOrigin(env);}
  async function sessionByToken(token){
   const [id,expires,mac]=String(token||'').split('.');
   if(!/^[a-f0-9-]{36}$/i.test(id||'')||!/^\d+$/.test(expires||''))throw Error('Sesión de pago inválida.');
@@ -60,7 +60,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
    }
    const isAdmin=path.startsWith('/api/events/admin/');
    if(isAdmin){const admin=requireAdmin(req,res);if(!admin)return;if(!csrfOk(req,admin))return json(res,403,{error:'Sesión administrativa vencida.'});}
-   if(req.method==='POST'&&req.headers.origin!==origin())return json(res,403,{error:'Origen no permitido.'});
+   if(req.method==='POST'&&!require('./public-origin').allowedBrowserOrigin(req.headers.origin,env))return json(res,403,{error:'Origen no permitido.'});
    const bearer=String(req.headers.authorization||'').replace(/^Bearer /,'');
    if(path==='/api/events/payments/checkout'&&req.method==='GET'){
     const s=await sessionByToken(bearer);if(s.status==='paid')return json(res,200,{paid:true,mode:s.mode});
