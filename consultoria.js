@@ -18,7 +18,7 @@
  let month = firstMonth, slots = [], selectedDay = '', selectedSlot, loading = false, generation = 0, requestId = crypto.randomUUID();
  const root = document.createElement('div');
  root.className = 'cb-booking';
- root.innerHTML = '<div class="cb-calendar-pane"><div class="cb-person"><img src="/assets/people/miguel-alba.webp" alt="Miguel Alba" width="52" height="52"><div><strong>Miguel Alba</strong><span>Consultoría · Hora de Perú (UTC−5)</span></div></div><div class="cb-month-nav"><button type="button" data-month="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><h3 aria-live="polite"></h3><button type="button" data-month="1" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div><div class="cb-weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="cb-days" role="group" aria-label="Selecciona un día disponible"></div><p class="cb-calendar-legend"><i aria-hidden="true"></i> Fechas con horarios disponibles</p></div><div class="cb-times-pane"><span class="cb-step-label">1. Elige una fecha y hora</span><h3 data-day-title>Horarios disponibles</h3><p data-availability role="status">Consultando la agenda…</p><div class="cb-times" role="group" aria-label="Horarios de consultoría"></div><div class="cb-selection" hidden><strong>Tu solicitud</strong><p></p><span>La reserva queda pendiente de confirmación por MALBA PMC.</span></div></div>';
+ root.innerHTML = '<div class="cb-calendar-pane"><div class="cb-person"><img src="/assets/people/miguel-alba.webp" alt="Miguel Alba" width="52" height="52"><div><strong>Miguel Alba</strong><span>Sesiones de 60 min · Hora de Perú (UTC−5)</span></div></div><div class="cb-month-nav"><button type="button" data-month="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><h3 aria-live="polite"></h3><button type="button" data-month="1" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div><div class="cb-weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="cb-days" role="group" aria-label="Selecciona un día disponible"></div></div><div class="cb-times-pane"><h3 data-day-title>Horarios disponibles</h3><p data-availability role="status">Consultando la agenda…</p><div class="cb-times" role="group" aria-label="Horarios de consultoría"></div><div class="cb-selection" hidden><strong>Tu solicitud</strong><p></p><span>La reserva queda pendiente de confirmación por MALBA PMC.</span></div></div>';
  form.before(root);
  form.classList.add('cb-details');
  form.hidden = true;
@@ -83,8 +83,8 @@
   root.querySelector('.cb-selection').hidden=!selectedSlot;
   root.querySelector('[data-day-title]').textContent=selectedDay?fullDate(selectedDay+'T12:00:00-05:00'):'Horarios disponibles';
   if (loading) {availability.textContent='Consultando la agenda…';return;}
-  if (!slots.length) {availability.textContent='Miguel todavía no ha publicado horarios disponibles para este mes. Consulta otro mes o vuelve más adelante.';return;}
-  if (!selectedDay) {availability.textContent='Selecciona una fecha marcada en el calendario para ver sus horarios.';return;}
+  if (!slots.length) {availability.textContent='No quedan horarios libres para este mes. Puedes consultar otro mes.';return;}
+  if (!selectedDay) {availability.textContent='Selecciona una fecha para ver sus horarios.';return;}
   availability.textContent='Selecciona el horario que mejor te acomode.';
   for (const slot of slots.filter(s=>dateKey(s.starts_at)===selectedDay)) {
    const button=document.createElement('button');button.type='button';
@@ -132,5 +132,27 @@
   } catch(error) {status.textContent=error.message;}
   finally {submit.disabled=false;}
  });
+ const flow=document.createElement('div');
+ flow.className='cb-flow';root.before(flow);flow.append(root,form);
+ const placeholder=document.createComment('Agenda en la sección');flow.before(placeholder);
+ const dialog=document.createElement('dialog');dialog.className='cb-dialog';
+ dialog.setAttribute('aria-labelledby','cb-dialog-title');
+ dialog.innerHTML='<header class="cb-dialog-header"><h2 id="cb-dialog-title">Reserva tu consultoría</h2><button type="button" class="cb-dialog-close" aria-label="Cerrar reserva"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="cb-dialog-content"></div>';
+ document.body.append(dialog);
+ let opener;
+ const close=()=>dialog.close();
+ dialog.querySelector('.cb-dialog-close').addEventListener('click',close);
+ dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close();}});
+ dialog.addEventListener('close',()=>{placeholder.after(flow);opener?.focus({preventScroll:true});});
+ for(const link of document.querySelectorAll('a[href]')){
+  const url=new URL(link.href,location.href);
+  if(url.pathname!==location.pathname||url.hash!=='#consulta')continue;
+  link.setAttribute('aria-haspopup','dialog');
+  link.addEventListener('click',event=>{
+   event.preventDefault();opener=link;
+   dialog.querySelector('.cb-dialog-content').append(flow);
+   dialog.showModal();dialog.scrollTop=0;
+  });
+ }
  void loadMonth();
 })();

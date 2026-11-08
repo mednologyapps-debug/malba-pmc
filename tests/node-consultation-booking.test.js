@@ -51,6 +51,7 @@ test('SMTP sends pending notice and a private confirmation link; errors do not d
  const jobs=[{id:'job1',booking_id:booking.id,kind:'requested_client',status:'pending',attempts:0},{id:'job2',booking_id:booking.id,kind:'requested_consultant',status:'pending',attempts:0}];
  const api=fixture(item=>{
   if(item.rpc)return {data:{status:'pending'}};
+  if(item.table==='consultation_settings')return {data:{enabled:true,consultant_email:'consultant@example.invalid'}};
   if(item.table==='consultation_mail_outbox'&&item.operation==='select')return {data:jobs};
   if(item.table==='consultation_mail_outbox')return {data:[{id:'claim'}]};
   if(item.table==='consultation_bookings')return {data:booking};

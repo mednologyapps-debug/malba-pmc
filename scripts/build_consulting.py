@@ -31,7 +31,7 @@ def document(title,description,slug,main,programs,active,image,alt,service=None)
     if service:schema['@graph'].append({'@type':'Service','name':title,'description':description,'serviceType':service['name'],'url':b.ORIGIN+slug,'provider':{'@type':'Organization','name':'MALBA PMC','url':b.ORIGIN}})
     else:schema['@graph'].append({'@type':'CollectionPage','name':'Consultoría MALBA PMC','description':description,'url':b.ORIGIN+slug})
     result=b.document(title,description,slug,'../','<div class="consult-page">'+main+'</div>',programs,active,schema,image,alt)
-    return result.replace('</head>','<link rel="stylesheet" href="../consultoria.css"><link rel="stylesheet" href="../consultation.css?v=20261108"><script src="../consultoria.js?v=20261108" defer></script></head>')
+    return result.replace('</head>','<link rel="stylesheet" href="../consultoria.css"><link rel="stylesheet" href="../consultation.css?v=20261108-open"><script src="../consultoria.js?v=20261108-open" defer></script></head>')
 
 
 def render_consulting(programs,data=None):

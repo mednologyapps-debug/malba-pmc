@@ -93,6 +93,10 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    const port = Number(env.SMTP_PORT || 465);
    transport = nodemailer.createTransport({host:env.SMTP_HOST, port, secure:env.SMTP_SECURE ? env.SMTP_SECURE === 'true' : port === 465, auth:{user:env.SMTP_USER, pass:env.SMTP_PASSWORD || env.SMTP_PASS}, connectionTimeout:10000, socketTimeout:20000, tls:{rejectUnauthorized:true}});
    for (const job of jobs) {
+    if (job.kind === 'requested_consultant') {
+     const recipient = await settings();
+     if (!recipient.consultant_email) continue;
+    }
     const claims = await query(db.from('consultation_mail_outbox').update({status:'sending', attempts:job.attempts + 1, updated_at:new Date().toISOString()}).eq('id', job.id).eq('status', job.status).eq('attempts', job.attempts).select('id'));
     if (!claims.length) continue;
     try {
@@ -100,6 +104,10 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
      if (job.kind.startsWith('requested_') && booking.status !== 'pending') {
       await query(db.from('consultation_mail_outbox').update({status:'cancelled', updated_at:new Date().toISOString()}).eq('id', job.id));
       continue;
+     }
+     if (job.kind === 'requested_consultant' && !booking.consultant_email) {
+      booking.consultant_email = (await settings()).consultant_email;
+      await query(db.from('consultation_bookings').update({consultant_email:booking.consultant_email}).eq('id',booking.id).eq('consultant_email',''));
      }
      const mail = mailContent(job, booking);
      const receipt = await transport.sendMail({...mail, from:sender(env), messageId:'<malba-consultation-' + job.id + '@malba-pmc.com>'});
@@ -139,8 +147,9 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    }
    if (route === '/api/consultations/availability' && req.method === 'GET') {
     const current = await settings();
-    if (!current.enabled || !current.consultant_email || !mailReady()) return json(res, 200, {slots:[], timezone:'America/Lima', enabled:false});
+    if (!current.enabled) return json(res, 200, {slots:[], timezone:'America/Lima', enabled:false});
     const range = monthRange(url);
+    await query(db.rpc('consultation_ensure_slots',{p_from:range.from,p_to:range.to}));
     const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at').eq('enabled', true).gte('starts_at', new Date(Math.max(Date.parse(range.from), Date.now() + 3600000)).toISOString()).lt('starts_at', range.to).order('starts_at').limit(1000));
     const booked = slots.length ? await query(db.from('consultation_bookings').select('slot_id').in('slot_id', slots.map(s => s.id)).in('status', ['pending','confirmed'])) : [];
     const taken = new Set(booked.map(b => b.slot_id));
@@ -183,13 +192,19 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
      if (value.enabled && !mailReady()) return json(res, 409, {error:'Configura el envío de correos antes de activar la agenda.'});
      const rows = await query(db.from('consultation_settings').update({consultant_email:email, enabled:value.enabled, revision:current.revision + 1, updated_at:new Date().toISOString()}).eq('id', true).eq('revision', value.revision).select('revision'));
      if (!rows.length) return json(res, 409, {error:'Otra sesión cambió la agenda. Actualiza la vista.'});
+     sendQueued();
      return json(res, 200, {revision:rows[0].revision});
     }
    }
    if (route === '/api/consultations/admin/slots') {
     if (req.method === 'GET') {
      const range = monthRange(url);
-     const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,enabled,consultation_bookings(id,name,email,company,service,message,status,created_at)').gte('starts_at',range.from).lt('starts_at',range.to).order('starts_at').limit(1000));
+     await query(db.rpc('consultation_ensure_slots',{p_from:range.from,p_to:range.to}));
+     const day = url.searchParams.get('date');
+     if (day && (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !day.startsWith(url.searchParams.get('month') + '-'))) return json(res, 400, {error:'Selecciona un día válido.'});
+     const from = day ? new Date(day + 'T00:00:00-05:00').toISOString() : range.from;
+     const to = day ? new Date(Date.parse(from) + 86400000).toISOString() : range.to;
+     const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,enabled,consultation_bookings(id,name,email,company,service,message,status,created_at)').gte('starts_at',from).lt('starts_at',to).order('starts_at').limit(1000));
      return json(res, 200, {slots});
     }
     if (req.method === 'POST') {
@@ -202,8 +217,9 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    if (route === '/api/consultations/admin/slot' && req.method === 'POST') {
     const value = await body(req);
     if (!UUID.test(value.id || '')) return json(res, 400, {error:'Horario inválido.'});
-    await query(db.from('consultation_slots').update({enabled:false}).eq('id',value.id));
-    return json(res, 200, {hidden:true});
+    if (typeof value.enabled !== 'boolean') return json(res, 400, {error:'Selecciona bloquear o liberar el horario.'});
+    await query(db.rpc('consultation_toggle_slot',{p_id:value.id,p_enabled:value.enabled}));
+    return json(res, 200, {enabled:value.enabled});
    }
    if (route === '/api/consultations/admin/decision' && req.method === 'POST') {
     const value = await body(req);
@@ -214,7 +230,9 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    }
    if (route === '/api/consultations/admin/mail' && req.method === 'GET') {
     const rows = await query(db.from('consultation_mail_outbox').select('status').in('status',['failed','sending']));
-    return json(res, 200, {failed:rows.filter(r => r.status === 'failed').length, sending:rows.filter(r => r.status === 'sending').length});
+    const current = await settings();
+    const waiting = current.consultant_email ? [] : await query(db.from('consultation_mail_outbox').select('id').eq('kind','requested_consultant').eq('status','pending'));
+    return json(res, 200, {failed:rows.filter(r => r.status === 'failed').length, sending:rows.filter(r => r.status === 'sending').length, awaitingRecipient:waiting.length});
    }
    return json(res, 404, {error:'Ruta no encontrada.'});
   } catch (error) {
