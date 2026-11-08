@@ -15,7 +15,7 @@ function fixture(responder,{admin=false,csrf=true,mailer,settings=env}={}){
 }
 test('public availability excludes reservations and never discloses client or consultant data',async()=>{
  const used={...slot,id:'33333333-3333-4333-8333-333333333333'};
- const api=fixture(item=>({data:item.table==='consultation_settings'?{enabled:true,consultant_email:'consultant@example.invalid'}:item.table==='consultation_slots'?[slot,used]:[{slot_id:used.id}]}));
+ const api=fixture(item=>({data:item.table==='consultation_settings'?{enabled:true,consultant_email:'consultant@example.invalid'}:item.table==='consultation_slots'?[slot,{...used,consultation_bookings:[{status:'pending'}]}]:[]}));
  const result=await api.request('/api/consultations/availability?month=2026-12');
  assert.equal(result.status,200);assert.deepEqual(result.value.slots,[slot]);assert.equal(result.value.consultant_email,undefined);
 });

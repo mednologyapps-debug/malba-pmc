@@ -150,10 +150,9 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
     if (!current.enabled) return json(res, 200, {slots:[], timezone:'America/Lima', enabled:false});
     const range = monthRange(url);
     await query(db.rpc('consultation_ensure_slots',{p_from:range.from,p_to:range.to}));
-    const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at').eq('enabled', true).gte('starts_at', new Date(Math.max(Date.parse(range.from), Date.now() + 3600000)).toISOString()).lt('starts_at', range.to).order('starts_at').limit(1000));
-    const booked = slots.length ? await query(db.from('consultation_bookings').select('slot_id').in('slot_id', slots.map(s => s.id)).in('status', ['pending','confirmed'])) : [];
-    const taken = new Set(booked.map(b => b.slot_id));
-    return json(res, 200, {slots:slots.filter(s => !taken.has(s.id)), timezone:'America/Lima', enabled:true});
+    const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,consultation_bookings(status)').eq('enabled', true).gte('starts_at', new Date(Math.max(Date.parse(range.from), Date.now() + 3600000)).toISOString()).lt('starts_at', range.to).order('starts_at').limit(1000));
+    const available = slots.filter(slot => !(slot.consultation_bookings || []).some(booking => ['pending','confirmed'].includes(booking.status))).map(({consultation_bookings, ...slot}) => slot);
+    return json(res, 200, {slots:available, timezone:'America/Lima', enabled:true});
    }
    if (route === '/api/consultations/request' && req.method === 'POST') {
     if (!mailReady()) return json(res, 503, {error:'La agenda todavía no está disponible.'});
