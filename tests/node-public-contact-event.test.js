@@ -18,7 +18,7 @@ test('event form has one registration identity and distinct fiscal data',()=>{
 test('public contact is handled on the server, never by launching a WhatsApp draft',()=>{
  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
  const consult=fs.readFileSync(path.join(root,'consultoria.js'),'utf8');
- assert.match(app,/\/api\/public-contact/);assert.match(consult,/\/api\/public-contact/);
+ assert.match(app,/\/api\/public-contact/);assert.match(consult,/\/api\/consultations\/request/);
  assert.doesNotMatch(app,/window\.open\(destination/);
  assert.doesNotMatch(consult,/window\.open\('https:\/\/wa/);
 });

@@ -17,7 +17,7 @@ const SESSION_TTL = 8 * 60 * 60;
 const MAX_UPLOAD = 100 * 1024 * 1024;
 const APP_VERSION = process.env.APP_VERSION || 'node-cms-live-publish-20261028.1';
 const REDIRECTS = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'redirects.json'), 'utf8')); } catch { return {}; } })();
-const PRIVATE_FILES = /(^|\/)(?:\.env|\.runtime|\.cms-private|server\.js|event-system|contact-api\.js|mail-sender\.js|package\.json|package-lock\.json|supabase|scripts|tests)(?:\/|$)/i;
+const PRIVATE_FILES = /(^|\/)(?:\.env|\.runtime|\.cms-private|server\.js|event-system|consultation-system|contact-api\.js|mail-sender\.js|package\.json|package-lock\.json|supabase|scripts|tests)(?:\/|$)/i;
 const MIME = {'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.ico':'image/x-icon','.pdf':'application/pdf','.mp4':'video/mp4'};
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {auth:{autoRefreshToken:false,persistSession:false},realtime:{transport:WebSocket}}) : null;
 // Never sign a user into the shared service-role client: even with persistence
@@ -547,7 +547,8 @@ async function lmsApi(req,res,url) {
 }
 
 const eventApi=require('./event-system/api')({db:supabase,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign,getDocument});
-async function api(req,res,url) { if(url.pathname==='/api/public-contact')return require('./contact-api')(req,res,{json}); if(url.pathname.startsWith('/api/events/'))return eventApi(req,res,url); if(url.pathname.startsWith('/api/public-asset/'))return publicAsset(req,res,url);if(url.pathname.startsWith('/api/lms/'))return lmsApi(req,res,url);return cmsApi(req,res,url); }
+const consultationApi=require('./consultation-system/api')({db:supabase,json,requireAdmin,csrfOk,sign,nodemailer,getDocument});
+async function api(req,res,url) { if(url.pathname.startsWith('/api/consultations/'))return consultationApi(req,res,url); if(url.pathname==='/api/public-contact')return require('./contact-api')(req,res,{json}); if(url.pathname.startsWith('/api/events/'))return eventApi(req,res,url); if(url.pathname.startsWith('/api/public-asset/'))return publicAsset(req,res,url);if(url.pathname.startsWith('/api/lms/'))return lmsApi(req,res,url);return cmsApi(req,res,url); }
 const server=http.createServer(async(req,res)=>{const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);try{if(req.method==='GET'&&url.pathname==='/health')return json(res,200,{ok:true,service:'malba-pmc',version:APP_VERSION,supabase:!!supabase});if((req.method==='GET'||req.method==='HEAD')&&REDIRECTS[url.pathname]){res.writeHead(301,{'Location':REDIRECTS[url.pathname],'Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'});return res.end();}if(url.pathname.startsWith('/api/')){const handled=await api(req,res,url);if(handled!==false)return;}if(req.method!=='GET'&&req.method!=='HEAD')return text(res,405,'Método no permitido.');
     if((req.method==='GET'||req.method==='HEAD')&&/^\/evento\/presentacion-libro(?:\/|\/index.html)?$/.test(url.pathname)){return serve(res,path.join(ROOT,'evento/presentacion-libro/index.html'));}
     // Runtime pages reflect the published CMS revision (also after server restart).
