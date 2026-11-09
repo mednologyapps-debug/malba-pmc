@@ -65,12 +65,13 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    try{const reg=await context(job.registration_id),p=reg.book_participants,o=reg.book_orders?.[0];
     if(job.kind==='purchase'&&o?.status!=='paid')throw Error('No existe un pago real verificado.');
     const eventDate=c.date?new Date(c.date).toLocaleString('es-PE',{timeZone:'America/Lima',dateStyle:'long',timeStyle:'short'}):'Fecha por confirmar';
-    const subject=job.kind==='admin'?'Nueva inscripción | Presentación del libro MALBA PMC':job.kind==='purchase'?'Compra verificada | MALBA PMC':'Recibimos tu inscripción | Presentación del libro MALBA PMC';
+    const subject=job.kind==='admin'?'Nueva inscripción | Presentación del libro MALBA PMC':job.kind==='purchase'?'Pago confirmado | Presentación del libro MALBA PMC':'Recibimos tu inscripción | Presentación del libro MALBA PMC';
     const title=job.kind==='admin'?'Nueva inscripción recibida':job.kind==='purchase'?'Compra confirmada':'Recibimos tu inscripción';
-    const description=job.kind==='purchase'?'Izipay confirmó el pago de tu libro. Recógelo en el lugar del evento.'+(reg.status==='waitlist'?' Tu solicitud de asistencia sigue en lista de espera.':''):reg.status==='waitlist'?'Tu solicitud está en lista de espera. No es una confirmación de ingreso.':'Tu inscripción ha sido registrada. Recuerda que no garantiza el ingreso.';
+    const description=job.kind==='purchase'?(reg.status==='registered'?'Tu pago y tu inscripción a la presentación están confirmados.':reg.status==='waitlist'?'Tu pago está confirmado. Tu solicitud de asistencia sigue en lista de espera.':'Tu pago está confirmado.')+' Recoge tu libro en el lugar del evento.':reg.status==='waitlist'?'Tu solicitud está en lista de espera. No es una confirmación de ingreso.':'Tu inscripción ha sido registrada. Recuerda que no garantiza el ingreso.';
     const order=o?`<p>Pedido: ${escape(o.id)}<br>Libro físico · S/ ${Number(o.amount).toFixed(2)}<br>Entrega: ${escape(o.delivery)}<br>Estado: ${o.status==='paid'?'Pago verificado':o.status==='simulated_paid'?'Simulación completada, sin cobro real':'Pendiente de pago'}</p>`:'';
     const html=`<!doctype html><html lang="es"><body style="margin:0;background:#f4f2f7;font-family:Arial,sans-serif;color:#25364a"><div style="max-width:600px;margin:auto;padding:36px 24px;background:white;border-top:5px solid #5d4594"><p style="color:#5d4594;font-weight:bold">MALBA PMC</p><h1 style="font-size:26px">${title}</h1><p>Hola, ${escape(p.full_name)}.</p><p>${description}</p><h2 style="font-size:18px">${escape(c.title)}</h2><p>${escape(eventDate)} (hora de Perú)<br>${escape(c.location||'Sede por confirmar')}</p>${order}<p style="background:#f0edf6;padding:18px;font-size:12px">${CAPACITY}</p>${job.kind==='admin'?`<p>Participante: ${escape(p.full_name)}<br>Correo: ${escape(p.email)}<br>Celular: ${escape(p.phone)}<br>Modalidad: ${reg.mode==='book'?'Evento + libro':'Solo evento'}</p>`:''}${c.adminEmail?`<p>Consultas: <a href="mailto:${escape(c.adminEmail)}">${escape(c.adminEmail)}</a></p>`:''}<p>MALBA PMC</p></div></body></html>`;
-    await transport.sendMail({from:require('../mail-sender').sender(process.env),to:job.kind==='admin'?(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER):p.email,subject,html,text:`${title}\nHola, ${p.full_name}.\n${description}\n${eventDate}\n${c.location}\n${CAPACITY}`,messageId:`<malba-event-${job.id}@malba-pmc.com>`});
+    const receipt=await transport.sendMail({from:require('../mail-sender').sender(process.env),to:job.kind==='admin'?(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER):p.email,subject,html,text:`${title}\nHola, ${p.full_name}.\n${description}\n${eventDate}\n${c.location}\n${CAPACITY}`,messageId:`<malba-event-${job.id}@malba-pmc.com>`});
+    if(receipt?.accepted&&!receipt.accepted.length)throw Error('SMTP no aceptó el destinatario.');
     await query(db.from('book_mail_outbox').update({status:'sent',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id));sent++;if(job.kind==='registration')recipientSent=true;
    }catch(e){failed++;console.error('MALBA event SMTP failed:',String(e.code||e.message||'Error').slice(0,200));await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
   }transport.close();return{sent,recipientSent,failed};
@@ -89,6 +90,18 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    }
    if(count){const sent=await flushMail();console.info('MALBA recovered SMTP notices:',{requeued:count,sent:sent.sent,failed:sent.failed});}
   }catch(e){console.error('MALBA SMTP recovery error:',String(e.message||e).slice(0,180));}
+ }
+ let sendingPurchases=false;
+ async function dispatchPurchases(){
+  if(sendingPurchases)return;
+  sendingPurchases=true;
+  try{await flushMail(null,'purchase');}
+  catch{console.error('Event purchase confirmation remains queued.');}
+  finally{sendingPurchases=false;}
+ }
+ if(db){
+  const timer=setInterval(dispatchPurchases,60000);
+  timer.unref?.();
  }
  const recoveryTimer=setTimeout(retryLegacySenderFailuresOnce,12000);
  recoveryTimer.unref?.();

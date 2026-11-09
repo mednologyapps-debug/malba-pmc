@@ -100,3 +100,16 @@ test('automatic status check can reconcile a missing IPN by the exact order',asy
  assert.equal(result.value.status,'paid');
  assert.equal(db.calls.filter(c=>c[0]==='book_finish_izipay').length,1);
 });
+
+test('a recovery hint cannot settle a debit unless Izipay binds it to the expected order',async()=>{
+ const transaction={...answer.transactions[0],shopId:session.shop_id,operationType:'DEBIT'};
+ const calls=[];
+ const lookup=reference=>izi.lookupPaid(session,transaction.uuid,{env,recovery:true,fetcher:async url=>{
+  calls.push(url);
+  const response=url.endsWith('/Transaction/Get')?transaction:{...answer,orderDetails:{...answer.orderDetails,orderId:reference},transactions:[transaction]};
+  return {ok:true,json:async()=>({status:'SUCCESS',answer:response})};
+ }});
+ assert.equal(await lookup('another-order'),null);
+ assert.equal(await lookup(session.provider_order_id),transaction.uuid);
+ assert.equal(calls.length,4);
+});

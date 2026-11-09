@@ -30,14 +30,14 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
    if(previous.mode!==mode)throw Error('Este pedido tiene una sesión de otra modalidad de pago. Contacta a MALBA para reiniciarlo de forma segura.');
    if(previous.expires_at&&Date.parse(previous.expires_at)<Date.now())throw Error('La sesión de pago anterior venció. Contacta a la organización.');
    const expires=Date.parse(previous.expires_at),token=previous.id+'.'+expires+'.'+sign('izipay-session:'+previous.id+':'+expires);
-   return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-auto#'+token};
+   return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-complete#'+token};
   }}
   const id=crypto.randomUUID(),expires=Date.now()+30*60000,token=id+'.'+expires+'.'+sign('izipay-session:'+id+':'+expires);
   const receipt=c2u.billing(billing);
   if(retailPhone)receipt.retailPhone=retailPhone;
   const s={id,order_id:orderId,provider_order_id:'MALBA-'+id,shop_id:creds.shopId,mode,amount_minor:amountMinor,currency:'PEN',client_hash:hash(token),email,customer_name:name,billing:receipt,expires_at:new Date(expires).toISOString()};
   await query(db.from('book_payment_sessions').insert(s));
-  return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-auto#'+token};
+  return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-complete#'+token};
  }
  async function readBody(req){let size=0,raw='';for await(const chunk of req){size+=chunk.length;if(size>128000)throw Error('Solicitud de pago demasiado grande.');raw+=chunk;}
   return String(req.headers['content-type']).includes('application/x-www-form-urlencoded')?Object.fromEntries(new URLSearchParams(raw)):JSON.parse(raw||'{}');
@@ -63,27 +63,43 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
   }
  }
  const providerChecks=new Map();
- async function reconcile(s,transactionId){
+ async function reconcile(s,transactionId,recovery=false){
   if(s.status==='paid')return true;
-  const key=s.id+(transactionId?':transaction':':order'),now=Date.now();
+  const key=s.id+(recovery?':recovery':transactionId?':transaction':':order'),now=Date.now();
   for(const [id,check] of providerChecks)if(check.until<=now)providerChecks.delete(id);
   if(providerChecks.has(key))return providerChecks.get(key).result;
   if(providerChecks.size>=200)return false;
   const result=(async()=>{
+   let outcome='not_confirmed';
    try{
-    const verifiedId=await izipay.lookupPaid(s,transactionId,{env,fetcher});
-    if(!verifiedId)return false;
-    await settle(s,verifiedId);
-    return true;
-   }catch{return false;}
+    const verifiedId=await izipay.lookupPaid(s,transactionId,{env,fetcher,recovery});
+    if(verifiedId){
+     outcome='settlement_failed';
+     await settle(s,verifiedId);
+     outcome='confirmed';
+     return true;
+    }
+   }catch(error){
+    if(outcome!=='settlement_failed')outcome=error.lookupCode||'lookup_failed';
+   }finally{
+    if(recovery)try{
+     await query(db.from('book_payment_sessions').update({recovery_result:outcome,recovery_checked_at:new Date().toISOString()}).eq('id',s.id));
+    }catch{console.error('Could not record Izipay recovery result.');}
+   }
+   return false;
   })();
   providerChecks.set(key,{until:now+8000,result});
   return result;
  }
  async function status(token,confirm){
   const s=await sessionByToken(token);
-  const paid=confirm&&s.status==='pending'&&await reconcile(s);
-  return {status:paid?'paid':s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone,event:!!s.order_id};
+  const paid=s.status==='paid'||confirm&&s.status==='pending'&&await reconcile(s);
+  let eventStatus;
+  if(paid&&s.order_id&&s.mode==='PRODUCTION'){
+   const order=await query(db.from('book_orders').select('book_registrations(status)').eq('id',s.order_id).single());
+   eventStatus=order?.book_registrations?.status;
+  }
+  return {status:paid?'paid':s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone,event:!!s.order_id,eventStatus};
  }
  async function handler(req,res,url){
   const path=url.pathname.replace(/\/$/,'');
@@ -142,14 +158,19 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
   reconciling=true;
   try{
    const cutoff=new Date(Date.now()-45*60000).toISOString();
-   const sessions=await query(db.from('book_payment_sessions').select('id,order_id,provider_order_id,shop_id,mode,amount_minor,currency,status,billing').eq('status','pending').eq('mode','PRODUCTION').gte('created_at',cutoff).order('created_at',{ascending:false}).limit(20));
+   const fields='id,order_id,provider_order_id,shop_id,mode,amount_minor,currency,status,billing,recovery_transaction';
+   const pending=()=>db.from('book_payment_sessions').select(fields).eq('status','pending').eq('mode','PRODUCTION');
+   const recoveries=await query(pending().not('recovery_transaction','is',null).order('recovery_checked_at',{ascending:true,nullsFirst:true}).limit(5));
+   for(const session of recoveries)await reconcile(session,session.recovery_transaction.replace(/-/g,''),true);
+   const sessions=await query(pending().is('recovery_transaction',null).gte('created_at',cutoff).order('created_at',{ascending:false}).limit(20));
    for(const session of sessions)await reconcile(session);
   }catch{console.error('Izipay automatic reconciliation unavailable.');}
   finally{reconciling=false;}
  }
  if(db){
+  const first=setTimeout(reconcileRecentPayments,8000);
   const timer=setInterval(reconcileRecentPayments,60000);
-  timer.unref?.();
+  first.unref?.();timer.unref?.();
  }
  async function lookupStatuses(ids){return ids.length&&db?query(db.from('book_payment_sessions').select('id,status').in('id',ids)):[];}
  return {ready,createSession,status,handler,lookupStatuses};

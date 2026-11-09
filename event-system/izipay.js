@@ -36,20 +36,39 @@ async function lookup(resource,payload,session,{env=process.env,fetcher=fetch}={
  if(String(c.shopId)!==String(session.shop_id))throw Error('La tienda del pedido no coincide.');
  const response=await fetcher(API+resource,{method:'POST',headers:{Authorization:'Basic '+Buffer.from(c.shopId+':'+c.password).toString('base64'),'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(4000)});
  const result=await response.json();
- return response.ok&&result.status==='SUCCESS'?result.answer:null;
+ if(!response.ok||result.status!=='SUCCESS'){
+  const code=String(result.answer?.errorCode||'');
+  const error=Error('Izipay no confirmó la consulta.');
+  error.lookupCode=/^[A-Z0-9_]{1,32}$/i.test(code)?'provider_'+code:'provider_http_'+response.status;
+  throw error;
+ }
+ return result.answer;
 }
 const normalizedId=value=>String(value||'').replace(/-/g,'').toLowerCase();
+function matchingDebit(transaction,session){
+ return transaction?.status==='PAID'&&transaction.operationType==='DEBIT'&&
+  String(transaction.shopId)===String(session.shop_id)&&Number(transaction.amount)===session.amount_minor&&
+  transaction.currency===session.currency&&/^[a-f0-9]{32}$/i.test(normalizedId(transaction.uuid));
+}
 async function lookupPaid(session,transactionId,options){
  if(transactionId){
-  // The signed return already binds this UUID to the order. Confirm the debit independently with Izipay.
   const transaction=await lookup('Transaction/Get',{uuid:transactionId},session,options);
-  return transaction?.status==='PAID'&&transaction.operationType==='DEBIT'&&
-   normalizedId(transaction.uuid)===normalizedId(transactionId)&&String(transaction.shopId)===String(session.shop_id)&&
-   transaction.amount===session.amount_minor&&transaction.currency===session.currency?transaction.uuid:null;
+  if(!matchingDebit(transaction,session)||normalizedId(transaction.uuid)!==normalizedId(transactionId))return null;
+  const details=transaction.orderDetails;
+  if(details&&(details.orderId&&details.orderId!==session.provider_order_id||details.mode&&details.mode!==session.mode))return null;
+  // The browser callback supplies a signed binding. A recovery hint must independently match the provider's order.
+  if(!options?.recovery||details?.orderId===session.provider_order_id&&details?.mode===session.mode)return transaction.uuid;
  }
  const order=await lookup('Order/Get',{orderId:session.provider_order_id,operationType:'DEBIT'},session,options);
- if(order?.orderStatus!=='PAID')return null;
- const result=verifyAnswer(order,session);
- return result.paid&&order.transactions.some(t=>t.uuid===result.transactionId&&t.operationType==='DEBIT')?result.transactionId:null;
+ const details=order?.orderDetails;
+ if(order?.orderStatus&&order.orderStatus!=='PAID'||details?.orderId&&details.orderId!==session.provider_order_id||
+  details?.mode&&details.mode!==session.mode||details?.orderCurrency&&details.orderCurrency!==session.currency||
+  details?.orderTotalAmount!=null&&Number(details.orderTotalAmount)!==session.amount_minor||
+  order?.shopId&&String(order.shopId)!==String(session.shop_id))return null;
+ const paid=(Array.isArray(order?.transactions)?order.transactions:[]).filter(t=>t.status==='PAID'&&t.operationType==='DEBIT');
+ if(paid.length!==1)return null;
+ const transaction={...paid[0],shopId:paid[0].shopId??order.shopId};
+ if(!matchingDebit(transaction,session)||transactionId&&normalizedId(transaction.uuid)!==normalizedId(transactionId))return null;
+ return transaction.uuid;
 }
 module.exports={credentials,ready,verifyHash,verifyAnswer,createPayment,lookupPaid};

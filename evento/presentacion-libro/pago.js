@@ -14,7 +14,11 @@
   $('#book-delivery').hidden=!s.retail;
   container.hidden=true;
   preview.hidden=s.mode!=='TEST';
-  if(s.event&&s.mode==='PRODUCTION')confirmation.showModal();
+  if(s.event&&s.mode==='PRODUCTION'){
+   const participation=s.eventStatus==='registered'?'Tu pago y tu inscripción al evento están confirmados.':s.eventStatus==='waitlist'?'Tu pago está confirmado. Tu solicitud de asistencia sigue en lista de espera.':'Tu compra del libro está confirmada.';
+   $('#purchase-confirmation-copy').textContent=participation+' Podrás recoger tu ejemplar en el lugar del evento.';
+   confirmation.showModal();
+  }
  }
  async function verifyAutomatically(){
   const until=Date.now()+90000;
