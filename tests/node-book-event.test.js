@@ -57,3 +57,22 @@ test('book registration returns a pending payment token without sending registra
  assert.match(result.value.paymentToken,/^12345678-/);
  assert.equal(a.db.calls.some(call=>call.table==='book_mail_outbox'),false);
 });
+
+test('purchase confirmation reads the one-to-one order returned by PostgREST',async t=>{
+ for(const key of ['SMTP_HOST','SMTP_USER','SMTP_PASSWORD']){
+  const previous=process.env[key];
+  process.env[key]=key==='SMTP_USER'?'team@example.invalid':'test-only';
+  t.after(()=>{if(previous===undefined)delete process.env[key];else process.env[key]=previous;});
+ }
+ const sent=[];
+ const a=setup(c=>{
+  if(c.table==='book_events')return {data:{config}};
+  if(c.table==='book_registrations')return {data:{status:'registered',mode:'book',book_participants:{full_name:'Prueba',email:'qa@example.invalid'},book_orders:{id:'paid-order',amount:10,status:'paid',delivery:'Recojo'}}};
+  if(c.op==='select')return {data:[{id:'job',registration_id:'reg',kind:'purchase',attempts:0}]};
+  return {data:[{id:'job'}]};
+ },{admin:true,mailer:{createTransport:()=>({sendMail:async message=>{sent.push(message);return {accepted:[message.to]};},close(){}})}});
+ const response=await a.call('/api/events/admin/mail',{});
+ assert.equal(response.value.sent,1);
+ assert.equal(sent.length,1);
+ assert.match(sent[0].text,/Tu pago y tu inscripción a la presentación están confirmados/);
+});

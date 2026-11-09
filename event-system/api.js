@@ -6,6 +6,7 @@ const CAPACITY='La inscripción al evento está sujeta al aforo disponible y no 
 const SLUG='presentacion-libro';
 const DELIVERY='Recojo en el lugar del evento';
 const DEFAULT={title:'Presentación del libro de Miguel Alba',date:'2026-11-27T19:00:00-05:00',location:'Consejo Nacional del Colegio de Ingenieros del Perú',capacity:50,deadline:null,status:'draft',registrationOpen:false,waitlist:false,price:129,regularPrice:169,launchUntil:'2026-11-28T00:00:00-05:00',taxIncluded:true,priceConfirmed:true,bookAvailable:false,paymentMode:'disabled',deliveries:[DELIVERY],adminEmail:'',privacyUrl:'https://olivedrab-mouse-758184.hostingersite.com/evento/presentacion-libro/privacidad.html'};
+const eventOrder=registration=>Array.isArray(registration.book_orders)?registration.book_orders[0]:registration.book_orders;
 const clean=(v,n)=>String(v||'').trim().slice(0,n);
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function priceAt(c,now=Date.now()){return c.regularPrice&&c.launchUntil&&now>=Date.parse(c.launchUntil)?Number(c.regularPrice):Number(c.price);}
@@ -62,7 +63,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   for(const job of jobs){
    if(job.kind==='admin'&&!(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER))continue;
    const claimed=await query(db.from('book_mail_outbox').update({status:'sending',attempts:job.attempts+1,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','pending').select('id'));if(!claimed.length)continue;
-   try{const reg=await context(job.registration_id),p=reg.book_participants,o=reg.book_orders?.[0];
+   try{const reg=await context(job.registration_id),p=reg.book_participants,o=eventOrder(reg);
     if(job.kind==='purchase'&&o?.status!=='paid')throw Error('No existe un pago real verificado.');
     const eventDate=c.date?new Date(c.date).toLocaleString('es-PE',{timeZone:'America/Lima',dateStyle:'long',timeStyle:'short'}):'Fecha por confirmar';
     const subject=job.kind==='admin'?'Nueva inscripción | Presentación del libro MALBA PMC':job.kind==='purchase'?'Pago confirmado | Presentación del libro MALBA PMC':'Recibimos tu inscripción | Presentación del libro MALBA PMC';
@@ -76,15 +77,16 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    }catch(e){failed++;console.error('MALBA event SMTP failed:',String(e.code||e.message||'Error').slice(0,200));await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
   }transport.close();return{sent,recipientSent,failed};
  }
- // Retry only delivery attempts definitively rejected by the previous malformed
- // SMTP sender. No duplicate enrollment or payment action is performed.
- async function retryLegacySenderFailuresOnce(){
+ // Retry only known failures that occurred before SMTP accepted the message.
+ async function retryKnownMailFailuresOnce(){
   if(!db||!process.env.SMTP_HOST||!process.env.SMTP_USER||!(process.env.SMTP_PASSWORD||process.env.SMTP_PASS))return;
   try{
-   const failures=await query(db.from('book_mail_outbox').select('id,last_error,attempts').eq('status','failed').lte('attempts',2).limit(20));
+   const failures=await query(db.from('book_mail_outbox').select('id,registration_id,kind,last_error,attempts').eq('status','failed').lte('attempts',2).limit(20));
    let count=0;
    for(const job of failures){
-    if(!/553 5\\.7\\.1/.test(String(job.last_error||''))||!/Sender address rejected/.test(String(job.last_error||'')))continue;
+    const rejectedSender=/553 5\.7\.1/.test(String(job.last_error||''))&&/Sender address rejected/.test(String(job.last_error||''));
+    const missingOrder=job.kind==='purchase'&&job.last_error==='No existe un pago real verificado.';
+    if(!rejectedSender&&(!missingOrder||eventOrder(await context(job.registration_id))?.status!=='paid'))continue;
     const changed=await query(db.from('book_mail_outbox').update({status:'pending',updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','failed').select('id'));
     if(changed.length)count++;
    }
@@ -103,7 +105,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   const timer=setInterval(dispatchPurchases,60000);
   timer.unref?.();
  }
- const recoveryTimer=setTimeout(retryLegacySenderFailuresOnce,12000);
+ const recoveryTimer=setTimeout(retryKnownMailFailuresOnce,12000);
  recoveryTimer.unref?.();
  return async function eventApi(req,res,url){
   const route=url.pathname.replace(/\/$/,'');
@@ -161,7 +163,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
     if(['free','book'].includes(mode))filter=filter.eq('mode',mode);if(['registered','waitlist','cancelled'].includes(state))filter=filter.eq('status',state);
     if(q){const safe=q.replace(/[^\p{L}\p{N}@. _-]/gu,'');filter=filter.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`,{referencedTable:'book_participants'});}
     if(['pending','failed','simulated_paid','paid'].includes(payment)){filter=db.from('book_registrations').select('*,book_participants!inner(*),book_orders!inner(*)',{count:'exact'}).eq('event_id',SLUG).eq('book_orders.status',payment).order('created_at',{ascending:false});if(mode)filter=filter.eq('mode',mode);if(state)filter=filter.eq('status',state);if(q){const safe=q.replace(/[^\p{L}\p{N}@. _-]/gu,'');filter=filter.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`,{referencedTable:'book_participants'});}}
-    const r=await filter.range(page*50,page*50+49);if(r.error)throw Error(r.error.message);return json(res,200,{rows:r.data,total:r.count,page});
+    const r=await filter.range(page*50,page*50+49);if(r.error)throw Error(r.error.message);return json(res,200,{rows:r.data.map(row=>({...row,book_orders:eventOrder(row)?[eventOrder(row)]:[]})),total:r.count,page});
    }
    if(route==='/api/events/admin/stats'&&req.method==='GET'){
     const specs=[['total','book_registrations',{}],['free','book_registrations',{mode:'free'}],['book','book_registrations',{mode:'book'}],['registered','book_registrations',{status:'registered'}],['waitlist','book_registrations',{status:'waitlist'}],['paid','book_orders',{status:'paid'}],['pending','book_orders',{status:'pending'}],['failed','book_orders',{status:'failed'}],['simulated','book_orders',{status:'simulated_paid'}],['mailFailed','book_mail_outbox',{status:'failed'}],['mailPending','book_mail_outbox',{status:'pending'}],['mailSending','book_mail_outbox',{status:'sending'}]];
@@ -174,7 +176,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    if(route==='/api/events/admin/mail'&&req.method==='POST'){const b=await body(req);if(b.retry===true)await query(db.from('book_mail_outbox').update({status:'pending',updated_at:new Date().toISOString()}).eq('status','failed'));return json(res,200,await flushMail());}
    if(route==='/api/events/admin/export'&&req.method==='GET'){
     const workbook=new ExcelJS.Workbook(),sheet=workbook.addWorksheet('Inscripciones');sheet.columns=['Fecha','Nombre','Correo','Celular','Empresa','Cargo','Modalidad','Inscripción','Pago','Importe PEN','Entrega','Ingreso','UTM origen','UTM campaña'].map(header=>({header,width:25}));let start=0;
-    while(true){const rows=await query(db.from('book_registrations').select('*,book_participants(*),book_orders(*)').eq('event_id',SLUG).order('created_at').order('id').range(start,start+999));for(const r of rows){const p=r.book_participants,o=r.book_orders?.[0];sheet.addRow([r.created_at,p.full_name,p.email,p.phone,p.company,p.position,r.mode,r.status,o?.status||'',o?Number(o.amount):'',o?.delivery||'',r.entered_at||'',r.utm?.utm_source||'',r.utm?.utm_campaign||'']);}if(rows.length<1000)break;start+=1000;}
+    while(true){const rows=await query(db.from('book_registrations').select('*,book_participants(*),book_orders(*)').eq('event_id',SLUG).order('created_at').order('id').range(start,start+999));for(const r of rows){const p=r.book_participants,o=eventOrder(r);sheet.addRow([r.created_at,p.full_name,p.email,p.phone,p.company,p.position,r.mode,r.status,o?.status||'',o?Number(o.amount):'',o?.delivery||'',r.entered_at||'',r.utm?.utm_source||'',r.utm?.utm_campaign||'']);}if(rows.length<1000)break;start+=1000;}
     sheet.getRow(1).font={bold:true,color:{argb:'FF5D4594'}};sheet.views=[{state:'frozen',ySplit:1}];sheet.autoFilter={from:'A1',to:'N1'};return text(res,200,Buffer.from(await workbook.xlsx.writeBuffer()),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',{'Content-Disposition':'attachment; filename="MALBA-inscripciones-evento.xlsx"'});
    }
    return json(res,404,{error:'Ruta de evento no encontrada.'});
