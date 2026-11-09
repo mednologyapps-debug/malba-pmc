@@ -18,7 +18,7 @@
  let month = firstMonth, slots = [], selectedDay = '', selectedSlot, loading = false, generation = 0, requestId = crypto.randomUUID();
  const root = document.createElement('div');
  root.className = 'cb-booking';
- root.innerHTML = '<div class="cb-calendar-pane"><div class="cb-person"><img src="/assets/people/miguel-alba.webp" alt="Miguel Alba" width="52" height="52"><div><strong>Miguel Alba</strong><span>Sesiones de 60 min · Hora de Perú (UTC−5)</span></div></div><div class="cb-month-nav"><button type="button" data-month="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><h3 aria-live="polite"></h3><button type="button" data-month="1" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div><div class="cb-weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="cb-days" role="group" aria-label="Selecciona un día disponible"></div></div><div class="cb-times-pane"><h3 data-day-title>Horarios disponibles</h3><p data-availability role="status">Consultando la agenda…</p><div class="cb-times" role="group" aria-label="Horarios de consultoría"></div><div class="cb-selection" hidden><strong>Tu solicitud</strong><p></p><span>La reserva queda pendiente de confirmación por MALBA PMC.</span></div></div>';
+ root.innerHTML = '<div class="cb-calendar-pane"><div class="cb-person"><img src="/assets/people/miguel-alba.webp" alt="Miguel Alba" width="52" height="52"><div><strong>Miguel Alba</strong><span>Sesiones de 60 min · Hora de Perú (UTC−5)</span></div></div><div class="cb-month-nav"><button type="button" data-month="-1" aria-label="Mes anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button><h3 aria-live="polite"></h3><button type="button" data-month="1" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button></div><div class="cb-weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div><div class="cb-days" role="group" aria-label="Selecciona un día disponible"></div></div><div class="cb-times-pane"><h3 data-day-title>Horarios disponibles</h3><p data-availability role="status">Consultando la agenda…</p><div class="cb-times" role="group" aria-label="Horarios de consultoría"></div></div>';
  form.before(root);
  form.classList.add('cb-details');
  form.hidden = true;
@@ -33,7 +33,12 @@
   if (steps) steps.hidden = true;
  }
  root.parentElement.classList.add('cb-contact-layout');
- form.querySelector('h3').textContent = '2. Completa tus datos';
+ const detailsTitle = form.querySelector('h3');
+ detailsTitle.textContent = 'Completa tus datos';
+ detailsTitle.tabIndex = -1;
+ const appointment = document.createElement('p');
+ appointment.className = 'cb-appointment';
+ detailsTitle.after(appointment);
  const submit = form.querySelector('[type=submit]');
  submit.textContent = 'Solicitar reserva de consultoría';
  const note = form.querySelector('.consult-form-note');
@@ -79,8 +84,7 @@
   navigation[1].disabled=loading||month>=lastMonth.toISOString().slice(0,7);
  }
  function drawTimes() {
-  times.replaceChildren();form.hidden=!selectedSlot;submit.disabled=!selectedSlot;
-  root.querySelector('.cb-selection').hidden=!selectedSlot;
+  times.replaceChildren();next.disabled=!selectedSlot;
   root.querySelector('[data-day-title]').textContent=selectedDay?fullDate(selectedDay+'T12:00:00-05:00'):'Horarios disponibles';
   if (loading) {availability.textContent='Consultando la agenda…';return;}
   if (!slots.length) {availability.textContent='No quedan horarios libres para este mes. Puedes consultar otro mes.';return;}
@@ -92,9 +96,10 @@
    button.setAttribute('aria-pressed',String(selectedSlot?.id===slot.id));
    button.addEventListener('click',()=>{
     if(selectedSlot?.id!==slot.id)requestId=crypto.randomUUID();
-    selectedSlot=slot;drawTimes();
-    root.querySelector('.cb-selection p').textContent=fullDate(slot.starts_at)+' · '+time(slot.starts_at)+' – '+time(slot.ends_at);
-    if(matchMedia('(max-width:760px)').matches)form.scrollIntoView({behavior:'smooth',block:'start'});
+    selectedSlot=slot;
+    times.querySelector('[aria-pressed=true]')?.setAttribute('aria-pressed','false');
+    button.setAttribute('aria-pressed','true');
+    next.disabled=false;
    });
    times.append(button);
   }
@@ -117,8 +122,8 @@
  }));
  form.addEventListener('submit',async event=>{
   event.preventDefault();
-  if(!selectedSlot||submit.disabled||!form.reportValidity())return;
-  submit.disabled=true;status.textContent='Enviando tu solicitud…';
+  if(form.hidden||!selectedSlot||submit.disabled||!form.reportValidity())return;
+  back.disabled=true;submit.disabled=true;status.textContent='Enviando tu solicitud…';
   const fields=new FormData(form);
   try {
    const response=await fetch('/api/consultations/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId,slotId:selectedSlot.id,name:fields.get('name'),email:fields.get('email'),company:fields.get('company'),service:fields.get('service'),message:fields.get('context'),consent:fields.get('booking_consent')==='on',website:fields.get('website')})});
@@ -128,17 +133,56 @@
    const title=document.createElement('h3');title.textContent=data.status==='confirmed'?'Consultoría confirmada':data.status==='declined'?'Esta solicitud ya fue respondida':'Solicitud recibida';
    const detail=document.createElement('p');detail.textContent=fullDate(selectedSlot.starts_at)+' · '+time(selectedSlot.starts_at)+' – '+time(selectedSlot.ends_at)+' (hora de Perú).';
    const message=document.createElement('p');message.textContent=data.status==='confirmed'?'MALBA PMC confirmó tu consultoría. Revisa tu correo. El enlace de reunión se enviará por separado.':data.status==='declined'?'Revisa tu correo o selecciona un nuevo horario.':'Tu horario está apartado mientras MALBA PMC confirma la consultoría. Recibirás un correo con la solicitud y otro cuando se confirme. El enlace de reunión se enviará después.';
-   result.append(title,detail,message);root.replaceWith(result);form.hidden=true;result.focus();
+   result.append(title,detail,message);flow.replaceChildren(result);focusStep(result);
   } catch(error) {status.textContent=error.message;}
-  finally {submit.disabled=false;}
+  finally {back.disabled=false;submit.disabled=false;}
  });
  const flow=document.createElement('div');
- flow.className='cb-flow';root.before(flow);flow.append(root,form);
+ flow.className='cb-flow';
+ const toolbar=document.createElement('div');
+ toolbar.className='cb-toolbar';
+ toolbar.innerHTML=`
+  <ol class="cb-progress" aria-label="Pasos de la reserva">
+   <li aria-current="step"><span>1</span> Fecha y hora</li>
+   <li><span>2</span> Tus datos</li>
+  </ol>
+  <button class="cb-step-action" type="button" data-next disabled>Siguiente</button>
+  <button class="cb-step-action" type="button" data-back hidden>Volver</button>
+ `;
+ const [dateStep, detailsStep]=toolbar.querySelectorAll('li');
+ const next=toolbar.querySelector('[data-next]'), back=toolbar.querySelector('[data-back]');
+ root.before(flow);
+ flow.append(toolbar,root,form);
  const placeholder=document.createComment('Agenda en la sección');flow.before(placeholder);
  const dialog=document.createElement('dialog');dialog.className='cb-dialog';
  dialog.setAttribute('aria-labelledby','cb-dialog-title');
  dialog.innerHTML='<header class="cb-dialog-header"><h2 id="cb-dialog-title">Reserva tu consultoría</h2><button type="button" class="cb-dialog-close" aria-label="Cerrar reserva"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="cb-dialog-content"></div>';
  document.body.append(dialog);
+ function focusStep(element) {
+  if (dialog.open) dialog.scrollTop=0;
+  else flow.scrollIntoView({block:'start'});
+  element.focus({preventScroll:true});
+ }
+ next.addEventListener('click',()=>{
+  if(!selectedSlot)return;
+  appointment.textContent=fullDate(selectedSlot.starts_at)+' · '+time(selectedSlot.starts_at)+' – '+time(selectedSlot.ends_at)+' (hora de Perú)';
+  dateStep.removeAttribute('aria-current');
+  detailsStep.setAttribute('aria-current','step');
+  root.hidden=true;
+  form.hidden=false;
+  next.hidden=true;
+  back.hidden=false;
+  focusStep(detailsTitle);
+ });
+ back.addEventListener('click',()=>{
+  detailsStep.removeAttribute('aria-current');
+  dateStep.setAttribute('aria-current','step');
+  form.hidden=true;
+  root.hidden=false;
+  back.hidden=true;
+  next.hidden=false;
+  focusStep(next);
+ });
  let opener;
  const close=()=>dialog.close();
  dialog.querySelector('.cb-dialog-close').addEventListener('click',close);
