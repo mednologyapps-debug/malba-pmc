@@ -17,12 +17,12 @@
   $('#receipt-document-label').firstChild.textContent=invoice?'RUC (obligatorio)':'DNI (opcional)';
   invoiceExtra.querySelectorAll('input').forEach(field=>field.required=invoice);
  }));
- const canBuy=()=>config?.bookAvailable&&config?.priceConfirmed&&config?.price>0&&['sandbox','production'].includes(config?.paymentMode)&&['izipay_test','izipay_live'].includes(config?.paymentProvider);
+ const canBuy=()=>config?.bookAvailable&&config?.priceConfirmed&&config?.price>0&&['sandbox','production'].includes(config?.paymentMode)&&(['izipay_test','izipay_live'].includes(config?.paymentProvider)||demoMode&&config?.paymentProvider==='simulation');
  function updateMode(){
   $('#purchase-fields').hidden=mode!=='book';
   document.querySelectorAll('.mode-switch button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
   $('#form-title').textContent=mode==='book'?'Inscríbete y compra tu libro':'Inscríbete al evento';
-  $('#form-intro').textContent=mode==='book'?'Completa tus datos una sola vez para registrar tu participación y preparar tu pedido.':'Completa tus datos para inscribirte.';
+  $('#form-intro').textContent=mode==='book'?'Completa tus datos para continuar al pago seguro. Verás la confirmación cuando Izipay apruebe el pago.':'Completa tus datos para inscribirte.';
   const open=!!config?.registrationOpen;
   submit.disabled=!open||mode==='book'&&!canBuy();submit.textContent=!open?'Inscripciones próximamente':mode==='book'?(config?.paymentProvider==='izipay_live'?'Continuar al pago seguro':config?.paymentProvider==='izipay_test'?'Continuar a Izipay TEST':'Continuar a pago de prueba'):'Confirmar inscripción';
   $('#form-error').textContent=!open?'Las inscripciones todavía no están abiertas. La organización confirmará los detalles del evento.':mode==='book'&&!canBuy()?'La compra aún no está habilitada. Puedes cambiar a «Solo evento» para inscribirte.':'';
@@ -32,16 +32,19 @@
  $('#registration .close').addEventListener('click',()=>{if(!busy)dialog.close();});dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});dialog.addEventListener('close',()=>lastTrigger?.focus());
  function showResult(title,copy){$('#form-content').hidden=true;const section=$('#result');section.replaceChildren();section.hidden=false;const mark=document.createElement('span');mark.className='success-mark';mark.textContent='✓';mark.setAttribute('aria-hidden','true');const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;const capacity=document.createElement('p');capacity.className='form-capacity';capacity.textContent=notice;section.append(mark,h,p,capacity);section.focus();dialog.scrollTop=0;return section;}
  function addButton(container,label,handler){const b=document.createElement('button');b.type='button';b.className='solid-button';b.textContent=label;b.addEventListener('click',handler);container.append(b);return b;}
- async function izipayView(){
-  const live=config?.paymentProvider==='izipay_live';const section=showResult('Tu inscripción está registrada.',live?'Continúa al formulario seguro de Izipay para realizar el pago del libro.':'Continúa al formulario seguro de Izipay TEST para probar el pago sin cargos reales.');
-  const b=addButton(section,live?'Pagar con Izipay':'Continuar a Izipay TEST',async()=>{b.disabled=true;try{
-   const data=await api('/api/events/payments/start',{token:paymentToken,billing:billingDetails});location.assign(data.checkoutUrl);
-  }catch(e){const p=document.createElement('p');p.textContent=e.message;section.append(p);b.disabled=false;}});
+ async function startPayment(data, billing){
+  if(!['izipay_test','izipay_live'].includes(config?.paymentProvider)){
+   paymentToken=data.paymentToken;orderAmount=data.amount;simulatePayment();return;
+  }
+  submit.textContent='Abriendo Izipay…';
+  const payment=await api('/api/events/payments/start',{token:data.paymentToken,billing});
+  if(!payment.checkoutUrl)throw Error('No pudimos abrir el pago. Puedes volver a intentarlo.');
+  location.assign(payment.checkoutUrl);
  }
- function paymentView(){if(['izipay_test','izipay_live'].includes(config?.paymentProvider)){izipayView();return;}
-  const section=showResult('Tu inscripción está registrada.','El pedido queda pendiente. Estás en una simulación: no ingreses datos de tarjeta y no se realizará ningún cobro.');
+ function simulatePayment(){
+  const section=showResult('Pedido de prueba pendiente','Selecciona un resultado para simular el pago.');
   const total=document.createElement('p');total.textContent='Libro físico · '+money(orderAmount??config.price)+' · '+$('#delivery').value;section.append(total);const actions=document.createElement('div');actions.className='payment-actions';section.append(actions);
-  for(const [outcome,label]of [['success','Simular pago aprobado'],['failed','Simular pago fallido'],['pending','Simular pago pendiente']])addButton(actions,label,async()=>{if(busy)return;busy=true;actions.querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await api('/api/events/simulate',{token:paymentToken,outcome});const view=showResult(r.status==='simulated_paid'?'Prueba completada.':r.status==='failed'?'El pago de prueba falló.':'Pago de prueba pendiente.',r.message);if(r.status!=='simulated_paid')addButton(view,'Reintentar pago de prueba',paymentView);addButton(view,'Cerrar',()=>dialog.close());}catch(e){const p=document.createElement('p');p.textContent=e.message;actions.after(p);actions.querySelectorAll('button').forEach(b=>b.disabled=false);}finally{busy=false;}});
+  for(const [outcome,label]of [['success','Simular pago aprobado'],['failed','Simular pago fallido'],['pending','Simular pago pendiente']])addButton(actions,label,async()=>{if(busy)return;busy=true;actions.querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await api('/api/events/simulate',{token:paymentToken,outcome});const view=showResult(r.status==='simulated_paid'?'Prueba completada.':r.status==='failed'?'El pago de prueba falló.':'Pago de prueba pendiente.',r.message);if(r.status!=='simulated_paid')addButton(view,'Reintentar pago de prueba',simulatePayment);addButton(view,'Cerrar',()=>dialog.close());}catch(e){const p=document.createElement('p');p.textContent=e.message;actions.after(p);actions.querySelectorAll('button').forEach(b=>b.disabled=false);}finally{busy=false;}});
  }
  form.addEventListener('submit',async e=>{e.preventDefault();if(busy||!form.reportValidity())return;if(!config?.registrationOpen||mode==='book'&&!canBuy())return;busy=true;submit.disabled=true;submit.textContent='Registrando…';$('#form-error').textContent='';const f=new FormData(form);try{
   billingDetails=null;
@@ -55,8 +58,10 @@
    billingDetails={type,document,name,address};
   }
   const data=await api('/api/events/register',demoMode?{fixtureId:config.fixtureId,mode,consent:f.has('consent'),capacity:f.has('capacity')}:{...Object.fromEntries(f),mode,consent:f.has('consent'),capacity:f.has('capacity'),utm});
-  if(data.duplicate){const s=showResult('Revisemos tu inscripción.',data.message);addButton(s,'Cerrar',()=>dialog.close());}
-  else if(data.orderId){paymentToken=data.paymentToken;orderAmount=data.amount;paymentView();}
+  if(mode==='book'){
+   if(data.duplicate||!data.paymentToken)throw Error(data.message||'Revisa tu correo y celular antes de reintentar el pago.');
+   await startPayment(data,billingDetails);
+  } else if(data.duplicate){const s=showResult('Revisemos tu inscripción.',data.message);addButton(s,'Cerrar',()=>dialog.close());}
   else{const s=showResult(data.status==='waitlist'?'Estás en lista de espera.':'Recibimos tu inscripción.',data.testMode?'Tu registro de prueba está guardado. Puedes revisarlo en el administrador.':data.status==='waitlist'?'Registramos tu solicitud en lista de espera. La organización te informará sobre la disponibilidad.':data.emailSent?'Registramos tu participación. Revisa tu correo para ver los detalles y el aviso de aforo.':data.emailFailed?'Tu inscripción quedó registrada, pero no pudimos enviar el correo de confirmación. MALBA revisará el envío.':'Tu registro está guardado. El correo de confirmación está en proceso de envío.');addButton(s,'Listo, cerrar',()=>dialog.close());if(!demoMode)form.reset();}
  }catch(err){$('#form-error').textContent=err.message;$('#form-error').scrollIntoView({block:'nearest'});}finally{busy=false;const message=$('#form-error').textContent;updateMode();if(message)$('#form-error').textContent=message;}});
  api('/api/events/config').then(c=>{config=c;document.querySelectorAll('a[data-privacy]').forEach(a=>{if(c.privacyUrl){a.href=c.privacyUrl;a.removeAttribute('aria-disabled');}else{a.removeAttribute('href');a.setAttribute('aria-disabled','true');a.title='La organización confirmará la política antes de abrir inscripciones.';}});if(c.date){const date=new Date(c.date);$('#event-date').textContent=date.toLocaleString('es-PE',{timeZone:'America/Lima',day:'numeric',month:'long',year:'numeric'});$('#event-time').textContent=date.toLocaleTimeString('es-PE',{timeZone:'America/Lima',hour:'numeric',minute:'2-digit',hour12:true})+' · Hora de Perú';}if(c.location)$('#event-location').textContent=c.location;

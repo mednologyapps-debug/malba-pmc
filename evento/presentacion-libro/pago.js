@@ -2,9 +2,10 @@
 (async()=>{
  const $=s=>document.querySelector(s),token=location.hash.slice(1);history.replaceState(null,'',location.pathname);
  const preview=$('#preview-receipt'),download=$('#receipt-download');
+ const confirmation=$('#purchase-confirmation');let confirmed=false;
  const status=$('#checkout-status'),container=$('#payment-container'),check=$('#check-status');let pollTimer=null,polls=0;
  async function api(path,body){const r=await fetch('/api/events/payments/'+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined,cache:'no-store',referrerPolicy:'no-referrer'});const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo verificar el pago.');return data;}
- async function refresh(){try{const s=await api('status');if(s.status==='paid'){status.textContent=s.mode==='TEST'?'Pago TEST verificado por Izipay. No se realizó ningún cargo real.':'Pago confirmado. Recibirás el comprobante cuando termine su procesamiento.';$('#checkout-title').textContent='Pago confirmado';$('#book-delivery').hidden=!s.retail;container.hidden=true;check.hidden=true;preview.hidden=s.mode!=='TEST';clearInterval(pollTimer);return;}status.textContent='Estamos esperando la confirmación de Izipay. Puedes verificar nuevamente en unos segundos.';}catch(e){status.textContent=e.message;clearInterval(pollTimer);}}
+ async function refresh(){if(confirmed)return;try{const s=await api('status');if(s.status==='paid'){if(confirmed)return;confirmed=true;status.textContent=s.mode==='TEST'?'Pago TEST verificado por Izipay. No se realizó ningún cargo real.':'Pago confirmado. Recibirás el comprobante cuando termine su procesamiento.';$('#checkout-title').textContent='Pago confirmado';$('#book-delivery').hidden=!s.retail;container.hidden=true;check.hidden=true;preview.hidden=s.mode!=='TEST';clearInterval(pollTimer);if(s.event&&s.mode==='PRODUCTION')confirmation.showModal();return;}status.textContent='Estamos esperando la confirmación de Izipay. Puedes verificar nuevamente en unos segundos.';}catch(e){status.textContent=e.message;clearInterval(pollTimer);}}
  function script(src,attrs={}){return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;for(const[k,v]of Object.entries(attrs))s.setAttribute(k,v);s.onload=resolve;s.onerror=()=>reject(Error('No se pudo cargar el formulario de Izipay. Recarga la página del evento para reintentar.'));document.head.append(s);});}
  check.addEventListener('click',refresh);
  preview.addEventListener('click',async()=>{
@@ -30,7 +31,7 @@
   await script('https://static.micuentaweb.pe/static/js/krypton-client/V4.0/ext/classic.js');
   await window.KR.setFormConfig({formToken:form.formToken,'kr-language':'es-ES'});
   window.KR.onSubmit(async data=>{
-   try{await api('return',{'kr-answer':data.rawClientAnswer,'kr-hash':data.hash});container.hidden=true;check.hidden=false;await refresh();pollTimer=setInterval(()=>{if(++polls>=12){clearInterval(pollTimer);return;}refresh();},5000);}catch(e){status.textContent=e.message;check.hidden=false;}
+   try{const result=await api('return',{'kr-answer':data.rawClientAnswer,'kr-hash':data.hash});if(!result.waitingForNotification){status.textContent='Izipay no confirmó el pago. Revisa el formulario para reintentar.';return false;}container.hidden=true;check.hidden=false;await refresh();if(!confirmed)pollTimer=setInterval(()=>{if(++polls>=12){clearInterval(pollTimer);return;}refresh();},5000);}catch(e){status.textContent=e.message;check.hidden=false;}
    return false;
   });
   status.textContent=form.mode==='TEST'?'Formulario Izipay TEST listo. Utiliza una tarjeta de prueba.':'Completa el pago en el formulario seguro.';

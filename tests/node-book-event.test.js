@@ -40,3 +40,20 @@ test('isolated event demo registers only synthetic fixtures and requires admin t
  assert.equal((await a.call('/api/events/demo/register',{fixtureId:c.value.fixtureId,mode:'free',consent:true,capacity:true},{...headers,origin:'https://other.invalid'})).status,403);
  assert.equal((await a.call('/api/events/demo/config',undefined,{host:'malba-pmc.com'})).status,404);
 });
+
+test('book registration returns a pending payment token without sending registration mail',async t=>{
+ const keys=['IZIPAY_LIVE_ENABLED','IZIPAY_SHOP_ID','IZIPAY_PROD_PASSWORD','IZIPAY_PROD_PUBLIC_KEY','IZIPAY_PROD_HMAC','C2U_LIVE_ENABLED','C2U_RUC','C2U_USER','C2U_PASSWORD','C2U_SERIE_FACTURA','C2U_SERIE_BOLETA'];
+ for(const key of keys){const previous=process.env[key];process.env[key]=key.endsWith('ENABLED')?'true':'test-only';t.after(()=>{if(previous===undefined)delete process.env[key];else process.env[key]=previous;});}
+ const id='12345678-1234-4234-8234-123456789abc';
+ const a=setup(call=>{
+  if(call.table==='book_events')return {data:{config:{...config,paymentMode:'production'}}};
+  if(call.rpc==='book_register')return {data:{id:'registration',status:'registered',orderId:id,amount:10}};
+  throw Error('Unexpected lookup before payment');
+ });
+ const result=await a.call('/api/events/register',{...valid,mode:'book'});
+ assert.equal(result.status,201);
+ assert.equal(result.value.status,'pending_payment');
+ assert.equal(result.value.orderId,id);
+ assert.match(result.value.paymentToken,/^12345678-/);
+ assert.equal(a.db.calls.some(call=>call.table==='book_mail_outbox'),false);
+});

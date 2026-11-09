@@ -1,7 +1,7 @@
 'use strict';
 const crypto=require('node:crypto'),izipay=require('./izipay'),c2u=require('./close2u');
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
-module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,env=process.env,fetcher=fetch}){
+module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,onEventPaid,env=process.env,fetcher=fetch}){
  const fiscal=c2u.createClient({env,fetcher});
  const previews=new Map();
  async function preview(s){
@@ -30,14 +30,14 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
    if(previous.mode!==mode)throw Error('Este pedido tiene una sesión de otra modalidad de pago. Contacta a MALBA para reiniciarlo de forma segura.');
    if(previous.expires_at&&Date.parse(previous.expires_at)<Date.now())throw Error('La sesión de pago anterior venció. Contacta a la organización.');
    const expires=Date.parse(previous.expires_at),token=previous.id+'.'+expires+'.'+sign('izipay-session:'+previous.id+':'+expires);
-   return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261105-checkout#'+token};
+   return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-direct#'+token};
   }}
   const id=crypto.randomUUID(),expires=Date.now()+30*60000,token=id+'.'+expires+'.'+sign('izipay-session:'+id+':'+expires);
   const receipt=c2u.billing(billing);
   if(retailPhone)receipt.retailPhone=retailPhone;
   const s={id,order_id:orderId,provider_order_id:'MALBA-'+id,shop_id:creds.shopId,mode,amount_minor:amountMinor,currency:'PEN',client_hash:hash(token),email,customer_name:name,billing:receipt,expires_at:new Date(expires).toISOString()};
   await query(db.from('book_payment_sessions').insert(s));
-  return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261105-checkout#'+token};
+  return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-direct#'+token};
  }
  async function readBody(req){let size=0,raw='';for await(const chunk of req){size+=chunk.length;if(size>128000)throw Error('Solicitud de pago demasiado grande.');raw+=chunk;}
   return String(req.headers['content-type']).includes('application/x-www-form-urlencoded')?Object.fromEntries(new URLSearchParams(raw)):JSON.parse(raw||'{}');
@@ -51,13 +51,16 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,en
   // Browser return is authenticated for display only. Only server IPN settles an order.
   if(check.paid&&!browser){
    await query(db.rpc('book_finish_izipay',{session_id:s.id,tx_id:check.transactionId,paid_amount:s.amount_minor,paid_currency:s.currency,paid_mode:s.mode,paid_shop:s.shop_id,paid_reference:s.provider_order_id}));
+   if(s.mode==='PRODUCTION'&&s.order_id&&onEventPaid){
+    void onEventPaid(s.order_id).catch(()=>console.error('Event purchase email remains queued.'));
+   }
    if(s.mode==='PRODUCTION'&&!s.order_id&&s.billing?.retailPhone){
     await query(db.from('book_invoice_jobs').upsert({session_id:s.id},{onConflict:'session_id',ignoreDuplicates:true}));
    }
   }
   return {verified:true,waitingForNotification:browser&&check.paid};
  }
- async function status(token){const s=await sessionByToken(token);return {status:s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone};}
+ async function status(token){const s=await sessionByToken(token);return {status:s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone,event:!!s.order_id};}
  async function handler(req,res,url){
   const path=url.pathname.replace(/\/$/,'');
   try{

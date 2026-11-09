@@ -38,7 +38,7 @@ function validateConfig(b){
 }
 module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign,getDocument}){
  const limits=new Map();
- const payments=createPayments({db,json,text,requireAdmin,csrfOk,sign});
+ const payments=createPayments({db,json,text,requireAdmin,csrfOk,sign,onEventPaid});
  const demo=createDemo({json,requireAdmin,csrfOk,sign,defaults:DEFAULT,priceAt,payments});
  function rate(req,key,max){const now=Date.now(),id=crypto.createHash('sha256').update(String(req.socket.remoteAddress||'unknown')+key).digest('hex');if(limits.size>10000)for(const [k,v]of limits)if(v.until<now)limits.delete(k);let v=limits.get(id);if(!v||v.until<now){v={n:0,until:now+60000};limits.set(id,v);}return ++v.n<=max;}
  async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>12000)throw Error('La solicitud es demasiado grande.');chunks.push(chunk);}return JSON.parse(Buffer.concat(chunks).toString()||'{}');}
@@ -49,10 +49,14 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
  function paymentToken(orderId){const expires=Date.now()+30*60000;const raw=orderId+':'+expires;return raw+'.'+sign('book-payment:'+raw);}
  function validPaymentToken(value){const [raw,mac]=String(value||'').split('.');if(!raw||!mac)return null;const expected=sign('book-payment:'+raw);if(mac.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(mac),Buffer.from(expected)))return null;const [id,expires]=raw.split(':');return Number(expires)>Date.now()&&/^[0-9a-f-]{36}$/.test(id)?id:null;}
  async function context(id){const reg=await query(db.from('book_registrations').select('*,book_participants(*),book_orders(*)').eq('id',id).single());return reg;}
- async function flushMail(registrationId){
+ async function onEventPaid(orderId){
+  const order=await query(db.from('book_orders').select('registration_id').eq('id',orderId).single());
+  await flushMail(order.registration_id,'purchase');
+ }
+ async function flushMail(registrationId,kind){
   const c=(await config()).config;const host=process.env.SMTP_HOST,user=process.env.SMTP_USER,pass=process.env.SMTP_PASSWORD||process.env.SMTP_PASS;
   if(!host||!user||!pass)return {sent:0,pending:true};
-  let q=db.from('book_mail_outbox').select('*').eq('status','pending').order('updated_at').limit(20);if(registrationId)q=q.eq('registration_id',registrationId);
+  let q=db.from('book_mail_outbox').select('*').eq('status','pending').order('updated_at').limit(20);if(registrationId)q=q.eq('registration_id',registrationId);if(kind)q=q.eq('kind',kind);
   const jobs=await query(q);let sent=0,recipientSent=false,failed=0;
   const transport=nodemailer.createTransport({host,port:Number(process.env.SMTP_PORT||465),secure:process.env.SMTP_SECURE?process.env.SMTP_SECURE==='true':Number(process.env.SMTP_PORT||465)===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:15000});
   for(const job of jobs){
@@ -63,8 +67,8 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
     const eventDate=c.date?new Date(c.date).toLocaleString('es-PE',{timeZone:'America/Lima',dateStyle:'long',timeStyle:'short'}):'Fecha por confirmar';
     const subject=job.kind==='admin'?'Nueva inscripción | Presentación del libro MALBA PMC':job.kind==='purchase'?'Compra verificada | MALBA PMC':'Recibimos tu inscripción | Presentación del libro MALBA PMC';
     const title=job.kind==='admin'?'Nueva inscripción recibida':job.kind==='purchase'?'Compra confirmada':'Recibimos tu inscripción';
-    const description=reg.status==='waitlist'?'Tu solicitud está en lista de espera. No es una confirmación de ingreso.':'Tu inscripción ha sido registrada. Recuerda que no garantiza el ingreso.';
-    const order=o?`<p>Pedido: ${escape(o.id)}<br>Libro físico · S/ ${Number(o.amount).toFixed(2)}<br>Entrega: ${escape(o.delivery)}<br>Estado: ${o.status==='paid'?'Pago verificado':o.status==='simulated_paid'?'Simulación completada, sin cobro real':'Pendiente de pago (prueba, sin cobro real)'}</p>`:'';
+    const description=job.kind==='purchase'?'Izipay confirmó el pago de tu libro. Recógelo en el lugar del evento.'+(reg.status==='waitlist'?' Tu solicitud de asistencia sigue en lista de espera.':''):reg.status==='waitlist'?'Tu solicitud está en lista de espera. No es una confirmación de ingreso.':'Tu inscripción ha sido registrada. Recuerda que no garantiza el ingreso.';
+    const order=o?`<p>Pedido: ${escape(o.id)}<br>Libro físico · S/ ${Number(o.amount).toFixed(2)}<br>Entrega: ${escape(o.delivery)}<br>Estado: ${o.status==='paid'?'Pago verificado':o.status==='simulated_paid'?'Simulación completada, sin cobro real':'Pendiente de pago'}</p>`:'';
     const html=`<!doctype html><html lang="es"><body style="margin:0;background:#f4f2f7;font-family:Arial,sans-serif;color:#25364a"><div style="max-width:600px;margin:auto;padding:36px 24px;background:white;border-top:5px solid #5d4594"><p style="color:#5d4594;font-weight:bold">MALBA PMC</p><h1 style="font-size:26px">${title}</h1><p>Hola, ${escape(p.full_name)}.</p><p>${description}</p><h2 style="font-size:18px">${escape(c.title)}</h2><p>${escape(eventDate)} (hora de Perú)<br>${escape(c.location||'Sede por confirmar')}</p>${order}<p style="background:#f0edf6;padding:18px;font-size:12px">${CAPACITY}</p>${job.kind==='admin'?`<p>Participante: ${escape(p.full_name)}<br>Correo: ${escape(p.email)}<br>Celular: ${escape(p.phone)}<br>Modalidad: ${reg.mode==='book'?'Evento + libro':'Solo evento'}</p>`:''}${c.adminEmail?`<p>Consultas: <a href="mailto:${escape(c.adminEmail)}">${escape(c.adminEmail)}</a></p>`:''}<p>MALBA PMC</p></div></body></html>`;
     await transport.sendMail({from:require('../mail-sender').sender(process.env),to:job.kind==='admin'?(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER):p.email,subject,html,text:`${title}\nHola, ${p.full_name}.\n${description}\n${eventDate}\n${c.location}\n${CAPACITY}`,messageId:`<malba-event-${job.id}@malba-pmc.com>`});
     await query(db.from('book_mail_outbox').update({status:'sent',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id));sent++;if(job.kind==='registration')recipientSent=true;
@@ -124,7 +128,8 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
    }
    if(route==='/api/events/register'&&req.method==='POST'){
     const p=validateRegistration(await body(req));if(p.mode==='book'){const settings=(await config()).config;const gatewayMode=settings.paymentMode==='production'?'PRODUCTION':'TEST';if(!settings.bookAvailable||!['sandbox','production'].includes(settings.paymentMode)||!payments.ready(gatewayMode))return json(res,503,{error:'La compra del libro no está disponible hasta que se configure la pasarela segura.'});}if(!rate(req,'email:'+p.email,5))return json(res,429,{error:'Espera un minuto antes de volver a enviar tu solicitud.'});const r=await query(db.rpc('book_register',{payload:p}));
-    if(r.duplicate)return json(res,200,{duplicate:true,message:'Si este correo ya está inscrito, conservamos su solicitud original. Revisa tu correo o contacta a la organización para modificarla.'});
+    if(r.duplicate)return json(res,200,{duplicate:true,message:p.mode==='book'?'Si ya te inscribiste, usa el mismo correo y celular. Si ya pagaste o no puedes retomar el pedido, contacta a la organización.':'Si este correo ya está inscrito, conservamos su solicitud original. Revisa tu correo o contacta a la organización para modificarla.'});
+    if(p.mode==='book')return json(res,201,{status:'pending_payment',orderId:r.orderId,amount:r.amount,paymentToken:paymentToken(r.orderId)});
     let mail={sent:0};try{mail=await flushMail(r.id);}catch(e){console.error('Event email remains queued:',e.message);}return json(res,201,{status:r.status,orderId:r.orderId||null,amount:r.amount??null,paymentToken:r.orderId?paymentToken(r.orderId):null,emailQueued:mail.recipientSent!==true&&!(mail.failed>0),emailSent:mail.recipientSent===true,emailFailed:mail.failed>0,capacityNotice:CAPACITY});
    }
    if(route==='/api/events/simulate'&&req.method==='POST'){
