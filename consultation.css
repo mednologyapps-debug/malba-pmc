@@ -206,7 +206,7 @@
 }
 @media(min-width:1131px){
  .site-header:has([data-open-consultation]) .header-inner{gap:clamp(24px,3vw,48px)}
- .site-header:has([data-open-consultation]) .main-navigation{justify-content:space-between;gap:20px}
+ .site-header:has([data-open-consultation]) .main-navigation{justify-content:center;gap:clamp(20px,2.4vw,34px)}
  .site-header:has([data-open-consultation]) .nav-links{gap:clamp(14px,1.45vw,24px)}
  .site-header .header-cta[data-open-consultation]{padding-inline:clamp(14px,1.5vw,22px)}
 }
