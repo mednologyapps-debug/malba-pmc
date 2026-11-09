@@ -30,14 +30,14 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
    if(previous.mode!==mode)throw Error('Este pedido tiene una sesión de otra modalidad de pago. Contacta a MALBA para reiniciarlo de forma segura.');
    if(previous.expires_at&&Date.parse(previous.expires_at)<Date.now())throw Error('La sesión de pago anterior venció. Contacta a la organización.');
    const expires=Date.parse(previous.expires_at),token=previous.id+'.'+expires+'.'+sign('izipay-session:'+previous.id+':'+expires);
-   return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-direct#'+token};
+   return {token,sessionId:previous.id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-auto#'+token};
   }}
   const id=crypto.randomUUID(),expires=Date.now()+30*60000,token=id+'.'+expires+'.'+sign('izipay-session:'+id+':'+expires);
   const receipt=c2u.billing(billing);
   if(retailPhone)receipt.retailPhone=retailPhone;
   const s={id,order_id:orderId,provider_order_id:'MALBA-'+id,shop_id:creds.shopId,mode,amount_minor:amountMinor,currency:'PEN',client_hash:hash(token),email,customer_name:name,billing:receipt,expires_at:new Date(expires).toISOString()};
   await query(db.from('book_payment_sessions').insert(s));
-  return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-direct#'+token};
+  return {token,sessionId:id,checkoutUrl:'/evento/presentacion-libro/pago.html?v=20261109-auto#'+token};
  }
  async function readBody(req){let size=0,raw='';for await(const chunk of req){size+=chunk.length;if(size>128000)throw Error('Solicitud de pago demasiado grande.');raw+=chunk;}
   return String(req.headers['content-type']).includes('application/x-www-form-urlencoded')?Object.fromEntries(new URLSearchParams(raw)):JSON.parse(raw||'{}');
@@ -48,19 +48,43 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
   const s=await query(db.from('book_payment_sessions').select('*').eq('provider_order_id',reference).single());
   if(!s)throw Error('Pedido de pago no encontrado.');
   const creds=izipay.credentials(env,s.mode),answer=izipay.verifyHash(fields,browser?creds.hmac:creds.password),check=izipay.verifyAnswer(answer,s);
-  // Browser return is authenticated for display only. Only server IPN settles an order.
-  if(check.paid&&!browser){
-   await query(db.rpc('book_finish_izipay',{session_id:s.id,tx_id:check.transactionId,paid_amount:s.amount_minor,paid_currency:s.currency,paid_mode:s.mode,paid_shop:s.shop_id,paid_reference:s.provider_order_id}));
-   if(s.mode==='PRODUCTION'&&s.order_id&&onEventPaid){
-    void onEventPaid(s.order_id).catch(()=>console.error('Event purchase email remains queued.'));
-   }
-   if(s.mode==='PRODUCTION'&&!s.order_id&&s.billing?.retailPhone){
-    await query(db.from('book_invoice_jobs').upsert({session_id:s.id},{onConflict:'session_id',ignoreDuplicates:true}));
-   }
-  }
-  return {verified:true,waitingForNotification:browser&&check.paid};
+  if(!check.paid)return {verified:true,waitingForNotification:false};
+  if(!browser)await settle(s,check.transactionId);
+  const paid=browser&&(s.status==='paid'||await reconcile(s,check.transactionId));
+  return {verified:true,paid,waitingForNotification:browser&&!paid};
  }
- async function status(token){const s=await sessionByToken(token);return {status:s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone,event:!!s.order_id};}
+ async function settle(s,transactionId){
+  await query(db.rpc('book_finish_izipay',{session_id:s.id,tx_id:transactionId,paid_amount:s.amount_minor,paid_currency:s.currency,paid_mode:s.mode,paid_shop:s.shop_id,paid_reference:s.provider_order_id}));
+  if(s.mode==='PRODUCTION'&&s.order_id&&onEventPaid){
+   void onEventPaid(s.order_id).catch(()=>console.error('Event purchase email remains queued.'));
+  }
+  if(s.mode==='PRODUCTION'&&!s.order_id&&s.billing?.retailPhone){
+   await query(db.from('book_invoice_jobs').upsert({session_id:s.id},{onConflict:'session_id',ignoreDuplicates:true}));
+  }
+ }
+ const providerChecks=new Map();
+ async function reconcile(s,transactionId){
+  if(s.status==='paid')return true;
+  const key=s.id+(transactionId?':transaction':':order'),now=Date.now();
+  for(const [id,check] of providerChecks)if(check.until<=now)providerChecks.delete(id);
+  if(providerChecks.has(key))return providerChecks.get(key).result;
+  if(providerChecks.size>=200)return false;
+  const result=(async()=>{
+   try{
+    const verifiedId=await izipay.lookupPaid(s,transactionId,{env,fetcher});
+    if(!verifiedId)return false;
+    await settle(s,verifiedId);
+    return true;
+   }catch{return false;}
+  })();
+  providerChecks.set(key,{until:now+8000,result});
+  return result;
+ }
+ async function status(token,confirm){
+  const s=await sessionByToken(token);
+  const paid=confirm&&s.status==='pending'&&await reconcile(s);
+  return {status:paid?'paid':s.status,mode:s.mode,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone,event:!!s.order_id};
+ }
  async function handler(req,res,url){
   const path=url.pathname.replace(/\/$/,'');
   try{
@@ -73,10 +97,12 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
    if(req.method==='POST'&&!require('./public-origin').allowedBrowserOrigin(req.headers.origin,env))return json(res,403,{error:'Origen no permitido.'});
    const bearer=String(req.headers.authorization||'').replace(/^Bearer /,'');
    if(path==='/api/events/payments/checkout'&&req.method==='GET'){
-    const s=await sessionByToken(bearer);if(s.status==='paid')return json(res,200,{paid:true,mode:s.mode,retail:!!s.billing?.retailPhone});
+    const s=await sessionByToken(bearer);
+    const resumed=s.status==='pending'&&Date.now()-Date.parse(s.created_at)>30000;
+    if(s.status==='paid'||resumed&&await reconcile(s))return json(res,200,{paid:true,mode:s.mode,retail:!!s.billing?.retailPhone});
     const form=await izipay.createPayment(s,{email:s.email,name:s.customer_name},origin(),{env,fetcher});return json(res,200,{...form,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone});
    }
-   if(path==='/api/events/payments/status'&&req.method==='GET')return json(res,200,await status(bearer));
+   if(path==='/api/events/payments/status'&&req.method==='GET')return json(res,200,await status(bearer,url.searchParams.get('confirm')==='1'));
    if(path==='/api/events/payments/return'&&req.method==='POST')return json(res,200,await notify(await readBody(req),true));
    if(path==='/api/events/payments/preview'&&req.method==='POST')return json(res,200,await preview(await sessionByToken(bearer)));
    if(path==='/api/events/admin/payments/health'&&req.method==='GET')return json(res,200,{izipayTest:ready(),izipayProduction:ready('PRODUCTION'),close2uConfigured:!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD),realInvoices:env.C2U_LIVE_ENABLED==='true'});
@@ -110,6 +136,21 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
   }catch{console.error('Event invoice job requires review.');}finally{dispatching=false;}
  }
  if(env.C2U_LIVE_ENABLED==='true'&&db){const timer=setInterval(dispatch,60000);timer.unref();}
+ let reconciling=false;
+ async function reconcileRecentPayments(){
+  if(reconciling||!ready('PRODUCTION'))return;
+  reconciling=true;
+  try{
+   const cutoff=new Date(Date.now()-45*60000).toISOString();
+   const sessions=await query(db.from('book_payment_sessions').select('id,order_id,provider_order_id,shop_id,mode,amount_minor,currency,status,billing').eq('status','pending').eq('mode','PRODUCTION').gte('created_at',cutoff).order('created_at',{ascending:false}).limit(20));
+   for(const session of sessions)await reconcile(session);
+  }catch{console.error('Izipay automatic reconciliation unavailable.');}
+  finally{reconciling=false;}
+ }
+ if(db){
+  const timer=setInterval(reconcileRecentPayments,60000);
+  timer.unref?.();
+ }
  async function lookupStatuses(ids){return ids.length&&db?query(db.from('book_payment_sessions').select('id,status').in('id',ids)):[];}
  return {ready,createSession,status,handler,lookupStatuses};
 };

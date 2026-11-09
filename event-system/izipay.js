@@ -1,6 +1,6 @@
 'use strict';
 const crypto=require('node:crypto');
-const API='https://api.micuentaweb.pe/api-payment/V4/Charge/CreatePayment';
+const API='https://api.micuentaweb.pe/api-payment/V4/';
 function credentials(env=process.env,mode='TEST'){
  if(!['TEST','PRODUCTION'].includes(mode)||mode==='PRODUCTION'&&env.IZIPAY_LIVE_ENABLED!=='true')throw Error('Los pagos reales no están habilitados.');
  const prefix='IZIPAY_'+(mode==='TEST'?'TEST':'PROD')+'_';
@@ -27,8 +27,29 @@ function verifyAnswer(answer,session){
 }
 async function createPayment(session,{email,name},origin,{env=process.env,fetcher=fetch}={}){
  const c=credentials(env,session.mode);
- const response=await fetcher(API,{method:'POST',headers:{Authorization:'Basic '+Buffer.from(c.shopId+':'+c.password).toString('base64'),'Content-Type':'application/json'},body:JSON.stringify({amount:session.amount_minor,currency:'PEN',orderId:session.provider_order_id,ipnTargetUrl:origin+'/api/events/payments/ipn',customer:{email,billingDetails:{firstName:name,country:'PE'}},transactionOptions:{cardOptions:{captureDelay:0,manualValidation:'NO'}}}),signal:AbortSignal.timeout(25000)});
+ const response=await fetcher(API+'Charge/CreatePayment',{method:'POST',headers:{Authorization:'Basic '+Buffer.from(c.shopId+':'+c.password).toString('base64'),'Content-Type':'application/json'},body:JSON.stringify({amount:session.amount_minor,currency:'PEN',orderId:session.provider_order_id,ipnTargetUrl:origin+'/api/events/payments/ipn',customer:{email,billingDetails:{firstName:name,country:'PE'}},transactionOptions:{cardOptions:{captureDelay:0,manualValidation:'NO'}}}),signal:AbortSignal.timeout(25000)});
  const data=await response.json();if(!response.ok||data.status!=='SUCCESS'||!data.answer?.formToken)throw Error('Izipay no pudo iniciar el pago. Reintenta en unos minutos.');
  return {formToken:data.answer.formToken,publicKey:c.publicKey,mode:c.mode};
 }
-module.exports={credentials,ready,verifyHash,verifyAnswer,createPayment};
+async function lookup(resource,payload,session,{env=process.env,fetcher=fetch}={}){
+ const c=credentials(env,session.mode);
+ if(String(c.shopId)!==String(session.shop_id))throw Error('La tienda del pedido no coincide.');
+ const response=await fetcher(API+resource,{method:'POST',headers:{Authorization:'Basic '+Buffer.from(c.shopId+':'+c.password).toString('base64'),'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(4000)});
+ const result=await response.json();
+ return response.ok&&result.status==='SUCCESS'?result.answer:null;
+}
+const normalizedId=value=>String(value||'').replace(/-/g,'').toLowerCase();
+async function lookupPaid(session,transactionId,options){
+ if(transactionId){
+  // The signed return already binds this UUID to the order. Confirm the debit independently with Izipay.
+  const transaction=await lookup('Transaction/Get',{uuid:transactionId},session,options);
+  return transaction?.status==='PAID'&&transaction.operationType==='DEBIT'&&
+   normalizedId(transaction.uuid)===normalizedId(transactionId)&&String(transaction.shopId)===String(session.shop_id)&&
+   transaction.amount===session.amount_minor&&transaction.currency===session.currency?transaction.uuid:null;
+ }
+ const order=await lookup('Order/Get',{orderId:session.provider_order_id,operationType:'DEBIT'},session,options);
+ if(order?.orderStatus!=='PAID')return null;
+ const result=verifyAnswer(order,session);
+ return result.paid&&order.transactions.some(t=>t.uuid===result.transactionId&&t.operationType==='DEBIT')?result.transactionId:null;
+}
+module.exports={credentials,ready,verifyHash,verifyAnswer,createPayment,lookupPaid};

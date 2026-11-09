@@ -23,8 +23,8 @@ test('CreatePayment uses authoritative amount and a per-order IPN URL',async()=>
  assert.equal(payload.amount,12900);assert.equal(payload.currency,'PEN');assert.equal(payload.orderId,session.provider_order_id);assert.equal(payload.ipnTargetUrl,env.STAGING_ORIGIN+'/api/events/payments/ipn');assert.equal(r.publicKey,env.IZIPAY_TEST_PUBLIC_KEY);
  assert.throws(()=>izi.credentials(env,'PRODUCTION'));
 });
-test('browser payment return cannot settle an order; private IPN can',async()=>{
- const db=dbFor(session),api=create({...out,db,env,sign:()=>'',requireAdmin:()=>null,csrfOk:()=>false});
+test('browser payment return alone cannot settle an order; private IPN can',async()=>{
+ const db=dbFor({...session,status:'pending'}),api=create({...out,db,env,sign:()=>'',requireAdmin:()=>null,csrfOk:()=>false,fetcher:async()=>{throw Error('Provider temporarily unavailable');}});
  const browser=await call(api.handler,'/api/events/payments/return',{body:fields(answer,env.IZIPAY_TEST_HMAC)});assert.equal(browser.status,200);assert(!db.calls.some(c=>c[0]==='book_finish_izipay'));
  const forged=await call(api.handler,'/api/events/payments/ipn',{body:fields(answer,env.IZIPAY_TEST_HMAC)});assert.equal(forged.status,400);assert(!db.calls.some(c=>c[0]==='book_finish_izipay'));
  const ipn=await call(api.handler,'/api/events/payments/ipn',{body:fields(answer,env.IZIPAY_TEST_PASSWORD)});assert.equal(ipn.status,200);assert(db.calls.some(c=>c[0]==='book_finish_izipay'));
@@ -71,4 +71,32 @@ test('signed production IPN enqueues a retail receipt without changing event enr
  assert.equal(valid.status,200);
  const writes = db.calls.filter(c=>c[0]==='book_invoice_jobs');
  assert.deepEqual(writes,[['book_invoice_jobs','upsert',[{session_id:sale.id},{onConflict:'session_id',ignoreDuplicates:true}]]]);
+});
+
+test('verified browser return settles only after an independent matching debit from Izipay',async()=>{
+ const transaction={...answer.transactions[0],shopId:session.shop_id,operationType:'DEBIT'};
+ for(const expected of [false,true]){
+  const db=dbFor({...session,status:'pending'}),api=create({...out,db,env,sign:()=>'',fetcher:async(url,options)=>{
+   assert.match(url,/Transaction\/Get$/);
+   assert.deepEqual(JSON.parse(options.body),{uuid:transaction.uuid});
+   assert.match(options.headers.Authorization,/^Basic /);
+   return {ok:true,json:async()=>({status:'SUCCESS',answer:{...transaction,amount:expected?transaction.amount:1}})};
+  }});
+  const result=await call(api.handler,'/api/events/payments/return',{body:fields(answer,env.IZIPAY_TEST_HMAC)});
+  assert.equal(result.value.paid,expected);
+  assert.equal(db.calls.some(c=>c[0]==='book_finish_izipay'),expected);
+ }
+});
+
+test('automatic status check can reconcile a missing IPN by the exact order',async()=>{
+ const expires=Date.now()+60000,token=session.id+'.'+expires+'.fixture-signature';
+ const client_hash=crypto.createHash('sha256').update(token).digest('hex');
+ const db=dbFor({...session,status:'pending',client_hash}),api=create({...out,db,env,sign:()=> 'fixture-signature',fetcher:async(url,options)=>{
+  assert.match(url,/Order\/Get$/);
+  assert.deepEqual(JSON.parse(options.body),{orderId:session.provider_order_id,operationType:'DEBIT'});
+  return {ok:true,json:async()=>({status:'SUCCESS',answer:{...answer,transactions:[{...answer.transactions[0],operationType:'DEBIT'}]}})};
+ }});
+ const result=await call(api.handler,'/api/events/payments/status?confirm=1',{token});
+ assert.equal(result.value.status,'paid');
+ assert.equal(db.calls.filter(c=>c[0]==='book_finish_izipay').length,1);
 });
