@@ -63,3 +63,19 @@ test('SMTP sends pending notice and a private confirmation link; errors do not d
  assert.equal(messages[1].to,booking.consultant_email);assert.match(messages[1].html,/Revisar y confirmar consultoría/);assert.match(messages[1].text,/https:\/\/malba-pmc.com\/consultoria\/confirmar\/#/);
  assert.doesNotMatch(messages[0].html,/consultoria\/confirmar/);
 });
+
+test('admin week queries seven Lima days even when it crosses into another month',async()=>{
+ const start=new Date();
+ start.setUTCMonth(start.getUTCMonth()+1,28);
+ const week=start.toISOString().slice(0,10);
+ const from=new Date(week+'T00:00:00-05:00').toISOString();
+ const to=new Date(Date.parse(from)+7*86400000).toISOString();
+ const admin=fixture(item=>({data:item.rpc?null:[slot]}),{admin:true});
+ assert.equal((await admin.request('/api/consultations/admin/slots?week=2026-02-30')).status,400);
+ assert.equal(admin.calls.length,0);
+ const result=await admin.request('/api/consultations/admin/slots?week='+week);
+ assert.equal(result.status,200);
+ assert.deepEqual(result.value.slots,[slot]);
+ assert.deepEqual(admin.calls[0],{rpc:'consultation_ensure_slots',payload:{p_from:from,p_to:to}});
+ assert.ok(admin.calls.some(call=>call.table==='consultation_slots'&&call.filters.some(([op,field,value])=>op==='lt'&&field==='starts_at'&&value===to)));
+});

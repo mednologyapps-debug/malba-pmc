@@ -1,7 +1,42 @@
 'use strict';
 (() => {
  const form = document.querySelector('[data-consult-contact]');
- if (!form) return;
+ if (form) {
+  setupBooking(form);
+  return;
+ }
+ const homeLink = document.querySelector('[data-open-consultation]');
+ if (!homeLink) return;
+ let loading = false;
+ async function openHomeBooking(event) {
+  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  if (loading) return;
+  loading = true;
+  homeLink.setAttribute('aria-busy', 'true');
+  try {
+   const response = await fetch(homeLink.href);
+   if (!response.ok) throw Error('Agenda no disponible');
+   const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+   const booking = page.querySelector('[data-consult-contact]');
+   if (!booking) throw Error('Agenda no disponible');
+   const host = document.createElement('div');
+   host.hidden = true;
+   host.append(booking);
+   document.body.append(host);
+   setupBooking(booking, homeLink);
+   homeLink.removeEventListener('click', openHomeBooking);
+  } catch {
+   location.assign(homeLink.href);
+  } finally {
+   loading = false;
+   homeLink.removeAttribute('aria-busy');
+  }
+ }
+ homeLink.addEventListener('click', openHomeBooking);
+})();
+
+function setupBooking(form, homeLink) {
  const when = document.querySelector('.consult-when'), small = matchMedia('(max-width:500px)');
  if (when) { when.open = !small.matches; small.addEventListener('change', () => { when.open = !small.matches; }); }
  document.querySelectorAll('.consult-service').forEach(item => item.addEventListener('toggle', () => {
@@ -41,6 +76,8 @@
  detailsTitle.after(appointment);
  const submit = form.querySelector('[type=submit]');
  submit.textContent = 'Solicitar reserva de consultoría';
+ form.elements.name.minLength = 3;
+ form.elements.context.minLength = 10;
  const note = form.querySelector('.consult-form-note');
  note.textContent = 'Recibirás un correo con tu solicitud. La cita se confirma cuando MALBA PMC la apruebe. El enlace de reunión se enviará después.';
  const consent = document.createElement('label');
@@ -170,6 +207,7 @@
   detailsStep.setAttribute('aria-current','step');
   root.hidden=true;
   form.hidden=false;
+  submit.disabled=false;
   next.hidden=true;
   back.hidden=false;
   focusStep(detailsTitle);
@@ -178,6 +216,7 @@
   detailsStep.removeAttribute('aria-current');
   dateStep.setAttribute('aria-current','step');
   form.hidden=true;
+  submit.disabled=true;
   root.hidden=false;
   back.hidden=true;
   next.hidden=false;
@@ -188,15 +227,24 @@
  dialog.querySelector('.cb-dialog-close').addEventListener('click',close);
  dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close();}});
  dialog.addEventListener('close',()=>{placeholder.after(flow);opener?.focus({preventScroll:true});});
- for(const link of document.querySelectorAll('a[href]')){
-  const url=new URL(link.href,location.href);
-  if(url.pathname!==location.pathname||url.hash!=='#consulta')continue;
+ function openBooking(link) {
+  opener=link;
+  dialog.querySelector('.cb-dialog-content').append(flow);
+  dialog.showModal();
+  dialog.scrollTop=0;
+ }
+ const links = homeLink ? [homeLink] : [...document.querySelectorAll('a[href]')].filter(link => {
+  const url = new URL(link.href, location.href);
+  return url.origin === location.origin && url.pathname === location.pathname && url.hash === '#consulta';
+ });
+ for (const link of links) {
   link.setAttribute('aria-haspopup','dialog');
-  link.addEventListener('click',event=>{
-   event.preventDefault();opener=link;
-   dialog.querySelector('.cb-dialog-content').append(flow);
-   dialog.showModal();dialog.scrollTop=0;
+  link.addEventListener('click', event => {
+   if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+   event.preventDefault();
+   openBooking(link);
   });
  }
+ if (homeLink) openBooking(homeLink);
  void loadMonth();
-})();
+}

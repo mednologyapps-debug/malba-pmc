@@ -82,3 +82,108 @@
  .cb-progress li span{width:22px;height:22px}
  .cb-step-action{padding-inline:10px;font-size:13px}
 }
+
+.cb-week-toolbar,
+.cb-week-navigation,
+.cb-week-legend,
+.cb-week-actions{
+ display:flex;
+ align-items:center;
+ flex-wrap:wrap;
+ gap:8px;
+}
+.cb-week-toolbar{justify-content:space-between;margin-bottom:12px}
+.cb-week-toolbar h2{margin:0;font-size:20px}
+.cb-week-toolbar .button{min-height:40px;padding:8px 14px}
+.cb-week-navigation .button[aria-label]{font-size:23px;line-height:1}
+.cb-week-legend{margin-bottom:12px;font-size:12px}
+.cb-week-legend span:not(.cb-week-timezone){padding:4px 8px;border-radius:5px}
+.cb-week-timezone{margin-inline-start:auto;color:#52647b}
+.cb-week-scroll{
+ max-height:min(590px,72vh);
+ overflow:auto;
+ border:1px solid #dce2ed;
+ border-radius:12px;
+ background:white;
+}
+.cb-week-scroll[aria-busy=true]{pointer-events:none;opacity:.65}
+.cb-week-table{
+ width:100%;
+ min-width:690px;
+ table-layout:fixed;
+ border-collapse:separate;
+ border-spacing:0;
+ color:#163b61;
+}
+.cb-week-table th,.cb-week-table td{border-right:1px solid #e3e8f1;border-bottom:1px solid #e3e8f1}
+.cb-week-table tr>:last-child{border-right:0}
+.cb-week-table tbody tr:last-child>*{border-bottom:0}
+.cb-week-table thead th{position:sticky;top:0;z-index:2;background:#f6f7fb}
+.cb-week-table tr>th:first-child{width:62px}
+.cb-week-table tbody th{
+ position:sticky;
+ left:0;
+ z-index:1;
+ background:#f6f7fb;
+ font-weight:500;
+}
+.cb-week-table thead th:first-child{left:0;z-index:3}
+.cb-week-table th{text-align:center;font-size:12px;padding:0}
+.cb-week-table td{height:38px;padding:3px;vertical-align:middle}
+.cb-week-day,.cb-week-cell{
+ border:0;
+ background:transparent;
+ font:inherit;
+ color:inherit;
+ cursor:pointer;
+ width:100%;
+}
+.cb-week-day{display:grid;justify-items:center;gap:2px;padding:6px 3px;text-transform:capitalize}
+.cb-week-day strong{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;font-size:15px}
+.cb-week-day[aria-current=date] strong{background:#5d4594;color:#fff}
+.cb-week-day:not(:disabled):hover{background:#eee9f6}
+.cb-week-day:disabled{cursor:default;color:#61708a}
+.cb-week-cell{min-height:31px;border-radius:5px;font-size:12px;font-weight:600}
+.cb-week-cell:not(:disabled):hover{box-shadow:inset 0 0 0 1px currentColor}
+.cb-week-cell:disabled{visibility:hidden}
+.cb-week-cell.is-available{color:#5d4594}
+.cb-week-cell.is-available:not(:hover){background:#faf8fd}
+.cb-week-legend .is-available,.cb-week-cell.is-available:hover{background:#eee9f7;color:#513780}
+.cb-week-legend .is-blocked,.cb-week-cell.is-blocked{background:#e9ecf1;color:#3e4d63}
+.cb-week-legend .is-pending,.cb-week-cell.is-pending{background:#fff0ca;color:#674600}
+.cb-week-legend .is-confirmed,.cb-week-cell.is-confirmed{background:#dcefe8;color:#19583f}
+.cb-week-status{min-height:1.35em;margin:8px 0;font-size:14px}
+.cb-week-settings summary{cursor:pointer;font-weight:600;color:#4b347c}
+.cb-week-settings form{max-width:550px;margin-top:12px}
+.cb-week-dialog{
+ width:min(520px,calc(100vw - 24px));
+ max-height:calc(100dvh - 24px);
+ padding:0;
+ border:1px solid #e5dced;
+ border-radius:14px;
+ color:#163b61;
+ box-shadow:0 22px 65px #082a4b45;
+}
+.cb-week-dialog::backdrop{background:#082a4b78}
+.cb-week-dialog>header{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ gap:12px;
+ padding:16px 20px;
+ border-bottom:1px solid #e5dced;
+}
+.cb-week-dialog>header h2{margin:0;font-size:20px;text-transform:capitalize}
+.cb-week-dialog>header .button{min-width:38px;padding:5px 9px;font-size:20px}
+.cb-week-dialog-body{display:grid;gap:12px;padding:20px}
+.cb-week-dialog-body label{display:grid;gap:6px;margin:0}
+.cb-week-dialog-body select{width:100%;margin:0}
+.cb-week-detail{overflow-wrap:anywhere;white-space:pre-wrap}
+.cb-week-detail:empty,.cb-week-dialog-status:empty{display:none}
+.cb-week-detail p{margin:5px 0}
+.cb-week-dialog-status{margin:0;font-size:14px}
+.cb-dialog .cb-details{color:#133654;--blue:#133654;--purple:#5d4594;--muted:#52647b}
+@media(max-width:600px){
+ .cb-week-toolbar h2{order:-1;width:100%}
+ .cb-week-timezone{margin-inline-start:0}
+}

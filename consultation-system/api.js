@@ -197,12 +197,24 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    }
    if (route === '/api/consultations/admin/slots') {
     if (req.method === 'GET') {
-     const range = monthRange(url);
-     await query(db.rpc('consultation_ensure_slots',{p_from:range.from,p_to:range.to}));
+     const week = url.searchParams.get('week');
      const day = url.searchParams.get('date');
-     if (day && (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !day.startsWith(url.searchParams.get('month') + '-'))) return json(res, 400, {error:'Selecciona un día válido.'});
-     const from = day ? new Date(day + 'T00:00:00-05:00').toISOString() : range.from;
-     const to = day ? new Date(Date.parse(from) + 86400000).toISOString() : range.to;
+     let from, to;
+     if (week !== null) {
+      const start = new Date(week + 'T00:00:00-05:00');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(week) || !Number.isFinite(+start) || start.toISOString().slice(0,10) !== week) {
+       return json(res, 400, {error:'Selecciona una semana válida.'});
+      }
+      from = start.toISOString();
+      to = new Date(+start + 7 * 86400000).toISOString();
+      await query(db.rpc('consultation_ensure_slots',{p_from:from,p_to:to}));
+     } else {
+      const range = monthRange(url);
+      if (day && (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !day.startsWith(url.searchParams.get('month') + '-'))) return json(res, 400, {error:'Selecciona un día válido.'});
+      await query(db.rpc('consultation_ensure_slots',{p_from:range.from,p_to:range.to}));
+      from = day ? new Date(day + 'T00:00:00-05:00').toISOString() : range.from;
+      to = day ? new Date(Date.parse(from) + 86400000).toISOString() : range.to;
+     }
      const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,enabled,consultation_bookings(id,name,email,company,service,message,status,created_at)').gte('starts_at',from).lt('starts_at',to).order('starts_at').limit(1000));
      return json(res, 200, {slots});
     }
