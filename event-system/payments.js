@@ -1,7 +1,7 @@
 'use strict';
 const crypto=require('node:crypto'),izipay=require('./izipay'),c2u=require('./close2u');
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
-module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,onEventPaid,env=process.env,fetcher=fetch}){
+module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,nodemailer,onEventPaid,env=process.env,fetcher=fetch}){
  const fiscal=c2u.createClient({env,fetcher});
  const previews=new Map();
  async function preview(s){
@@ -126,6 +126,11 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
    if(path==='/api/events/admin/payments/invoice-preview'&&req.method==='POST'){
     const b=await readBody(req);return json(res,200,await preview(await sessionByToken(b.token)));
    }
+   if(path==='/api/events/admin/payments/send-issued-invoice'&&req.method==='POST'){
+    const {orderId}=await readBody(req);
+    if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(orderId||''))return json(res,400,{error:'Pedido inválido.'});
+    return json(res,200,await sendIssuedInvoice(orderId));
+   }
    if(path==='/api/events/admin/payments/issue'&&req.method==='POST'){
     if(env.C2U_LIVE_ENABLED!=='true')return json(res,409,{error:'La emisión fiscal real está deshabilitada.'});
     const b=await readBody(req),jobs=await query(db.from('book_invoice_jobs').update({status:'processing',updated_at:new Date().toISOString()}).eq('id',b.id).eq('status','pending').select('*'));
@@ -152,6 +157,35 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,on
   }catch{console.error('Event invoice job requires review.');}finally{dispatching=false;}
  }
  if(env.C2U_LIVE_ENABLED==='true'&&db){const timer=setInterval(dispatch,60000);timer.unref();}
+ // Explicit admin action for an existing receipt. It never calls the issuance endpoint.
+ async function sendIssuedInvoice(orderId){
+  const {SMTP_HOST:host,SMTP_USER:user}=env,pass=env.SMTP_PASSWORD||env.SMTP_PASS;
+  if(!nodemailer||!host||!user||!pass)throw Error('El correo de MALBA no está configurado.');
+  const session=await query(db.from('book_payment_sessions').select('id,email,billing,status,mode').eq('order_id',orderId).maybeSingle());
+  if(session?.status!=='paid'||session.mode!=='PRODUCTION')throw Error('El pedido todavía no tiene un pago confirmado.');
+  const jobs=await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sending',delivery_copy_error:null}).eq('session_id',session.id).eq('status','issued').is('delivery_copy_status',null).select('id,receipt'));
+  const job=jobs[0];
+  if(!job)throw Error('El comprobante aún no fue emitido, ya se envió o requiere revisión.');
+  let transport;
+  try{
+   const type=session.billing.type,label=type==='factura'?'Factura':'Boleta';
+   const [pdf,providerStatus]=await Promise.all([fiscal.issuedPdf(job.receipt,type),fiscal.deliveryStatus(job.receipt,type).catch(()=>null)]);
+   const alreadyDelivered=['1','2'].includes(providerStatus);
+   const account=c2u.ACCOUNTING_EMAIL,to=alreadyDelivered?account:session.email,cc=alreadyDelivered||to.toLowerCase()===account?undefined:account;
+   const number=job.receipt.serie+'-'+job.receipt.numero;
+   const port=Number(env.SMTP_PORT||465);
+   transport=nodemailer.createTransport({host,port,secure:env.SMTP_SECURE?env.SMTP_SECURE==='true':port===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:20000});
+   const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos el comprobante electrónico '+number+' de la compra en MALBA PMC.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
+   const accepted=(result.accepted||[]).map(address=>String(address).toLowerCase());
+   if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
+   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_provider_status:providerStatus,delivery_copy_sent_at:new Date().toISOString()}).eq('id',job.id));
+   return {sent:true,customerAlreadyDelivered:alreadyDelivered};
+  }catch(error){
+   const reason=transport?'SMTP requiere revisión.':String(error.message).slice(0,160);
+   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'review',delivery_copy_error:reason}).eq('id',job.id));
+   throw Error('No se pudo confirmar el envío del comprobante. '+reason);
+  }finally{transport?.close();}
+ }
  let reconciling=false;
  async function reconcileRecentPayments(){
   if(reconciling||!ready('PRODUCTION'))return;

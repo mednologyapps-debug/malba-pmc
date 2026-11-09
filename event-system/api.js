@@ -39,7 +39,7 @@ function validateConfig(b){
 }
 module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemailer,ExcelJS,sign,getDocument}){
  const limits=new Map();
- const payments=createPayments({db,json,text,requireAdmin,csrfOk,sign,onEventPaid});
+ const payments=createPayments({db,json,text,requireAdmin,csrfOk,sign,nodemailer,onEventPaid});
  const demo=createDemo({json,requireAdmin,csrfOk,sign,defaults:DEFAULT,priceAt,payments});
  function rate(req,key,max){const now=Date.now(),id=crypto.createHash('sha256').update(String(req.socket.remoteAddress||'unknown')+key).digest('hex');if(limits.size>10000)for(const [k,v]of limits)if(v.until<now)limits.delete(k);let v=limits.get(id);if(!v||v.until<now){v={n:0,until:now+60000};limits.set(id,v);}return ++v.n<=max;}
  async function body(req){let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>12000)throw Error('La solicitud es demasiado grande.');chunks.push(chunk);}return JSON.parse(Buffer.concat(chunks).toString()||'{}');}

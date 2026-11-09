@@ -1,5 +1,6 @@
 'use strict';
 const BASE='https://tefacturo.pe';
+const ACCOUNTING_EMAIL='contabilidad@malba-pmc.com';
 function billing(value={}){
  const type=value.type==='factura'?'factura':'boleta',document=String(value.document||'').trim(),name=String(value.name||'').trim().slice(0,150),address=String(value.address||'').trim().slice(0,250);
  if(type==='factura'&&(!/^\d{11}$/.test(document)||name.length<3||address.length<5))throw Error('Completa RUC, razón social y dirección fiscal.');
@@ -10,7 +11,7 @@ function buildPayload(session,env=process.env,{preview=false}={}){
  const b=billing(session.billing),type=b.type,series=env[type==='factura'?'C2U_SERIE_FACTURA':'C2U_SERIE_BOLETA'];
  if(!/^\d{11}$/.test(env.C2U_RUC||'')||!series)throw Error('Falta configurar el emisor o las series de facturación.');
  const local=new Date(Date.now()-5*3600000).toISOString();
- return {close2u:{tipoIntegracion:preview?'OFFLINE':'ERP',tipoPlantilla:'01',tipoRegistro:'PRECIOS_CON_IGV'},datosDocumento:{serie:series,numero:0,moneda:'PEN',fechaEmision:local.slice(0,10),horaEmision:local.slice(11,19),formaPago:'CONTADO',medioPago:env.C2U_PAYMENT_METHOD||'TARJETA_DEBITO',condicionPago:'CONTADO',ordencompra:session.provider_order_id,glosa:'Gestión de Proyectos de Transmisión. Factores Clave.'},detalleDocumento:[{codigoProducto:'MALBA-LIBRO-FISICO',descripcion:'Gestión de Proyectos de Transmisión. Factores Clave.',tipoAfectacion:'GRAVADO_OPERACION_ONEROSA',unidadMedida:'UNIDAD_BIENES',cantidad:1,precioVentaUnitarioItem:session.amount_minor/100}],emisor:{correo:env.C2U_ISSUER_EMAIL,nombreComercial:env.C2U_TRADE_NAME,nombreLegal:env.C2U_LEGAL_NAME,numeroDocumentoIdentidad:env.C2U_RUC,tipoDocumentoIdentidad:'RUC'},informacionAdicional:{tipoOperacion:'VENTA_INTERNA'},receptor:{correo:session.email,nombreComercial:b.name||session.customer_name,nombreLegal:b.name||session.customer_name,numeroDocumentoIdentidad:b.document||null,tipoDocumentoIdentidad:b.document?(type==='factura'?'RUC':'DOC_NACIONAL_DE_IDENTIDAD'):null,domicilioFiscal:b.address?{direccion:b.address}:null}};
+ return {close2u:{tipoIntegracion:preview?'OFFLINE':'ERP',tipoPlantilla:'01',tipoRegistro:'PRECIOS_CON_IGV'},datosDocumento:{serie:series,numero:0,moneda:'PEN',fechaEmision:local.slice(0,10),horaEmision:local.slice(11,19),formaPago:'CONTADO',medioPago:env.C2U_PAYMENT_METHOD||'TARJETA_DEBITO',condicionPago:'CONTADO',ordencompra:session.provider_order_id,glosa:'Gestión de Proyectos de Transmisión. Factores Clave.'},detalleDocumento:[{codigoProducto:'MALBA-LIBRO-FISICO',descripcion:'Gestión de Proyectos de Transmisión. Factores Clave.',tipoAfectacion:'GRAVADO_OPERACION_ONEROSA',unidadMedida:'UNIDAD_BIENES',cantidad:1,precioVentaUnitarioItem:session.amount_minor/100}],emisor:{correo:env.C2U_ISSUER_EMAIL,nombreComercial:env.C2U_TRADE_NAME,nombreLegal:env.C2U_LEGAL_NAME,numeroDocumentoIdentidad:env.C2U_RUC,tipoDocumentoIdentidad:'RUC'},informacionAdicional:{tipoOperacion:'VENTA_INTERNA'},receptor:{correo:session.email,...(!preview?{correoCopia:ACCOUNTING_EMAIL}:{}),nombreComercial:b.name||session.customer_name,nombreLegal:b.name||session.customer_name,numeroDocumentoIdentidad:b.document||null,tipoDocumentoIdentidad:b.document?(type==='factura'?'RUC':'DOC_NACIONAL_DE_IDENTIDAD'):null,domicilioFiscal:b.address?{direccion:b.address}:null}};
 }
 function createClient({env=process.env,fetcher=fetch}={}){
  let cached=null,until=0,pending=null;
@@ -30,6 +31,28 @@ function createClient({env=process.env,fetcher=fetch}={}){
   if(!r.ok)throw Error('CLOSE2U no confirmó el comprobante. Requiere revisión antes de reintentar.');
   const raw=await r.text();try{return JSON.parse(raw);}catch{return raw;}
  }
- return {token,send};
+ async function documentQuery(path,receipt,type){
+  const ruc=env.C2U_RUC,numero=Number(receipt?.numero),serie=receipt?.serie;
+  if(!/^\d{11}$/.test(ruc||'')||!Number.isSafeInteger(numero)||numero<1||!/^\w{1,8}$/.test(serie||'')||!['boleta','factura'].includes(type))throw Error('Comprobante emitido inválido.');
+  const response=await fetcher(BASE+path+'/'+ruc,{method:'PUT',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body:JSON.stringify({emisor:Number(ruc),numero,serie,tipoComprobante:type==='factura'?'01':'03'}),signal:AbortSignal.timeout(20000)});
+  if(!response.ok)throw Error('CLOSE2U no devolvió el comprobante solicitado.');
+  const raw=await response.text();
+  try{return JSON.parse(raw);}catch{return raw;}
+ }
+ async function issuedPdf(receipt,type){
+  const value=await documentQuery('/pdfapi/pdfapi/consultarPdf',receipt,type);
+  const encoded=typeof value==='string'?value:value?.pdf||value?.base64||value?.archivo;
+  if(typeof encoded!=='string'||encoded.length>7000000)throw Error('Respuesta PDF inválida.');
+  const pdf=Buffer.from(encoded.trim().replace(/^data:application\/pdf;base64,/,''),'base64');
+  if(pdf.subarray(0,5).toString('ascii')!=='%PDF-')throw Error('Respuesta PDF inválida.');
+  return pdf;
+ }
+ async function deliveryStatus(receipt,type){
+  const result=await documentQuery('/consulta-api/invoice2u/integracion/consultarEstado',receipt,type);
+  const state=result?.estadoEntrega??result?.estadoEntregaCorreo;
+  const code=String(state?.codigo??state??'');
+  return ['0','1','2','3'].includes(code)?code:null;
+ }
+ return {token,send,issuedPdf,deliveryStatus};
 }
-module.exports={billing,buildPayload,createClient};
+module.exports={billing,buildPayload,createClient,ACCOUNTING_EMAIL};

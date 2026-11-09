@@ -36,6 +36,20 @@ async function drawEventRows(){
    const book=el('td'),label=o?.status==='paid'?'Compró el libro':o?.status==='simulated_paid'?'Compra simulada':o?.status==='pending'?'Pago pendiente':o?.status==='failed'?'Pago fallido':o?.status==='cancelled'?'Pedido cancelado':'Sin compra';
    book.append(el('span',{class:'event-book-badge '+(o?.status==='paid'?'purchased':o?'pending':'none'),text:label}));
    if(o)book.append(el('small',{text:'S/ '+Number(o.amount).toFixed(2)}));
+   if(o?.status==='paid'&&!reg.is_test){
+    const send=el('button',{type:'button',class:'button secondary',text:'Enviar comprobante'});
+    const feedback=el('small',{role:'status'});
+    send.addEventListener('click',async()=>{
+     if(!window.confirm('Enviar el comprobante existente a '+p.email+' y a contabilidad@malba-pmc.com. Si CLOSE2U ya confirmó la entrega al cliente, solo se enviará la copia a contabilidad.'))return;
+     send.disabled=true;
+     feedback.textContent='Enviando…';
+     try{
+      const result=await request('/api/events/admin/payments/send-issued-invoice',{orderId:o.id});
+      feedback.textContent=result.customerAlreadyDelivered?'Entregado al cliente por CLOSE2U. Copia enviada a contabilidad.':'Correo aceptado para el cliente y contabilidad.';
+     }catch(error){feedback.textContent=error.message;send.disabled=false;}
+    });
+    book.append(send,feedback);
+   }
    row.append(person,contact,status,book);tbody.append(row);
   }
   table.append(tbody);scroll.append(table);root.append(scroll);
