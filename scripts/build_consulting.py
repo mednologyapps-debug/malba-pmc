@@ -30,8 +30,7 @@ def document(title,description,slug,main,programs,active,image,alt,service=None)
     schema={'@context':'https://schema.org','@graph':[{'@type':'BreadcrumbList','itemListElement':[{'@type':'ListItem','position':1,'name':'Inicio','item':b.ORIGIN},{'@type':'ListItem','position':2,'name':'Consultoría','item':b.ORIGIN+'consultoria/'}]+([{'@type':'ListItem','position':3,'name':service['name'],'item':b.ORIGIN+slug}] if service else [])}]}
     if service:schema['@graph'].append({'@type':'Service','name':title,'description':description,'serviceType':service['name'],'url':b.ORIGIN+slug,'provider':{'@type':'Organization','name':'MALBA PMC','url':b.ORIGIN}})
     else:schema['@graph'].append({'@type':'CollectionPage','name':'Consultoría MALBA PMC','description':description,'url':b.ORIGIN+slug})
-    result=b.document(title,description,slug,'../','<div class="consult-page">'+main+'</div>',programs,active,schema,image,alt)
-    return result.replace('</head>','<link rel="stylesheet" href="../consultoria.css"><link rel="stylesheet" href="../consultation.css?v=20261109-week"><script src="../consultoria.js?v=20261109-week" defer></script></head>')
+    return b.document(title,description,slug,'../','<div class="consult-page">'+main+'</div>',programs,active,schema,image,alt)
 
 
 def render_consulting(programs,data=None):

@@ -5,17 +5,17 @@
   setupBooking(form);
   return;
  }
- const homeLink = document.querySelector('[data-open-consultation]');
- if (!homeLink) return;
+ const triggers = [...document.querySelectorAll('[data-open-consultation]')];
  let loading = false;
- async function openHomeBooking(event) {
+ async function openSharedBooking(event) {
   if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const opener = event.currentTarget;
   event.preventDefault();
   if (loading) return;
   loading = true;
-  homeLink.setAttribute('aria-busy', 'true');
+  opener.setAttribute('aria-busy', 'true');
   try {
-   const response = await fetch(homeLink.href);
+   const response = await fetch(opener.href);
    if (!response.ok) throw Error('Agenda no disponible');
    const page = new DOMParser().parseFromString(await response.text(), 'text/html');
    const booking = page.querySelector('[data-consult-contact]');
@@ -24,19 +24,19 @@
    host.hidden = true;
    host.append(booking);
    document.body.append(host);
-   setupBooking(booking, homeLink);
-   homeLink.removeEventListener('click', openHomeBooking);
+   setupBooking(booking, opener);
+   triggers.forEach(link => link.removeEventListener('click', openSharedBooking));
   } catch {
-   location.assign(homeLink.href);
+   location.assign(opener.href);
   } finally {
    loading = false;
-   homeLink.removeAttribute('aria-busy');
+   opener.removeAttribute('aria-busy');
   }
  }
- homeLink.addEventListener('click', openHomeBooking);
+ triggers.forEach(link => link.addEventListener('click', openSharedBooking));
 })();
 
-function setupBooking(form, homeLink) {
+function setupBooking(form, initialOpener) {
  const when = document.querySelector('.consult-when'), small = matchMedia('(max-width:500px)');
  if (when) { when.open = !small.matches; small.addEventListener('change', () => { when.open = !small.matches; }); }
  document.querySelectorAll('.consult-service').forEach(item => item.addEventListener('toggle', () => {
@@ -79,7 +79,7 @@ function setupBooking(form, homeLink) {
  form.elements.name.minLength = 3;
  form.elements.context.minLength = 10;
  const note = form.querySelector('.consult-form-note');
- note.textContent = 'Recibirás un correo con tu solicitud. La cita se confirma cuando MALBA PMC la apruebe. El enlace de reunión se enviará después.';
+ note.textContent = 'Recibirás un correo con tu solicitud. La cita se confirma cuando MALBA PMC la apruebe. El correo de confirmación incluirá el enlace de la sesión.';
  const consent = document.createElement('label');
  consent.className = 'cb-consent';
  consent.innerHTML = '<input type="checkbox" name="booking_consent" required><span>He leído la <a href="/consultoria/privacidad/" target="_blank" rel="noopener">política de privacidad</a> y autorizo el uso de mis datos para gestionar esta consultoría.</span>';
@@ -169,7 +169,7 @@ function setupBooking(form, homeLink) {
    const result=document.createElement('section');result.className='cb-result';result.tabIndex=-1;
    const title=document.createElement('h3');title.textContent=data.status==='confirmed'?'Consultoría confirmada':data.status==='declined'?'Esta solicitud ya fue respondida':'Solicitud recibida';
    const detail=document.createElement('p');detail.textContent=fullDate(selectedSlot.starts_at)+' · '+time(selectedSlot.starts_at)+' – '+time(selectedSlot.ends_at)+' (hora de Perú).';
-   const message=document.createElement('p');message.textContent=data.status==='confirmed'?'MALBA PMC confirmó tu consultoría. Revisa tu correo. El enlace de reunión se enviará por separado.':data.status==='declined'?'Revisa tu correo o selecciona un nuevo horario.':'Tu horario está apartado mientras MALBA PMC confirma la consultoría. Recibirás un correo con la solicitud y otro cuando se confirme. El enlace de reunión se enviará después.';
+   const message=document.createElement('p');message.textContent=data.status==='confirmed'?'MALBA PMC confirmó tu consultoría. Revisa tu correo para ver el enlace de la sesión.':data.status==='declined'?'Revisa tu correo o selecciona un nuevo horario.':'Tu horario está apartado mientras MALBA PMC confirma la consultoría. Recibirás un correo con la solicitud y otro cuando se confirme. El correo de confirmación incluirá el enlace de la sesión.';
    result.append(title,detail,message);flow.replaceChildren(result);focusStep(result);
   } catch(error) {status.textContent=error.message;}
   finally {back.disabled=false;submit.disabled=false;}
@@ -228,12 +228,14 @@ function setupBooking(form, homeLink) {
  dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)close();}});
  dialog.addEventListener('close',()=>{placeholder.after(flow);opener?.focus({preventScroll:true});});
  function openBooking(link) {
-  opener=link;
+  const menu = link.closest('.main-navigation') && matchMedia('(max-width:1130px)').matches;
+  opener = menu ? document.querySelector('.menu-toggle') : link;
   dialog.querySelector('.cb-dialog-content').append(flow);
   dialog.showModal();
   dialog.scrollTop=0;
  }
- const links = homeLink ? [homeLink] : [...document.querySelectorAll('a[href]')].filter(link => {
+ const links = [...document.querySelectorAll('a[href]')].filter(link => {
+  if (link.hasAttribute('data-open-consultation')) return true;
   const url = new URL(link.href, location.href);
   return url.origin === location.origin && url.pathname === location.pathname && url.hash === '#consulta';
  });
@@ -245,6 +247,6 @@ function setupBooking(form, homeLink) {
    openBooking(link);
   });
  }
- if (homeLink) openBooking(homeLink);
+ if (initialOpener) openBooking(initialOpener);
  void loadMonth();
 }

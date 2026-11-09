@@ -9,6 +9,22 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const format = (value, options) => new Intl.DateTimeFormat('es-PE', {timeZone:'America/Lima', ...options}).format(new Date(value));
 
+const dateTime = new Intl.DateTimeFormat('sv-SE', {timeZone:'America/Lima', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'});
+function withinHours(slot) {
+ const [day, start] = dateTime.format(new Date(slot.starts_at)).split(' ');
+ const [endDay, end] = dateTime.format(new Date(slot.ends_at)).split(' ');
+ return day === endDay && start >= '08:00:00' && end <= '19:00:00';
+}
+function meetingUrl(value) {
+ if (typeof value !== 'string' || value.trim().length > 2048) return null;
+ const input = value.trim();
+ if (!/^https:\/\/[^/?#]/i.test(input) || /[\s\\]/.test(input)) return null;
+ try {
+  const url = new URL(input);
+  return url.protocol === 'https:' && url.hostname && !url.username && !url.password ? input : null;
+ } catch { return null; }
+}
+
 module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk, sign, nodemailer, getDocument, env = process.env}) {
  const attempts = new Map();
  let dispatching = false;
@@ -69,7 +85,7 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    description = booking.name + ' solicita una consultoría. Revisa los datos y confirma la fecha y hora.';
   } else if (job.kind === 'confirmed_client') {
    title = 'Tu consultoría ha sido confirmada';
-   description = 'MALBA PMC confirmó tu consultoría con Miguel Alba. El equipo te enviará el enlace de la reunión por separado.';
+   description = 'MALBA PMC confirmó tu consultoría con Miguel Alba.';
   } else if (job.kind === 'declined_client') {
    title = 'Actualización de tu solicitud de consultoría';
    description = 'MALBA PMC no podrá atenderte en el horario solicitado. Puedes elegir otra fecha en nuestra web.';
@@ -77,11 +93,13 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    title = 'Recibimos tu solicitud de consultoría';
    description = 'Tu horario está apartado mientras MALBA PMC revisa la solicitud. Espera el correo de confirmación antes de considerar la reunión confirmada.';
   }
+  const session = job.kind === 'confirmed_client' ? meetingUrl(booking.meeting_url) : null;
+  const sessionHtml = session ? '<p><strong>Este es el URL de la sesión</strong><br><a href="' + escape(session) + '">' + escape(session) + '</a></p>' : '';
   const link = consultant ? publicOrigin(env) + '/consultoria/confirmar/#' + tokenFor(booking.request_id) : publicOrigin(env) + '/consultoria/#consulta';
   const detail = consultant ? '<p><strong>Cliente</strong><br>' + escape(booking.name) + '<br>' + escape(booking.email) + '</p><p>' + escape(booking.company) + '</p><p><strong>Consulta</strong><br>' + escape(booking.message).replace(/\n/g, '<br>') + '</p>' : '';
   const cta = consultant ? 'Revisar y confirmar consultoría' : job.kind === 'declined_client' ? 'Ver otros horarios' : '';
-  const html = '<div style="font:16px/1.6 Arial,sans-serif;color:#163b61;max-width:620px;margin:auto;padding:24px"><img src="' + publicOrigin(env) + '/assets/malba-pmc-logo.png" alt="MALBA PMC" width="166"><h1 style="font-size:25px">' + escape(title) + '</h1><p>' + escape(description) + '</p><p><strong>' + escape(booking.service) + '</strong></p><p>' + escape(date) + '<br>' + escape(time) + '</p>' + detail + (cta ? '<p><a style="display:inline-block;background:#5d4594;color:white;text-decoration:none;padding:12px 18px;border-radius:8px" href="' + escape(link) + '">' + cta + '</a></p>' : '') + '</div>';
-  return {to:consultant ? booking.consultant_email : booking.email, subject:title + ' | MALBA PMC', html, text:[title, description, booking.service, date, time, consultant ? booking.name + '\n' + booking.email + '\n' + booking.company + '\n' + booking.message : '', cta ? cta + '\n' + link : ''].join('\n\n')};
+  const html = '<div style="font:16px/1.6 Arial,sans-serif;color:#163b61;max-width:620px;margin:auto;padding:24px"><img src="' + publicOrigin(env) + '/assets/malba-pmc-logo.png" alt="MALBA PMC" width="166"><h1 style="font-size:25px">' + escape(title) + '</h1><p>' + escape(description) + '</p><p><strong>' + escape(booking.service) + '</strong></p><p>' + escape(date) + '<br>' + escape(time) + '</p>' + detail + sessionHtml + (cta ? '<p><a style="display:inline-block;background:#5d4594;color:white;text-decoration:none;padding:12px 18px;border-radius:8px" href="' + escape(link) + '">' + cta + '</a></p>' : '') + '</div>';
+  return {to:consultant ? booking.consultant_email : booking.email, subject:title + ' | MALBA PMC', html, text:[title, description, booking.service, date, time, consultant ? booking.name + '\n' + booking.email + '\n' + booking.company + '\n' + booking.message : '', session ? 'Este es el URL de la sesión\n' + session : '', cta ? cta + '\n' + link : ''].join('\n\n')};
  }
  async function flushMail() {
   if (dispatching || !db || !mailReady()) return;
@@ -126,6 +144,14 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
   }
  }
  function sendQueued() { void flushMail(); }
+ async function decideBooking(value, id, token) {
+  if (!['confirmed','declined'].includes(value.status)) throw Error('Selecciona una respuesta válida para la solicitud.');
+  const session = value.status === 'confirmed' ? meetingUrl(value.meetingUrl) : null;
+  if (value.status === 'confirmed' && !session) throw Error('Ingresa un enlace HTTPS válido para la sesión.');
+  const result = await query(db.rpc('consultation_decide', {p_id:id, p_token_hash:token, p_status:value.status, p_meeting_url:session}));
+  sendQueued();
+  return result;
+ }
  if (db) {
   const timer = setInterval(sendQueued, 60000);
   timer.unref();
@@ -151,7 +177,7 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
     const range = monthRange(url);
     await query(db.rpc('consultation_ensure_slots',{p_from:range.from,p_to:range.to}));
     const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,consultation_bookings(status)').eq('enabled', true).gte('starts_at', new Date(Math.max(Date.parse(range.from), Date.now() + 3600000)).toISOString()).lt('starts_at', range.to).order('starts_at').limit(1000));
-    const available = slots.filter(slot => !(slot.consultation_bookings || []).some(booking => ['pending','confirmed'].includes(booking.status))).map(({consultation_bookings, ...slot}) => slot);
+    const available = slots.filter(slot => withinHours(slot) && !(slot.consultation_bookings || []).some(booking => ['pending','confirmed'].includes(booking.status))).map(({consultation_bookings, ...slot}) => slot);
     return json(res, 200, {slots:available, timezone:'America/Lima', enabled:true});
    }
    if (route === '/api/consultations/request' && req.method === 'POST') {
@@ -170,15 +196,13 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    if (route === '/api/consultations/confirmation') {
     const token = bearer(req);
     if (req.method === 'GET') {
-     const booking = await query(db.from('consultation_bookings').select('name,email,company,service,message,status,consultation_slots(starts_at,ends_at)').eq('token_hash',token).maybeSingle());
+     const booking = await query(db.from('consultation_bookings').select('name,email,company,service,message,status,meeting_url,consultation_slots(starts_at,ends_at)').eq('token_hash',token).maybeSingle());
      if (!booking || Date.parse(booking.consultation_slots.starts_at) <= Date.now()) return json(res, 404, {error:'El enlace no está disponible o la fecha ya pasó.'});
      return json(res, 200, booking);
     }
     if (req.method === 'POST') {
      const value = await body(req);
-     if (!['confirmed','declined'].includes(value.status)) return json(res, 400, {error:'Selecciona una respuesta válida.'});
-     const result = await query(db.rpc('consultation_decide', {p_id:null, p_token_hash:token, p_status:value.status}));
-     sendQueued();
+     const result = await decideBooking(value, null, token);
      return json(res, 200, result);
     }
    }
@@ -215,8 +239,13 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
       from = day ? new Date(day + 'T00:00:00-05:00').toISOString() : range.from;
       to = day ? new Date(Date.parse(from) + 86400000).toISOString() : range.to;
      }
-     const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,enabled,consultation_bookings(id,name,email,company,service,message,status,created_at)').gte('starts_at',from).lt('starts_at',to).order('starts_at').limit(1000));
-     return json(res, 200, {slots});
+     const slots = await query(db.from('consultation_slots').select('id,starts_at,ends_at,enabled,consultation_bookings(id,name,email,company,service,message,status,meeting_url,created_at)').gte('starts_at',from).lt('starts_at',to).order('starts_at').limit(1000));
+     const visible = slots.flatMap(slot => {
+      if (withinHours(slot)) return [slot];
+      if (slot.consultation_bookings?.some(booking => ['pending','confirmed'].includes(booking.status))) return [{...slot, outsideHours:true}];
+      return [];
+     });
+     return json(res, 200, {slots:visible});
     }
     if (req.method === 'POST') {
      const value = await body(req);
@@ -235,8 +264,7 @@ module.exports = function createConsultationApi({db, json, requireAdmin, csrfOk,
    if (route === '/api/consultations/admin/decision' && req.method === 'POST') {
     const value = await body(req);
     if (!UUID.test(value.id || '')) return json(res, 400, {error:'Solicitud inválida.'});
-    const result = await query(db.rpc('consultation_decide',{p_id:value.id,p_token_hash:null,p_status:value.status}));
-    sendQueued();
+    const result = await decideBooking(value, value.id, null);
     return json(res, 200, result);
    }
    if (route === '/api/consultations/admin/mail' && req.method === 'GET') {

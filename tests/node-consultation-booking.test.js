@@ -15,7 +15,8 @@ function fixture(responder,{admin=false,csrf=true,mailer,settings=env}={}){
 }
 test('public availability excludes reservations and never discloses client or consultant data',async()=>{
  const used={...slot,id:'33333333-3333-4333-8333-333333333333'};
- const api=fixture(item=>({data:item.table==='consultation_settings'?{enabled:true,consultant_email:'consultant@example.invalid'}:item.table==='consultation_slots'?[slot,{...used,consultation_bookings:[{status:'pending'}]}]:[]}));
+ const tooLate={...slot,starts_at:'2026-12-11T00:00:00Z',ends_at:'2026-12-11T01:00:00Z'};
+ const api=fixture(item=>({data:item.table==='consultation_settings'?{enabled:true,consultant_email:'consultant@example.invalid'}:item.table==='consultation_slots'?[slot,tooLate,{...used,consultation_bookings:[{status:'pending'}]}]:[]}));
  const result=await api.request('/api/consultations/availability?month=2026-12');
  assert.equal(result.status,200);assert.deepEqual(result.value.slots,[slot]);assert.equal(result.value.consultant_email,undefined);
 });
@@ -43,8 +44,10 @@ test('opening the confirmation link is read-only; only a deliberate POST confirm
  const token=identity.requestId+'.'+sign('consultation-confirm:'+identity.requestId);
  const api=fixture(item=>item.rpc?{data:{status:'confirmed',duplicate:false}}:{data:{...identity,status:'pending',consultation_slots:slot}});
  const result=await api.request('/api/consultations/confirmation',{token});assert.equal(result.status,200);assert.equal(api.calls.some(c=>c.rpc),false);
- const confirmed=await api.request('/api/consultations/confirmation',{token,body:{status:'confirmed'}});assert.equal(confirmed.value.status,'confirmed');
- const update=api.calls.find(c=>c.rpc==='consultation_decide');assert.equal(update.payload.p_id,null);assert.equal(update.payload.p_token_hash,crypto.createHash('sha256').update(token).digest('hex'));
+ assert.equal((await api.request('/api/consultations/confirmation',{token,body:{status:'confirmed'}})).status,400);
+ const meetingUrl='https://meet.example.invalid/session';
+ const confirmed=await api.request('/api/consultations/confirmation',{token,body:{status:'confirmed',meetingUrl}});assert.equal(confirmed.value.status,'confirmed');
+ const update=api.calls.find(c=>c.rpc==='consultation_decide');assert.equal(update.payload.p_id,null);assert.equal(update.payload.p_meeting_url,meetingUrl);assert.equal(update.payload.p_token_hash,crypto.createHash('sha256').update(token).digest('hex'));
 });
 test('SMTP sends pending notice and a private confirmation link; errors do not discard the saved reservation',async()=>{
  const messages=[],booking={...identity,id:'44444444-4444-4444-8444-444444444444',request_id:identity.requestId,consultant_email:'consultant@example.invalid',status:'pending',consultation_slots:slot};
@@ -78,4 +81,27 @@ test('admin week queries seven Lima days even when it crosses into another month
  assert.deepEqual(result.value.slots,[slot]);
  assert.deepEqual(admin.calls[0],{rpc:'consultation_ensure_slots',payload:{p_from:from,p_to:to}});
  assert.ok(admin.calls.some(call=>call.table==='consultation_slots'&&call.filters.some(([op,field,value])=>op==='lt'&&field==='starts_at'&&value===to)));
+});
+
+test('admin confirmation requires HTTPS and sends the saved meeting link only in the confirmation email',async()=>{
+ const meetingUrl='https://meet.example.invalid/session?test=1&mode=call';
+ const messages=[];
+ const booking={...identity,id:'44444444-4444-4444-8444-444444444444',status:'confirmed',meeting_url:meetingUrl,consultation_slots:slot};
+ const api=fixture(item=>{
+  if(item.rpc) return {data:{status:'confirmed'}};
+  if(item.table==='consultation_bookings') return {data:booking};
+  if(item.table==='consultation_mail_outbox'&&item.operation==='select') return {data:[{id:'job',booking_id:booking.id,kind:'confirmed_client',status:'pending',attempts:0}]};
+  return {data:[{id:'claim'}]};
+ },{admin:true,mailer:{createTransport:()=>({sendMail:async mail=>{messages.push(mail);return {accepted:[mail.to]};},close(){}})}});
+ const route='/api/consultations/admin/decision', body={id:booking.id,status:'confirmed'};
+ assert.equal((await api.request(route,{body})).status,400);
+ assert.equal((await api.request(route,{body:{...body,meetingUrl:'javascript:alert(1)'}})).status,400);
+ assert.equal(api.calls.length,0);
+ assert.equal((await api.request(route,{body:{...body,meetingUrl}})).status,200);
+ assert.equal(api.calls.find(call=>call.rpc==='consultation_decide').payload.p_meeting_url,meetingUrl);
+ for(let i=0;i<30&&!messages.length;i++)await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(messages.length,1);
+ assert.equal(messages[0].to,identity.email);
+ assert.ok(messages[0].text.includes('Este es el URL de la sesión\n'+meetingUrl));
+ assert.ok(messages[0].html.includes(meetingUrl.replace('&','&amp;')));
 });

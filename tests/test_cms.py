@@ -278,7 +278,12 @@ class CMSIntegrationTests(unittest.TestCase):
             self.assertEqual(parser.fields,['contact_name','contact_email','contact_phone','contact_message'],route)
             self.assertNotIn('{{CONTACT_URL}}',page);self.assertIn('data-contact-url="https://wa.me/51932563293"',page)
             header=page.split('</header>')[0]
-            self.assertNotIn('Solicitar información',header);self.assertEqual(header.count('data-dialog="contact-dialog"'),1)
+            self.assertNotIn('Solicitar información',header)
+            self.assertNotIn('data-dialog="contact-dialog"',header)
+            self.assertEqual(header.count('data-open-consultation'),1)
+        confirmation=self.call('/consultoria/confirmar/')
+        self.assertEqual(confirmation[0],200)
+        self.assertIn('id="confirmation-meeting-url"',confirmation[1])
 
     def test_about_navigation_preview_export_and_route_reservation(self):
         self.login();current=self.call('/api/content')[1];body={'data':current['data'],'revision':current['revision']}

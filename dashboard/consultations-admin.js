@@ -23,7 +23,6 @@ async function renderConsultationAgenda() {
  const lastDay = addDays(today, 179);
  let week = firstWeek;
  let generation = 0;
- let scrollToMorning = true;
  let settingsRevision;
  let saving = false;
  let opener;
@@ -42,12 +41,13 @@ async function renderConsultationAgenda() {
  ]);
  const calendarStatus = el('p', {class:'cb-week-status', role:'status'});
  const calendar = el('div', {class:'cb-week-scroll', tabindex:'0', role:'region', 'aria-label':'Calendario semanal de consultorías'});
+ const legacy = el('div', {class:'cb-week-legacy', hidden:''});
  const legend = el('div', {class:'cb-week-legend'}, [
   el('span', {class:'is-available', text:'Disponible'}),
   el('span', {class:'is-blocked', text:'Bloqueado'}),
   el('span', {class:'is-pending', text:'Pendiente'}),
   el('span', {class:'is-confirmed', text:'Confirmada'}),
-  el('span', {class:'cb-week-timezone', text:'Hora de Perú (UTC−5)'})
+  el('span', {class:'cb-week-timezone', text:'8:00 a. m. a 7:00 p. m. · Hora de Perú'})
  ]);
 
  const mailSettings = el('details', {class:'cb-week-settings'}, [el('summary', {text:'Configuración de avisos'})]);
@@ -67,7 +67,7 @@ async function renderConsultationAgenda() {
  const dialog = el('dialog', {class:'cb-week-dialog', 'aria-labelledby':dialogTitle.id}, [
   el('header', {}, [dialogTitle, close]), dialogBody
  ]);
- editor.append(toolbar, legend, calendar, calendarStatus, mailSettings, dialog);
+ editor.append(toolbar, legend, calendar, calendarStatus, legacy, mailSettings, dialog);
  const stillHere = () => editor.contains(calendar);
  close.addEventListener('click', () => dialog.close());
  dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
@@ -117,16 +117,16 @@ async function renderConsultationAgenda() {
   const status = el('p', {class:'cb-week-dialog-status', role:'status'});
   dialogBody.replaceChildren(el('label', {text:'Horario (hora de Perú)'}, [picker]), detail, actions, status);
 
-  function action(label, route, payload, success, style) {
+  function action(label, route, payload, success, style, meeting) {
    const control = button(label, style);
    control.addEventListener('click', async () => {
-    if (saving) return;
+    if (saving || (meeting && !meeting.reportValidity())) return;
     saving = true;
     close.disabled = picker.disabled = true;
     actions.querySelectorAll('button').forEach(item => { item.disabled = true; });
     status.textContent = 'Guardando…';
     try {
-     await request(endpoint+route, payload);
+     await request(endpoint+route, meeting ? {...payload, meetingUrl:meeting.value.trim()} : payload);
      dialog.close();
      await loadWeek(success);
     } catch (error) {
@@ -152,9 +152,12 @@ async function renderConsultationAgenda() {
      el('p', {text:booking.service}), el('p', {text:booking.message}));
     if (Date.parse(slot.starts_at) <= Date.now()) return;
     if (booking.status === 'pending') {
-     action('Confirmar', 'decision', {id:booking.id, status:'confirmed'}, 'Reserva confirmada.', 'primary');
+     const meeting = el('input', {type:'url', required:'', maxlength:'2048', placeholder:'https://…', autocomplete:'off'});
+     detail.append(el('label', {class:'cb-meeting-label', text:'Enlace de la sesión (obligatorio)'}, [meeting]));
+     action('Confirmar', 'decision', {id:booking.id, status:'confirmed'}, 'Reserva confirmada.', 'primary', meeting);
      action('Rechazar horario', 'decision', {id:booking.id, status:'declined'}, 'Solicitud rechazada.');
     } else {
+     if (booking.meeting_url) detail.append(el('p', {text:'Enlace de la sesión · '+booking.meeting_url}));
      action('Cancelar reserva', 'decision', {id:booking.id, status:'declined'}, 'Reserva cancelada.');
     }
     return;
@@ -175,6 +178,7 @@ async function renderConsultationAgenda() {
    const key = dayKey(start);
    if (!byDay.has(key)) continue;
    byDay.get(key).push(slot);
+   if (slot.outsideHours) continue;
    const bucket = key + '-' + Number(hourAt.format(start));
    if (!byHour.has(bucket)) byHour.set(bucket, []);
    byHour.get(bucket).push(slot);
@@ -193,7 +197,7 @@ async function renderConsultationAgenda() {
    header.append(el('th', {scope:'col'}, [day]));
   }
   const body = el('tbody');
-  for (let hour = 0; hour < 24; hour++) {
+  for (let hour = 8; hour < 19; hour++) {
    const row = el('tr', {'data-hour':String(hour)}, [el('th', {scope:'row', text:String(hour).padStart(2,'0')+':00'})]);
    for (const key of days) {
     const cell = el('td');
@@ -211,9 +215,18 @@ async function renderConsultationAgenda() {
    body.append(row);
   }
   calendar.replaceChildren(el('table', {class:'cb-week-table', 'aria-label':'Semana de consultorías'}, [el('thead', {}, [header]), body]));
-  if (scrollToMorning) {
-   calendar.scrollTop = body.querySelector('[data-hour="8"]').offsetTop - header.offsetHeight;
-   scrollToMorning = false;
+  const outside = slots.filter(slot => slot.outsideHours);
+  legacy.hidden = !outside.length;
+  legacy.replaceChildren();
+  if (outside.length) {
+   legacy.append(el('h3', {text:'Reservas previas fuera del nuevo horario'}));
+   for (const slot of outside) {
+    const key = dayKey(new Date(slot.starts_at));
+    const date = dateText(dateAt(key), {weekday:'short', day:'numeric', month:'short'});
+    const control = button(date+' · '+interval(slot)+' · '+labels[state(slot)]);
+    control.addEventListener('click', () => openDay(key, byDay.get(key), slot.id, control));
+    legacy.append(control);
+   }
   }
  }
 
@@ -238,6 +251,7 @@ async function renderConsultationAgenda() {
   } catch (error) {
    if (!stillHere() || version !== generation) return;
    calendar.replaceChildren();
+   legacy.hidden = true;
    calendarStatus.textContent = error.message;
   } finally {
    if (version === generation) calendar.removeAttribute('aria-busy');
@@ -247,7 +261,7 @@ async function renderConsultationAgenda() {
   if (week !== key) {
    week = key;
    calendar.replaceChildren();
-   scrollToMorning = true;
+   legacy.hidden = true;
   }
   void loadWeek();
  }
