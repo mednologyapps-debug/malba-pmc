@@ -40,12 +40,12 @@ async function drawEventRows(){
     const send=el('button',{type:'button',class:'button secondary',text:'Enviar comprobante'});
     const feedback=el('small',{role:'status'});
     send.addEventListener('click',async()=>{
-     if(!window.confirm('Enviar el comprobante existente a '+p.email+' y a contabilidad@malba-pmc.com. Si CLOSE2U ya confirmó la entrega al cliente, solo se enviará la copia a contabilidad.'))return;
+     if(!window.confirm('Enviar el PDF del comprobante a '+p.email+' y a contabilidad@malba-pmc.com.'))return;
      send.disabled=true;
      feedback.textContent='Enviando…';
      try{
-      const result=await request('/api/events/admin/payments/send-issued-invoice',{orderId:o.id});
-      feedback.textContent=result.customerAlreadyDelivered?'Entregado al cliente por CLOSE2U. Copia enviada a contabilidad.':'Correo aceptado para el cliente y contabilidad.';
+      await request('/api/events/admin/payments/send-issued-invoice',{orderId:o.id});
+      feedback.textContent='Correo con PDF aceptado para el cliente y contabilidad.';
      }catch(error){feedback.textContent=error.message;send.disabled=false;}
     });
     book.append(send,feedback);

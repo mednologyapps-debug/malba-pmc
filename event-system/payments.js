@@ -145,44 +145,64 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
   try{
    const s=await query(db.from('book_payment_sessions').select('*').eq('id',job.session_id).single());
    const receipt=await fiscal.send(s);if(!receipt?.serie||!Number.isInteger(Number(receipt.numero))||Number(receipt.numero)<1)throw Error('Respuesta fiscal ambigua.');
-   await query(db.from('book_invoice_jobs').update({status:'issued',receipt,updated_at:new Date().toISOString()}).eq('id',job.id));
+   await query(db.from('book_invoice_jobs').update({status:'issued',receipt,delivery_copy_status:'pending',updated_at:new Date().toISOString()}).eq('id',job.id));
   }catch{await query(db.from('book_invoice_jobs').update({status:'review',last_error:'Revisar en CLOSE2U antes de reintentar; la solicitud pudo haber sido recibida.',updated_at:new Date().toISOString()}).eq('id',job.id));throw Error('El comprobante requiere revisión. No se reintentará automáticamente.');}
  }
  let dispatching=false;
  async function dispatch(){
   if(dispatching||!db||env.C2U_LIVE_ENABLED!=='true')return;dispatching=true;
-  try{const candidates=await query(db.from('book_invoice_jobs').select('id').eq('status','pending').order('updated_at').limit(1));if(!candidates.length)return;
-   const jobs=await query(db.from('book_invoice_jobs').update({status:'processing',updated_at:new Date().toISOString()}).eq('id',candidates[0].id).eq('status','pending').select('*'));
-   if(jobs.length)await issueClaimed(jobs[0]);
-  }catch{console.error('Event invoice job requires review.');}finally{dispatching=false;}
+  try{
+   const candidates=await query(db.from('book_invoice_jobs').select('id').eq('status','pending').order('updated_at').limit(1));
+   if(candidates.length){
+    const jobs=await query(db.from('book_invoice_jobs').update({status:'processing',updated_at:new Date().toISOString()}).eq('id',candidates[0].id).eq('status','pending').select('*'));
+    if(jobs.length)await issueClaimed(jobs[0]).catch(()=>console.error('Event invoice job requires review.'));
+   }
+   const now=Date.now();
+   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'review',delivery_copy_error:'El envío quedó interrumpido. Revisar el correo antes de reenviar.'}).eq('delivery_copy_status','sending').lt('updated_at',new Date(now-15*60000).toISOString()));
+   const deliveries=await query(db.from('book_invoice_jobs').select('id,session_id,delivery_copy_attempts').eq('status','issued').eq('delivery_copy_status','pending').lt('updated_at',new Date(now-45000).toISOString()).order('updated_at').limit(5));
+   for(const job of deliveries){
+    const session=await query(db.from('book_payment_sessions').select('id,email,billing,status,mode').eq('id',job.session_id).single());
+    await deliverPdf(session,job,'pending').catch(()=>console.error('Invoice PDF delivery needs attention.'));
+   }
+  }catch{console.error('Invoice worker unavailable.');}finally{dispatching=false;}
  }
  if(env.C2U_LIVE_ENABLED==='true'&&db){const timer=setInterval(dispatch,60000);timer.unref();}
- // Explicit admin action for an existing receipt. It never calls the issuance endpoint.
+ // Explicit admin action for an existing receipt.
  async function sendIssuedInvoice(orderId){
-  const {SMTP_HOST:host,SMTP_USER:user}=env,pass=env.SMTP_PASSWORD||env.SMTP_PASS;
-  if(!nodemailer||!host||!user||!pass)throw Error('El correo de MALBA no está configurado.');
-  const session=await query(db.from('book_payment_sessions').select('id,email,billing,status,mode').eq('order_id',orderId).maybeSingle());
+  const session=await query(db.from('book_payment_sessions').select('id,email,billing,status,mode').eq('order_id',orderId).eq('status','paid').eq('mode','PRODUCTION').maybeSingle());
+  if(!session)throw Error('El pedido todavía no tiene un pago confirmado.');
+  const job=await query(db.from('book_invoice_jobs').select('id,delivery_copy_attempts,delivery_copy_status').eq('session_id',session.id).eq('status','issued').maybeSingle());
+  if(!job||![null,'pending'].includes(job.delivery_copy_status))throw Error('El comprobante aún no fue emitido, ya se envió o requiere revisión.');
+  return deliverPdf(session,job,job.delivery_copy_status);
+ }
+ async function deliverPdf(session,job,expectedStatus){
   if(session?.status!=='paid'||session.mode!=='PRODUCTION')throw Error('El pedido todavía no tiene un pago confirmado.');
-  const jobs=await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sending',delivery_copy_error:null}).eq('session_id',session.id).eq('status','issued').is('delivery_copy_status',null).select('id,receipt'));
-  const job=jobs[0];
-  if(!job)throw Error('El comprobante aún no fue emitido, ya se envió o requiere revisión.');
-  let transport;
+  const attempts=job.delivery_copy_attempts+1;
+  const claim=db.from('book_invoice_jobs').update({delivery_copy_status:'sending',delivery_copy_error:null,delivery_copy_attempts:attempts,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','issued');
+  const jobs=await query((expectedStatus===null?claim.is('delivery_copy_status',null):claim.eq('delivery_copy_status',expectedStatus)).select('receipt'));
+  if(!jobs.length)throw Error('Ya se está procesando el envío del comprobante.');
+  const {receipt}=jobs[0];
+  let transport,smtpAttempted=false;
   try{
+   const {SMTP_HOST:host,SMTP_USER:user}=env,pass=env.SMTP_PASSWORD||env.SMTP_PASS;
+   if(!nodemailer||!host||!user||!pass)throw Error('El correo de MALBA no está configurado.');
    const type=session.billing.type,label=type==='factura'?'Factura':'Boleta';
-   const [pdf,providerStatus]=await Promise.all([fiscal.issuedPdf(job.receipt,type),fiscal.deliveryStatus(job.receipt,type).catch(()=>null)]);
-   const alreadyDelivered=['1','2'].includes(providerStatus);
-   const account=c2u.ACCOUNTING_EMAIL,to=alreadyDelivered?account:session.email,cc=alreadyDelivered||to.toLowerCase()===account?undefined:account;
-   const number=job.receipt.serie+'-'+job.receipt.numero;
+   const pdf=await fiscal.issuedPdf(receipt,type);
+   const to=session.email,account=c2u.ACCOUNTING_EMAIL,cc=to.toLowerCase()===account?undefined:account;
+   const number=receipt.serie+'-'+receipt.numero;
    const port=Number(env.SMTP_PORT||465);
    transport=nodemailer.createTransport({host,port,secure:env.SMTP_SECURE?env.SMTP_SECURE==='true':port===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:20000});
+   smtpAttempted=true;
    const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos el comprobante electrónico '+number+' de la compra en MALBA PMC.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
    const accepted=(result.accepted||[]).map(address=>String(address).toLowerCase());
    if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
-   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_provider_status:providerStatus,delivery_copy_sent_at:new Date().toISOString()}).eq('id',job.id));
-   return {sent:true,customerAlreadyDelivered:alreadyDelivered};
+   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_copy_sent_at:new Date().toISOString()}).eq('id',job.id));
+   return {sent:true};
   }catch(error){
-   const reason=transport?'SMTP requiere revisión.':String(error.message).slice(0,160);
-   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'review',delivery_copy_error:reason}).eq('id',job.id));
+   const reason=smtpAttempted?'SMTP requiere revisión.':String(error.message).slice(0,160);
+   const retry=!smtpAttempted&&expectedStatus==='pending'&&attempts<5;
+   const status=retry?'pending':!smtpAttempted&&expectedStatus===null?null:'review';
+   await query(db.from('book_invoice_jobs').update({delivery_copy_status:status,delivery_copy_error:reason,updated_at:new Date().toISOString()}).eq('id',job.id));
    throw Error('No se pudo confirmar el envío del comprobante. '+reason);
   }finally{transport?.close();}
  }
