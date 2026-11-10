@@ -105,19 +105,23 @@ function create({db,json,text,getCourse,lessonsFrom,rawBody,storeLmsFile,downloa
    if(!uuid.test(courseId||'')||!uuid.test(lessonId||''))throw Error('Actividad inválida.');
    const lesson=await result(db.from('lms_lessons').select('lesson_type,lms_modules!inner(course_id)').eq('id',lessonId).eq('lms_modules.course_id',courseId).maybeSingle());
    if(!lesson||!['assignment','quiz'].includes(lesson.lesson_type))throw Error('Actividad no encontrada.');
-   const pageSize=30,page=Math.min(100000,Math.max(0,Math.floor(Number(url.searchParams.get('page'))||0)));
-   const roster=await db.from('lms_enrollments').select('student_id,lms_students!inner(full_name,email)',{count:'exact'})
+   const studentId=url.searchParams.get('studentId');
+   if(studentId!==null&&!uuid.test(studentId))throw Error('Alumno inválido.');
+   const summary=url.searchParams.get('summary')==='1';
+   const pageSize=summary?100:30,page=Math.min(100000,Math.max(0,Math.floor(Number(url.searchParams.get('page'))||0)));
+   const rosterQuery=db.from('lms_enrollments').select('student_id,lms_students!inner(full_name,email)',{count:'exact'})
     .eq('course_id',courseId).is('lms_students.deleted_at',null)
-    .order('lms_students(full_name)').order('student_id')
-    .range(page*pageSize,page*pageSize+pageSize-1);
+    .order('lms_students(full_name)').order('student_id');
+   if(studentId)rosterQuery.eq('student_id',studentId);
+   const roster=await rosterQuery.range(page*pageSize,page*pageSize+pageSize-1);
    if(roster.error)throw roster.error;
    const ids=roster.data.map(row=>row.student_id);
    const [submissions,history]=ids.length?await Promise.all([
-    result(table().select('student_id,'+safe).eq('lesson_id',lessonId).eq('kind',lesson.lesson_type).in('student_id',ids)),
+    result(table().select('student_id,'+(summary?'id,graded_at,score,submitted_at':safe)).eq('lesson_id',lessonId).eq('kind',lesson.lesson_type).in('student_id',ids)),
     result(db.from('lms_progress').select('student_id').eq('course_id',courseId).eq('lesson_id',lessonId).in('student_id',ids))
    ]):[[],[]];
    const byStudent=new Map(submissions.map(item=>[item.student_id,item])),previous=new Set(history.map(item=>item.student_id));
-   const items=roster.data.map(row=>({student:row.lms_students,submission:byStudent.get(row.student_id)||null,completed:previous.has(row.student_id)}));
+   const items=roster.data.map(row=>({student:{id:row.student_id,...row.lms_students},submission:byStudent.get(row.student_id)||null,completed:previous.has(row.student_id)}));
    return json(res,200,{items,total:roster.count});
   }
   const id=body?.id||url.searchParams.get('id');

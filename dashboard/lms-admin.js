@@ -1,9 +1,9 @@
 'use strict';
-const lmsState={loaded:false,view:'courses',records:null,course:null,revision:0,step:0,dirty:false,busy:false,query:'',studentFilter:'active',studentCourseFilter:'',selectedStudents:new Set()};
+const lmsState={loaded:false,view:'courses',records:null,course:null,review:null,revision:0,step:0,dirty:false,busy:false,query:'',studentFilter:'active',studentCourseFilter:'',selectedStudents:new Set()};
 async function lmsApi(path,body){return request('/api/lms/admin'+path,body);}
 function lmsButton(title,fn,cls='button secondary'){const b=el('button',{type:'button',class:cls,text:title});b.addEventListener('click',fn);return b;}
 function lmsChange(){lmsState.dirty=true;const s=document.querySelector('#lms-save-state');if(s)s.textContent='Cambios sin guardar';}
-function confirmLmsLeave(){if(lmsState.dirty&&!confirm('Hay cambios del aula sin guardar. ¿Descartarlos y salir del editor?'))return false;lmsState.course=null;lmsState.dirty=false;return true;}
+function confirmLmsLeave(){if(lmsState.dirty&&!confirm('Hay cambios del aula sin guardar. ¿Descartarlos y salir del editor?'))return false;lmsState.course=null;lmsState.review=null;lmsState.dirty=false;return true;}
 window.addEventListener('beforeunload',e=>{if(lmsState.dirty){e.preventDefault();e.returnValue='';}});
 function lmsField(obj,key,label,type='text',options={}){const wrapper=el('label',{class:'lms-field',text:label});let input;if(type==='textarea')input=el('textarea',{rows:5});else input=el('input',{type,...(type==='number'?{min:0,max:5000,step:1}:{})});if(type==='checkbox')input.checked=obj[key];else input.value=obj[key]??'';input.setAttribute('aria-label',label);input.dataset.lmsField=key;if(options.required)input.required=true;if(options.placeholder)input.placeholder=options.placeholder;input.addEventListener('input',()=>{obj[key]=type==='checkbox'?input.checked:type==='number'?Number(input.value):input.value;const dialog=input.closest('dialog');if(dialog)dialog.dataset.changed='true';if(lmsState.course)lmsChange();});wrapper.append(input);return wrapper;}
 function lmsLesson(){return {id:crypto.randomUUID(),title:'Nueva lección',type:'text',body:'',minutes:15,required:true,videoUrl:'',videoFileId:'',meetingUrl:'',resources:[]};}
@@ -12,6 +12,7 @@ async function lmsReload(){lmsState.records=await lmsApi('');lmsState.loaded=tru
 async function renderLmsEditor(){
  $('.actions').hidden=true;$('.status-row').hidden=true;const editor=$('#editor');$('#page-title').textContent='Aula virtual';$('#page-description').textContent='Administra cursos, alumnos y matrículas con acciones claras y seguras.';editor.replaceChildren();
  if(!lmsState.loaded){editor.append(lmsSkeleton());try{await lmsReload();if(area==='lms')renderLmsEditor();}catch(e){editor.replaceChildren(lmsEmpty('No pudimos cargar el aula.',e.message),lmsButton('Volver a intentar',()=>{lmsState.loaded=false;renderLmsEditor();},'button primary'));}return;}
+ if(lmsState.review){lmsAssessmentPage(editor,lmsState.review);return;}
  if(lmsState.course){lmsCourseEditor(editor);return;}
  const nav=el('nav',{class:'lms-nav','aria-label':'Administración del aula'});for(const [id,label]of [['courses','Cursos'],['students','Alumnos'],['enrollments','Matrículas y avance']]){const b=lmsButton(label,()=>{lmsState.view=id;lmsState.query='';lmsState.selectedStudents.clear();renderLmsEditor();},lmsState.view===id?'active':'');b.setAttribute('aria-current',lmsState.view===id?'page':'false');nav.append(b);}editor.append(nav);
  const head=el('div',{class:'lms-section-head'},[el('div',{},[el('h2',{text:lmsState.view==='courses'?'Cursos':lmsState.view==='students'?'Alumnos':'Matrículas y avance'}),el('p',{text:lmsState.view==='courses'?'Crea, organiza y publica la experiencia completa del alumno.':lmsState.view==='students'?'Gestiona accesos, matrículas y grupos sin realizar tareas una por una.':'Revisa el acceso y el avance de cada alumno.'})])]);
@@ -59,7 +60,7 @@ function drawCourses(results,matches){
   const details=el('details',{class:'lms-catalog-more'}),summary=el('summary',{text:'Más opciones'});
   const menu=el('div',{class:'lms-catalog-menu'});
   for(const [kind,label] of [['quiz','Evaluaciones'],['assignment','Tareas']]){
-   menu.append(lmsButton(label,()=>{details.open=false;lmsAssessmentDialog(c,kind,label);},'lms-catalog-menu-button'));
+   menu.append(lmsButton(label,()=>{lmsState.review={course:c,kind,label};renderLmsEditor();document.querySelector('#page-title').scrollIntoView({block:'start'});},'lms-catalog-menu-button'));
   }
   if(r.published)menu.append(el('a',{href:'/aula-virtual/',target:'_blank',rel:'noopener noreferrer',text:'Abrir aula virtual'}));
   menu.append(lmsButton(r.active?'Deshabilitar curso':'Habilitar curso',async()=>{
@@ -124,78 +125,224 @@ function lmsImportDialog(){const d=lmsModal('Importar alumnos desde Excel'),form
 function lmsEnrollDialog(existing=null,studentId=''){const s=lmsState.records,courses=s.courses.filter(c=>c.active&&c.published);if(!s.students.length||!courses.length){message('Crea un alumno y publica al menos un curso antes de matricular.',true);return;}const value={studentId:existing?.student_id||studentId||s.students[0].id,courseId:existing?.course_id||courses[0].id,active:existing?!!existing.active:true,expires:existing?.expires||'',sendEmail:!existing},d=lmsModal(existing?'Editar matrícula':'Matricular alumno'),form=el('form');for(const [key,label,items,title]of [['studentId','Alumno',s.students,x=>x.name+' · '+x.email],['courseId','Curso publicado',courses,x=>x.draft.title]]){const select=el('select',{'aria-label':label});for(const item of items)select.append(el('option',{value:item.id,text:title(item)}));select.value=value[key];select.disabled=!!existing;select.addEventListener('change',()=>value[key]=select.value);form.append(el('label',{class:'lms-field',text:label},[select]));}form.append(lmsField(value,'expires','Acceso hasta (opcional)','date'),lmsField(value,'active','Matrícula habilitada','checkbox'),lmsField(value,'sendEmail','Enviar credenciales y datos del curso por correo','checkbox'),el('p',{class:'notice',text:'Se enviará un correo HTML con el acceso, la URL del aula, la contraseña temporal y el curso. Requiere configurar SMTP en el servidor.'}));const error=el('p',{role:'alert',class:'lms-error'});form.append(error,el('button',{type:'submit',class:'button primary',text:'Guardar matrícula'}));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('[type=submit]');b.disabled=true;try{const result=await lmsApi('/enroll',value);await lmsReload();d.dataset.changed='false';d.close();renderLmsEditor();message(result.email?.sent?'Matrícula guardada y correo enviado.':'Matrícula guardada. '+(result.email?.reason||'Configura SMTP para enviar el correo automáticamente.'));}catch(e){error.textContent=e.message;}finally{b.disabled=false;}});d.append(form);}
 function lmsStudentDialog(student){const s=lmsState.records,u=student?{...student,password:''}:{name:'',email:'',password:'',active:true},d=lmsModal(student?'Editar alumno':'Crear alumno'),form=el('form');form.classList.add('lms-student-form');form.append(el('p',{class:'lms-dialog-intro',text:student?'Actualiza los datos de acceso. Las matrículas y el avance se conservarán.':'Crea el acceso y, si lo deseas, deja al alumno matriculado y notificado en este mismo paso.'}),el('div',{class:'lms-form-section'},[el('h3',{text:'1. Datos del alumno'}),lmsField(u,'name','Nombre completo','text',{required:true}),lmsField(u,'email','Correo de acceso','email',{required:true}),lmsField(u,'active','Acceso habilitado','checkbox')]));const pass=lmsField(u,'password',student?'Nueva contraseña temporal (opcional)':'Contraseña temporal (opcional)','password',{required:false}),pi=pass.querySelector('input');pi.autocomplete='new-password';pi.minLength=12;const access=el('div',{class:'lms-form-section'},[el('h3',{text:'2. Acceso seguro'}),pass,lmsButton('Generar contraseña segura',()=>{u.password='Malba-'+crypto.randomUUID().replaceAll('-','').slice(0,15);pi.value=u.password;pi.type='text';d.dataset.changed='true';},'add-item'),el('p',{class:'field-hint',text:'Si envías el correo sin escribir una contraseña, el sistema generará una automáticamente.'})]);form.append(access);const course=el('select',{'aria-label':'Curso para matricular'});course.append(el('option',{value:'',text:'Sin matrícula inicial'}));for(const c of s.courses.filter(c=>c.active&&c.published))course.append(el('option',{value:c.id,text:c.draft.title}));const send=el('input',{type:'checkbox'});send.checked=!student;const enrollment=el('div',{class:'lms-form-section'},[el('h3',{text:'3. Matrícula y bienvenida'}),el('label',{class:'lms-field',text:'Curso publicado inicial'},[course]),el('label',{class:'lms-check-row'},[send,el('span',{text:'Enviar correo de bienvenida con la URL, el curso y las credenciales'})]),el('p',{class:'field-hint',text:'El correo se enviará al guardar cuando hayas elegido un curso publicado.'})]);course.addEventListener('change',()=>{send.disabled=!course.value;if(!course.value)send.checked=false;});send.disabled=!course.value;form.append(enrollment);const error=el('p',{role:'alert',class:'lms-error'}),submit=el('button',{type:'submit',class:'button primary',text:student?'Guardar cambios':'Crear alumno'});form.append(error,submit);form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;d.dataset.pending='true';try{const r=await lmsApi('/student',{...u,courseId:course.value,sendEmail:send.checked});await lmsReload();d.dataset.changed='false';d.close();renderLmsEditor();message(r.email?.sent?'Alumno creado, matriculado y notificado por correo.':'Alumno guardado. '+(r.email?.reason||'Puedes matricularlo cuando quieras.'));}catch(err){error.textContent=err.message;}finally{submit.disabled=false;d.dataset.pending='false';}});d.append(form);}
 
-function lmsAssessmentDialog(course,kind,label){
- const dialog=lmsModal(label),list=el('div',{class:'lms-roster'}),status=el('p',{role:'status'});
- dialog.append(el('p',{class:'lms-dialog-intro',text:course.title}));
+function lmsAssessmentPage(editor,{course,kind,label}){
+ const assignment=kind==='assignment',noun=assignment?'Tarea':'Evaluación';
+ let saving=false;
+ const heading=$('#page-title');
+ heading.textContent=label;
+ heading.tabIndex=-1;
+ heading.focus({preventScroll:true});
+ $('#page-description').textContent=course.title;
+ const workspace=el('section',{class:'lms-review','aria-label':label});
+ const back=lmsButton('Volver a cursos',()=>{if(canChange()&&confirmLmsLeave())renderLmsEditor();});
+ const tabs=el('nav',{class:'lms-nav','aria-label':'Actividades del curso'});
+ for(const [type,title] of [['quiz','Evaluaciones'],['assignment','Tareas']]){
+  const tab=lmsButton(title,()=>{
+   if(type===kind||!canChange()||!confirmLmsLeave())return;
+   lmsState.review={course,kind:type,label:title};
+   renderLmsEditor();
+  },type===kind?'active':'');
+  tab.setAttribute('aria-current',type===kind?'page':'false');
+  tabs.append(tab);
+ }
+ workspace.append(back,tabs);
+ editor.append(workspace);
  const activities=(course.modules||[]).flatMap(module=>(module.lessons||[])
   .filter(lesson=>lesson.type===kind).map(lesson=>({id:lesson.id,label:module.title+' · '+lesson.title})));
  if(!activities.length){
-  dialog.append(el('p',{text:kind==='assignment'?'Este curso aún no tiene tareas.':'Este curso aún no tiene evaluaciones.'}));
+  workspace.append(lmsEmpty(assignment?'Este curso aún no tiene tareas.':'Este curso aún no tiene evaluaciones.','Puedes añadir una desde el editor del curso.'));
   return;
  }
+
  const select=el('select');
- select.append(el('option',{value:'',text:'Selecciona una actividad'}));
  for(const activity of activities)select.append(el('option',{value:activity.id,text:activity.label}));
- dialog.append(el('label',{class:'lms-field',text:kind==='assignment'?'Tarea':'Evaluación'},[select]),status,list);
- let page=0,request=0;
- select.addEventListener('change',()=>{page=0;void draw();});
- async function draw(){
-  const id=++request;
-  list.replaceChildren();
-  status.textContent=select.value?'Cargando alumnos…':'';
-  if(!select.value)return;
-  try{
-   const {items,total}=await lmsApi('/assessments?'+new URLSearchParams({courseId:course.id,lessonId:select.value,page}));
-   if(id!==request||!dialog.open)return;
-   status.textContent=total?total+' '+(total===1?'alumno':'alumnos'):'Todavía no hay alumnos matriculados.';
-   for(const row of items)list.append(studentRow(row));
-   const pagination=el('div',{class:'lms-student-actions'});
-   if(page>0)pagination.append(lmsButton('Anterior',()=>{page--;void draw();},'button secondary'));
-   if((page+1)*30<total)pagination.append(lmsButton('Siguiente',()=>{page++;void draw();},'button secondary'));
-   if(pagination.childElementCount)list.append(pagination);
-  }catch(error){if(id===request)status.textContent=error.message;}
+ const search=el('input',{type:'search',placeholder:'Nombre o correo'});
+ const filter=el('select');
+ for(const [value,text] of [['all','Todos los estados'],['pending','Pendientes de calificar'],['graded','Calificadas'],['missing','Sin entrega'],['historical','Completadas sin detalle']]){
+  filter.append(el('option',{value,text}));
  }
- function studentRow({student,submission,completed}){
-  const state=submission?(submission.graded_at?'Calificada · '+submission.score+'%':'Entregada · pendiente de calificar'):
-   completed?'Completada · sin detalle de respuestas':'Sin entrega';
-  const row=el('details',{class:'notice'}),summary=el('summary',{text:student.full_name+' · '+state});
-  row.append(summary,el('p',{text:student.email}));
-  if(!submission)return row;
-  row.append(el('p',{text:'Entrega del '+new Date(submission.submitted_at).toLocaleString('es-PE',{timeZone:'America/Lima'})}));
-  if(kind==='assignment'){
-   row.append(el('a',{href:'/api/lms/admin/assessments/file?id='+encodeURIComponent(submission.id),text:'Descargar '+submission.file_name}));
-  }else{
-   if(submission.objective_total)row.append(el('p',{text:'Opción múltiple: '+submission.objective_correct+' / '+submission.objective_total+' correctas'}));
-   const answers=el('ol');
-   for(const answer of submission.responses){
-    const copy=el('p',{text:answer.answer+(answer.manual?'':answer.correct?' · Correcta':' · Incorrecta')});
-    copy.style.whiteSpace='pre-wrap';
-    answers.append(el('li',{},[el('strong',{text:answer.question}),copy]));
+ const toolbar=el('div',{class:'lms-review-tools'},[
+  el('label',{class:'lms-field',text:noun},[select]),
+  el('label',{class:'lms-field',text:'Buscar alumno'},[search]),
+  el('label',{class:'lms-field',text:'Estado'},[filter])
+ ]);
+ const status=el('p',{class:'lms-review-count',role:'status'});
+ const roster=el('div',{class:'lms-review-roster'},[el('h2',{text:'Alumnos'}),status]);
+ const list=el('div');
+ roster.append(list);
+ const detail=el('section',{class:'lms-review-detail','aria-label':'Detalle del alumno',hidden:''});
+ const columns=el('div',{class:'lms-review-columns'},[roster,detail]);
+ workspace.append(toolbar,columns);
+ const stateLabels={pending:'Pendiente de calificar',graded:'Calificada',missing:'Sin entrega',historical:'Completada sin detalle'};
+ let rows=[],page=0,activity=select.value,selected=null,request=0;
+ const pageSize=20;
+ const stateOf=row=>row.submission?(row.submission.graded_at?'graded':'pending'):row.completed?'historical':'missing';
+ const normalize=value=>String(value||'').normalize('NFD').replace(/\p{M}/gu,'').toLocaleLowerCase('es');
+ const parameters=extra=>new URLSearchParams({courseId:course.id,lessonId:activity,...extra});
+
+ function canChange(){
+  if(saving)return false;
+  if(lmsState.dirty&&!confirm('¿Descartar los cambios de la calificación?'))return false;
+  lmsState.dirty=false;
+  return true;
+ }
+ function closeDetail(){
+  if(!canChange())return;
+  const id=selected;
+  selected=null;
+  detail.hidden=true;
+  detail.replaceChildren();
+  drawRoster();
+  [...list.querySelectorAll('button[data-student]')].find(button=>button.dataset.student===id)?.focus();
+ }
+ function drawRoster(){
+  list.replaceChildren();
+  const query=normalize(search.value.trim());
+  const matches=rows.filter(row=>(filter.value==='all'||stateOf(row)===filter.value)&&
+   normalize(row.student.full_name+' '+row.student.email).includes(query));
+  const pages=Math.max(1,Math.ceil(matches.length/pageSize));
+  page=Math.min(page,pages-1);
+  status.textContent=matches.length+' de '+rows.length+' '+(rows.length===1?'alumno':'alumnos');
+  if(!matches.length){
+   list.append(lmsEmpty(rows.length?'Sin coincidencias':'Aún no hay alumnos matriculados',rows.length?'Prueba con otro nombre o estado.':'Las matrículas del curso aparecerán aquí.'));
+   return;
+  }
+  const table=el('table',{'aria-label':'Alumnos de la actividad'});
+  table.append(el('thead',{},[el('tr',{},['Alumno','Estado','Nota','Detalle'].map(text=>el('th',{scope:'col',text})))]));
+  const body=el('tbody');
+  for(const row of matches.slice(page*pageSize,(page+1)*pageSize)){
+   const {student,submission}=row,state=stateOf(row);
+   const open=lmsButton(state==='pending'?'Revisar':'Ver',()=>openDetail(row));
+   open.dataset.student=student.id;
+   open.setAttribute('aria-label',(state==='pending'?'Revisar a ':'Ver a ')+student.full_name);
+   open.setAttribute('aria-expanded',String(selected===student.id));
+   body.append(el('tr',{class:selected===student.id?'is-selected':''},[
+    el('th',{scope:'row'},[el('strong',{text:student.full_name}),el('small',{text:student.email})]),
+    el('td',{},[el('span',{class:'lms-review-badge '+state,text:stateLabels[state]})]),
+    el('td',{text:submission?.graded_at?submission.score+'%':'—'}),
+    el('td',{},[open])
+   ]));
+  }
+  table.append(body);
+  list.append(el('div',{class:'lms-review-scroll'},[table]));
+  if(pages>1){
+   const prev=lmsButton('Anterior',()=>{page--;drawRoster();list.querySelector('table').tabIndex=-1;list.querySelector('table').focus();});
+   const next=lmsButton('Siguiente',()=>{page++;drawRoster();list.querySelector('table').tabIndex=-1;list.querySelector('table').focus();});
+   prev.disabled=page===0;next.disabled=page===pages-1;
+   list.append(el('div',{class:'lms-review-pagination'},[prev,el('span',{text:'Página '+(page+1)+' de '+pages}),next]));
+  }
+ }
+
+ async function loadRoster(){
+  const id=++request;
+  rows=[];page=0;selected=null;
+  detail.hidden=true;list.replaceChildren();status.textContent='Cargando alumnos…';
+  search.disabled=filter.disabled=true;
+  try{
+   const roster=[];
+   for(let batch=0;;batch++){
+    const {items,total}=await lmsApi('/assessments?'+parameters({summary:'1',page:batch}));
+    if(id!==request||!workspace.isConnected)return;
+    roster.push(...items);
+    if(!items.length||roster.length>=total)break;
    }
-   row.append(answers);
+   rows=roster;
+   drawRoster();
+  }catch(error){
+   if(id!==request)return;
+   status.textContent=error.message;
+   list.append(lmsButton('Volver a intentar',loadRoster));
+  }finally{
+   if(id===request)search.disabled=filter.disabled=false;
+  }
+ }
+
+ async function openDetail(row){
+  if(selected===row.student.id||!canChange())return;
+  selected=row.student.id;
+  drawRoster();
+  const id=++request;
+  renderDetail(row,row.submission?'Cargando entrega…':'');
+  if(!row.submission)return;
+  try{
+   const {items}=await lmsApi('/assessments?'+parameters({studentId:row.student.id}));
+   if(id!==request||selected!==row.student.id||!workspace.isConnected)return;
+   if(!items.length)throw Error('El alumno ya no está disponible en esta actividad.');
+   Object.assign(row,items[0]);
+   renderDetail(row);
+   drawRoster();
+  }catch(error){
+   if(id!==request||selected!==row.student.id)return;
+   renderDetail(row,error.message);
+   detail.append(lmsButton('Volver a intentar',()=>{selected=null;void openDetail(row);}));
+  }
+ }
+
+ function renderDetail(row,loading=''){
+  const {student,submission}=row,state=stateOf(row);
+  const hadFocus=detail.contains(document.activeElement);
+  const title=el('h2',{text:student.full_name,tabindex:'-1'});
+  const close=lmsButton('Cerrar detalle',closeDetail);
+  detail.hidden=false;
+  detail.replaceChildren(el('div',{class:'lms-review-detail-head'},[title,close]),el('p',{class:'lms-review-count',text:student.email}),
+   el('span',{class:'lms-review-badge '+state,text:stateLabels[state]}));
+  if(loading)detail.append(el('p',{role:'status',text:loading}));
+  else if(!submission)detail.append(el('p',{text:state==='historical'?'Esta actividad se completó antes de guardar el detalle de las respuestas.':'El alumno todavía no ha enviado esta actividad.'}));
+  else renderSubmission(row);
+  if(loading||!submission||hadFocus)title.focus({preventScroll:true});
+  if(loading||!submission)detail.scrollIntoView({block:'nearest'});
+ }
+
+ function renderSubmission(row){
+  const {submission}=row;
+  detail.append(el('p',{class:'lms-review-count',text:'Entrega del '+new Date(submission.submitted_at).toLocaleString('es-PE',{timeZone:'America/Lima'})}));
+  if(assignment){
+   detail.append(el('a',{class:'button secondary',href:'/api/lms/admin/assessments/file?id='+encodeURIComponent(submission.id),text:'Descargar '+submission.file_name}));
+  }else{
+   if(submission.objective_total)detail.append(el('p',{text:'Opción múltiple: '+submission.objective_correct+' de '+submission.objective_total+' correctas'}));
+   const answers=el('ol',{class:'lms-review-answers'});
+   for(const answer of submission.responses){
+    answers.append(el('li',{},[el('strong',{text:answer.question}),
+     el('p',{text:answer.answer+(answer.manual?'':answer.correct?' · Correcta':' · Incorrecta')})]));
+   }
+   detail.append(answers);
   }
   if(submission.graded_at){
-   row.append(el('p',{text:'Nota final: '+submission.score+'%'}));
-   if(submission.feedback)row.append(el('p',{text:submission.feedback}));
-   return row;
+   detail.append(el('h3',{text:'Nota final: '+submission.score+'%'}));
+   if(submission.feedback)detail.append(el('p',{class:'lms-review-feedback',text:submission.feedback}));
+   return;
   }
-  const form=el('form'),points=el('input',{type:'number',min:0,max:kind==='assignment'?100:submission.manual_total,step:kind==='assignment'?'1':'0.01',required:''});
-  const feedback=el('textarea',{rows:3,maxlength:4000}),save=el('button',{type:'submit',class:'button primary',text:'Publicar nota'}),result=el('p',{role:'status'});
-  form.append(el('label',{class:'lms-field',text:kind==='assignment'?'Nota sobre 100':'Puntos de respuestas abiertas (máximo '+submission.manual_total+')'},[points]),
+
+  const form=el('form',{class:'lms-review-grade'});
+  const points=el('input',{type:'number',min:0,max:assignment?100:submission.manual_total,step:assignment?'1':'0.01',required:''});
+  const feedback=el('textarea',{rows:4,maxlength:4000}),save=el('button',{type:'submit',class:'button primary',text:'Publicar nota'}),result=el('p',{role:'status'});
+  form.append(el('label',{class:'lms-field',text:assignment?'Nota sobre 100':'Puntos de respuestas abiertas (máximo '+submission.manual_total+')'},[points]),
    el('label',{class:'lms-field',text:'Comentarios para el alumno'},[feedback]),save,result);
-  form.addEventListener('input',()=>row.dataset.changed='true');
+  form.addEventListener('input',()=>lmsState.dirty=true);
   form.addEventListener('submit',async event=>{
-   event.preventDefault();save.disabled=select.disabled=true;dialog.dataset.pending='true';
+   event.preventDefault();
+   if(saving)return;
+   saving=save.disabled=select.disabled=true;
    try{
     const {score}=await lmsApi('/assessments/grade',{id:submission.id,kind,points:points.valueAsNumber,feedback:feedback.value});
+    if(!workspace.isConnected)return;
     Object.assign(submission,{score,feedback:feedback.value,graded_at:new Date().toISOString()});
-    const replacement=studentRow({student,submission,completed});
-    replacement.open=true;row.replaceWith(replacement);
-    dialog.dataset.changed=String(!!list.querySelector('[data-changed="true"]'));
+    lmsState.dirty=false;
+    renderDetail(row);
+    drawRoster();
+    detail.querySelector('h2').focus({preventScroll:true});
+    message('Nota publicada.');
    }catch(error){result.textContent=error.message;save.disabled=false;}
-   finally{select.disabled=false;dialog.dataset.pending='false';}
+   finally{saving=select.disabled=false;}
   });
-  row.append(form);
-  return row;
+  detail.append(form);
  }
+ select.addEventListener('change',()=>{
+  if(!canChange()){select.value=activity;return;}
+  activity=select.value;filter.value='all';search.value='';
+  void loadRoster();
+ });
+ search.addEventListener('input',()=>{page=0;drawRoster();});
+ filter.addEventListener('change',()=>{page=0;drawRoster();});
+ void loadRoster();
 }
