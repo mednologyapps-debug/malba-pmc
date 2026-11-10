@@ -80,3 +80,37 @@ test('an issued invoice is attached for buyer and accounting without a second is
  assert.deepEqual(messages[0].attachments, [{ filename: 'Boleta-BBV1-3.pdf', content: pdf, contentType: 'application/pdf' }]);
  assert.equal(job.delivery_copy_status, 'sent');
 });
+
+test('submitted mixed quiz and uploaded task give 100% progress before academic approval', () => {
+ const { courseProgress } = require('../lms-system/assessments');
+ const lessons = [{id:'quiz',type:'quiz',required:true},{id:'task',type:'assignment',required:true}];
+ const taskDone = {lesson_id:'task'};
+ const quizSubmission = {lesson_id:'quiz',kind:'quiz',manual_total:1};
+ const pending = courseProgress(lessons,[taskDone],[quizSubmission]);
+ assert.deepEqual(pending.progress,{done:['quiz','task'],completed:2,total:2,percent:100});
+ assert.equal(pending.certifiable,false);
+ assert.equal(courseProgress(lessons,[taskDone,{lesson_id:'quiz'}],[quizSubmission]).certifiable,true);
+ assert.equal(courseProgress(lessons,[taskDone],[{...quizSubmission,manual_total:0}]).progress.percent,50);
+});
+
+test('task grade publishes zero and uses a compare-and-set guard against concurrent grading', async () => {
+ const { create } = require('../lms-system/assessments');
+ const filters = [];
+ let patch;
+ const query = {
+  update(values) { patch=values; return this; },
+  eq(key,value) { filters.push([key,value]); return this; },
+  is(key,value) { filters.push([key,value]); return this; },
+  select() { return this; },
+  async maybeSingle() { return {data:{score:0}}; }
+ };
+ const api=create({db:{from:()=>query},json:(_res,status,body)=>({status,body})});
+ const path=new URL('https://malba-pmc.com/api/lms/admin/assessments/grade');
+ const id='12345678-1234-1234-1234-123456789abc';
+ const request={method:'POST'};
+ await assert.rejects(api.admin(request,{},path,{id,kind:'assignment',points:101}),/entre 0 y 100/);
+ assert.deepEqual(await api.admin(request,{},path,{id,kind:'assignment',points:0,feedback:'Revisar cálculos.'}),{status:200,body:{score:0}});
+ assert.equal(patch.score,0);
+ assert.equal(patch.feedback,'Revisar cálculos.');
+ assert.deepEqual(filters,[['id',id],['kind','assignment'],['graded_at',null]]);
+});

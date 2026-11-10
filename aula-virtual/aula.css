@@ -150,3 +150,5 @@
 @media(max-width:700px){.aula-initial-skeleton{padding:22px 20px}.aula-skeleton-logo{width:175px;height:38px;margin-bottom:50px}.aula-skeleton-cards{grid-template-columns:1fr}.aula-skeleton-cards span{height:240px}.aula-skeleton-cards span:nth-child(n+2){display:none}}
 
 .lesson-quiz textarea{display:block;width:100%;min-height:110px;padding:12px;border:1px solid var(--line);border-radius:6px;color:var(--blue);background:#fff;resize:vertical}.lesson-quiz textarea:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+
+.quiz-questions:not([hidden]){display:grid;gap:20px}.quiz-questions[hidden],.lesson-quiz [hidden]{display:none}.saved-answer{white-space:pre-wrap;overflow-wrap:anywhere}

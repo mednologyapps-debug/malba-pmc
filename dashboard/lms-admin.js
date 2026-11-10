@@ -12,7 +12,7 @@ async function lmsReload(){lmsState.records=await lmsApi('');lmsState.loaded=tru
 async function renderLmsEditor(){
  $('.actions').hidden=true;$('.status-row').hidden=true;const editor=$('#editor');$('#page-title').textContent='Aula virtual';$('#page-description').textContent='Administra cursos, alumnos y matrículas con acciones claras y seguras.';editor.replaceChildren();
  if(!lmsState.loaded){editor.append(lmsSkeleton());try{await lmsReload();if(area==='lms')renderLmsEditor();}catch(e){editor.replaceChildren(lmsEmpty('No pudimos cargar el aula.',e.message),lmsButton('Volver a intentar',()=>{lmsState.loaded=false;renderLmsEditor();},'button primary'));}return;}
- if(lmsState.course){lmsCourseEditor(editor);if(lmsState.revision)editor.prepend(lmsButton('Revisar entregas y evaluaciones',()=>lmsAssessmentDialog(lmsState.course.id)));return;}
+ if(lmsState.course){lmsCourseEditor(editor);return;}
  const nav=el('nav',{class:'lms-nav','aria-label':'Administración del aula'});for(const [id,label]of [['courses','Cursos'],['students','Alumnos'],['enrollments','Matrículas y avance']]){const b=lmsButton(label,()=>{lmsState.view=id;lmsState.query='';lmsState.selectedStudents.clear();renderLmsEditor();},lmsState.view===id?'active':'');b.setAttribute('aria-current',lmsState.view===id?'page':'false');nav.append(b);}editor.append(nav);
  const head=el('div',{class:'lms-section-head'},[el('div',{},[el('h2',{text:lmsState.view==='courses'?'Cursos':lmsState.view==='students'?'Alumnos':'Matrículas y avance'}),el('p',{text:lmsState.view==='courses'?'Crea, organiza y publica la experiencia completa del alumno.':lmsState.view==='students'?'Gestiona accesos, matrículas y grupos sin realizar tareas una por una.':'Revisa el acceso y el avance de cada alumno.'})])]);
  if(lmsState.view==='courses'){const tools=el('div',{class:'lms-student-tools'});tools.append(lmsButton('Crear curso',()=>{lmsState.course=lmsNewCourse();lmsState.revision=0;lmsState.step=0;lmsState.dirty=false;renderLmsEditor();},'button primary'));head.append(tools);}else if(lmsState.view==='students'){head.append(el('div',{class:'lms-student-tools'},[lmsButton('Importar Excel',lmsImportDialog,'button secondary'),el('a',{href:'/api/lms/admin/students/export',class:'button secondary',text:'Exportar Excel',download:'alumnos-malba-pmc.xlsx'}),lmsButton('Crear alumno',()=>lmsStudentDialog(),'button primary')]));}else head.append(lmsButton('Matricular alumno',()=>lmsEnrollDialog(),'button primary'));editor.append(head);
@@ -58,6 +58,9 @@ function drawCourses(results,matches){
   actions.append(lmsButton('Editar',()=>edit(r),'button primary'));
   const details=el('details',{class:'lms-catalog-more'}),summary=el('summary',{text:'Más opciones'});
   const menu=el('div',{class:'lms-catalog-menu'});
+  for(const [kind,label] of [['quiz','Evaluaciones'],['assignment','Tareas']]){
+   menu.append(lmsButton(label,()=>{details.open=false;lmsAssessmentDialog(c,kind,label);},'lms-catalog-menu-button'));
+  }
   if(r.published)menu.append(el('a',{href:'/aula-virtual/',target:'_blank',rel:'noopener noreferrer',text:'Abrir aula virtual'}));
   menu.append(lmsButton(r.active?'Deshabilitar curso':'Habilitar curso',async()=>{
    if(!confirm((r.active?'¿Deshabilitar':'¿Habilitar')+' este curso? Se conservará el avance del alumno.'))return;
@@ -121,48 +124,78 @@ function lmsImportDialog(){const d=lmsModal('Importar alumnos desde Excel'),form
 function lmsEnrollDialog(existing=null,studentId=''){const s=lmsState.records,courses=s.courses.filter(c=>c.active&&c.published);if(!s.students.length||!courses.length){message('Crea un alumno y publica al menos un curso antes de matricular.',true);return;}const value={studentId:existing?.student_id||studentId||s.students[0].id,courseId:existing?.course_id||courses[0].id,active:existing?!!existing.active:true,expires:existing?.expires||'',sendEmail:!existing},d=lmsModal(existing?'Editar matrícula':'Matricular alumno'),form=el('form');for(const [key,label,items,title]of [['studentId','Alumno',s.students,x=>x.name+' · '+x.email],['courseId','Curso publicado',courses,x=>x.draft.title]]){const select=el('select',{'aria-label':label});for(const item of items)select.append(el('option',{value:item.id,text:title(item)}));select.value=value[key];select.disabled=!!existing;select.addEventListener('change',()=>value[key]=select.value);form.append(el('label',{class:'lms-field',text:label},[select]));}form.append(lmsField(value,'expires','Acceso hasta (opcional)','date'),lmsField(value,'active','Matrícula habilitada','checkbox'),lmsField(value,'sendEmail','Enviar credenciales y datos del curso por correo','checkbox'),el('p',{class:'notice',text:'Se enviará un correo HTML con el acceso, la URL del aula, la contraseña temporal y el curso. Requiere configurar SMTP en el servidor.'}));const error=el('p',{role:'alert',class:'lms-error'});form.append(error,el('button',{type:'submit',class:'button primary',text:'Guardar matrícula'}));form.addEventListener('submit',async e=>{e.preventDefault();const b=form.querySelector('[type=submit]');b.disabled=true;try{const result=await lmsApi('/enroll',value);await lmsReload();d.dataset.changed='false';d.close();renderLmsEditor();message(result.email?.sent?'Matrícula guardada y correo enviado.':'Matrícula guardada. '+(result.email?.reason||'Configura SMTP para enviar el correo automáticamente.'));}catch(e){error.textContent=e.message;}finally{b.disabled=false;}});d.append(form);}
 function lmsStudentDialog(student){const s=lmsState.records,u=student?{...student,password:''}:{name:'',email:'',password:'',active:true},d=lmsModal(student?'Editar alumno':'Crear alumno'),form=el('form');form.classList.add('lms-student-form');form.append(el('p',{class:'lms-dialog-intro',text:student?'Actualiza los datos de acceso. Las matrículas y el avance se conservarán.':'Crea el acceso y, si lo deseas, deja al alumno matriculado y notificado en este mismo paso.'}),el('div',{class:'lms-form-section'},[el('h3',{text:'1. Datos del alumno'}),lmsField(u,'name','Nombre completo','text',{required:true}),lmsField(u,'email','Correo de acceso','email',{required:true}),lmsField(u,'active','Acceso habilitado','checkbox')]));const pass=lmsField(u,'password',student?'Nueva contraseña temporal (opcional)':'Contraseña temporal (opcional)','password',{required:false}),pi=pass.querySelector('input');pi.autocomplete='new-password';pi.minLength=12;const access=el('div',{class:'lms-form-section'},[el('h3',{text:'2. Acceso seguro'}),pass,lmsButton('Generar contraseña segura',()=>{u.password='Malba-'+crypto.randomUUID().replaceAll('-','').slice(0,15);pi.value=u.password;pi.type='text';d.dataset.changed='true';},'add-item'),el('p',{class:'field-hint',text:'Si envías el correo sin escribir una contraseña, el sistema generará una automáticamente.'})]);form.append(access);const course=el('select',{'aria-label':'Curso para matricular'});course.append(el('option',{value:'',text:'Sin matrícula inicial'}));for(const c of s.courses.filter(c=>c.active&&c.published))course.append(el('option',{value:c.id,text:c.draft.title}));const send=el('input',{type:'checkbox'});send.checked=!student;const enrollment=el('div',{class:'lms-form-section'},[el('h3',{text:'3. Matrícula y bienvenida'}),el('label',{class:'lms-field',text:'Curso publicado inicial'},[course]),el('label',{class:'lms-check-row'},[send,el('span',{text:'Enviar correo de bienvenida con la URL, el curso y las credenciales'})]),el('p',{class:'field-hint',text:'El correo se enviará al guardar cuando hayas elegido un curso publicado.'})]);course.addEventListener('change',()=>{send.disabled=!course.value;if(!course.value)send.checked=false;});send.disabled=!course.value;form.append(enrollment);const error=el('p',{role:'alert',class:'lms-error'}),submit=el('button',{type:'submit',class:'button primary',text:student?'Guardar cambios':'Crear alumno'});form.append(error,submit);form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;d.dataset.pending='true';try{const r=await lmsApi('/student',{...u,courseId:course.value,sendEmail:send.checked});await lmsReload();d.dataset.changed='false';d.close();renderLmsEditor();message(r.email?.sent?'Alumno creado, matriculado y notificado por correo.':'Alumno guardado. '+(r.email?.reason||'Puedes matricularlo cuando quieras.'));}catch(err){error.textContent=err.message;}finally{submit.disabled=false;d.dataset.pending='false';}});d.append(form);}
 
-async function lmsAssessmentDialog(courseId){
- const dialog=lmsModal('Entregas y evaluaciones'),list=el('div'),status=el('p',{role:'status'});
- dialog.append(status,list);
- let page=0;
- async function draw(){
-  list.replaceChildren();status.textContent='Cargando…';
-  try{
-   const {items,total}=await lmsApi('/assessments?'+new URLSearchParams({courseId,page}));
-   status.textContent=total?total+' entregas':'Todavía no hay entregas.';
-   for(const item of items){
-    const card=el('article',{class:'notice'},[
-     el('h3',{text:item.lms_lessons?.title||'Actividad'}),
-     el('p',{text:(item.lms_students?.full_name||'Alumno')+' · '+new Date(item.submitted_at).toLocaleString('es-PE',{timeZone:'America/Lima'})})
-    ]);
-    if(item.kind==='assignment'){
-     card.append(el('a',{href:'/api/lms/admin/assessments/file?id='+encodeURIComponent(item.id),text:'Descargar '+item.file_name}));
-    }else{
-     card.append(el('p',{text:'Opción múltiple: '+item.objective_correct+' / '+item.objective_total}));
-     for(const answer of item.responses.filter(row=>row.manual)){
-      const copy=el('p',{text:answer.answer});copy.style.whiteSpace='pre-wrap';
-      card.append(el('strong',{text:answer.question}),copy);
-     }
-     if(item.graded_at)card.append(el('strong',{text:'Nota final: '+item.score+'%'}),el('p',{text:item.feedback||''}));
-     else{
-      const form=el('form'),points=el('input',{type:'number',min:0,max:item.manual_total,step:'0.01',required:''}),feedback=el('textarea',{rows:3,maxlength:4000});
-      const save=el('button',{type:'submit',class:'button primary',text:'Publicar nota'});
-      const result=el('p',{role:'status'});
-      form.append(el('label',{class:'lms-field',text:'Puntos de respuestas abiertas (máximo '+item.manual_total+')'},[points]),el('label',{class:'lms-field',text:'Comentarios para el alumno'},[feedback]),save,result);
-      form.addEventListener('submit',async event=>{
-       event.preventDefault();save.disabled=true;dialog.dataset.pending='true';
-       try{await lmsApi('/assessments/grade',{id:item.id,points:points.valueAsNumber,feedback:feedback.value});await draw();}
-       catch(error){result.textContent=error.message;save.disabled=false;}
-       finally{dialog.dataset.pending='false';}
-      });
-      card.append(form);
-     }
-    }
-    list.append(card);
-   }
-   if(page>0)list.append(lmsButton('Anterior',()=>{page--;void draw();}));
-   if((page+1)*30<total)list.append(lmsButton('Siguiente',()=>{page++;void draw();}));
-  }catch(error){status.textContent=error.message;}
+function lmsAssessmentDialog(course,kind,label){
+ const dialog=lmsModal(label),list=el('div',{class:'lms-roster'}),status=el('p',{role:'status'});
+ dialog.append(el('p',{class:'lms-dialog-intro',text:course.title}));
+ const activities=(course.modules||[]).flatMap(module=>(module.lessons||[])
+  .filter(lesson=>lesson.type===kind).map(lesson=>({id:lesson.id,label:module.title+' · '+lesson.title})));
+ if(!activities.length){
+  dialog.append(el('p',{text:kind==='assignment'?'Este curso aún no tiene tareas.':'Este curso aún no tiene evaluaciones.'}));
+  return;
  }
- await draw();
+ const select=el('select');
+ select.append(el('option',{value:'',text:'Selecciona una actividad'}));
+ for(const activity of activities)select.append(el('option',{value:activity.id,text:activity.label}));
+ dialog.append(el('label',{class:'lms-field',text:kind==='assignment'?'Tarea':'Evaluación'},[select]),status,list);
+ let page=0,request=0;
+ select.addEventListener('change',()=>{page=0;void draw();});
+ async function draw(){
+  const id=++request;
+  list.replaceChildren();
+  status.textContent=select.value?'Cargando alumnos…':'';
+  if(!select.value)return;
+  try{
+   const {items,total}=await lmsApi('/assessments?'+new URLSearchParams({courseId:course.id,lessonId:select.value,page}));
+   if(id!==request||!dialog.open)return;
+   status.textContent=total?total+' '+(total===1?'alumno':'alumnos'):'Todavía no hay alumnos matriculados.';
+   for(const row of items)list.append(studentRow(row));
+   const pagination=el('div',{class:'lms-student-actions'});
+   if(page>0)pagination.append(lmsButton('Anterior',()=>{page--;void draw();},'button secondary'));
+   if((page+1)*30<total)pagination.append(lmsButton('Siguiente',()=>{page++;void draw();},'button secondary'));
+   if(pagination.childElementCount)list.append(pagination);
+  }catch(error){if(id===request)status.textContent=error.message;}
+ }
+ function studentRow({student,submission,completed}){
+  const state=submission?(submission.graded_at?'Calificada · '+submission.score+'%':'Entregada · pendiente de calificar'):
+   completed?'Completada · sin detalle de respuestas':'Sin entrega';
+  const row=el('details',{class:'notice'}),summary=el('summary',{text:student.full_name+' · '+state});
+  row.append(summary,el('p',{text:student.email}));
+  if(!submission)return row;
+  row.append(el('p',{text:'Entrega del '+new Date(submission.submitted_at).toLocaleString('es-PE',{timeZone:'America/Lima'})}));
+  if(kind==='assignment'){
+   row.append(el('a',{href:'/api/lms/admin/assessments/file?id='+encodeURIComponent(submission.id),text:'Descargar '+submission.file_name}));
+  }else{
+   if(submission.objective_total)row.append(el('p',{text:'Opción múltiple: '+submission.objective_correct+' / '+submission.objective_total+' correctas'}));
+   const answers=el('ol');
+   for(const answer of submission.responses){
+    const copy=el('p',{text:answer.answer+(answer.manual?'':answer.correct?' · Correcta':' · Incorrecta')});
+    copy.style.whiteSpace='pre-wrap';
+    answers.append(el('li',{},[el('strong',{text:answer.question}),copy]));
+   }
+   row.append(answers);
+  }
+  if(submission.graded_at){
+   row.append(el('p',{text:'Nota final: '+submission.score+'%'}));
+   if(submission.feedback)row.append(el('p',{text:submission.feedback}));
+   return row;
+  }
+  const form=el('form'),points=el('input',{type:'number',min:0,max:kind==='assignment'?100:submission.manual_total,step:kind==='assignment'?'1':'0.01',required:''});
+  const feedback=el('textarea',{rows:3,maxlength:4000}),save=el('button',{type:'submit',class:'button primary',text:'Publicar nota'}),result=el('p',{role:'status'});
+  form.append(el('label',{class:'lms-field',text:kind==='assignment'?'Nota sobre 100':'Puntos de respuestas abiertas (máximo '+submission.manual_total+')'},[points]),
+   el('label',{class:'lms-field',text:'Comentarios para el alumno'},[feedback]),save,result);
+  form.addEventListener('input',()=>row.dataset.changed='true');
+  form.addEventListener('submit',async event=>{
+   event.preventDefault();save.disabled=select.disabled=true;dialog.dataset.pending='true';
+   try{
+    const {score}=await lmsApi('/assessments/grade',{id:submission.id,kind,points:points.valueAsNumber,feedback:feedback.value});
+    Object.assign(submission,{score,feedback:feedback.value,graded_at:new Date().toISOString()});
+    const replacement=studentRow({student,submission,completed});
+    replacement.open=true;row.replaceWith(replacement);
+    dialog.dataset.changed=String(!!list.querySelector('[data-changed="true"]'));
+   }catch(error){result.textContent=error.message;save.disabled=false;}
+   finally{select.disabled=false;dialog.dataset.pending='false';}
+  });
+  row.append(form);
+  return row;
+ }
 }
