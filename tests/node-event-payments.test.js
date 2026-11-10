@@ -114,12 +114,12 @@ test('a recovery hint cannot settle a debit unless Izipay binds it to the expect
  assert.equal(calls.length,4);
 });
 
-test('CLOSE2U sends a production copy to accounting for both fiscal document types',()=>{
+test('CLOSE2U routes its automatic email internally so MALBA can send one email with both files',()=>{
  for(const billing of [{type:'boleta'},{type:'factura',document:'20123456789',name:'Fixture SAC',address:'Av. Fixture 123'}]){
   const payload=c2u.buildPayload({...session,billing},env);
-  assert.equal(payload.receptor.correo,session.email);
-  assert.equal(payload.receptor.correoCopia,'contabilidad@malba-pmc.com');
-  assert.equal(c2u.buildPayload({...session,billing},env,{preview:true}).receptor.correoCopia,undefined);
+  assert.equal(payload.receptor.correo,env.C2U_ISSUER_EMAIL);
+  assert.equal(payload.receptor.correoCopia,undefined);
+  assert.equal(c2u.buildPayload({...session,billing},env,{preview:true}).receptor.correo,session.email);
  }
 });
 
@@ -130,9 +130,11 @@ test('CLOSE2U retrieves the existing PDF using its issued number without calling
   if(url.endsWith('/token'))return {ok:true,json:async()=>({c2uToken:'fixture'})};
   assert.equal(options.method,'PUT');
   assert.deepEqual(JSON.parse(options.body),{emisor:20123456789,numero:3,serie:'BBV1',tipoComprobante:'03'});
-  return {ok:true,text:async()=>url.includes('/consultarPdf/')?JSON.stringify(pdf.toString('base64')):JSON.stringify({estadoEntrega:1})};
+  return {ok:true,text:async()=>url.includes('/consultarPdf/')?JSON.stringify(pdf.toString('base64')):url.includes('/consultarXml/')?JSON.stringify({xmlFirma:Buffer.from('<?xml version="1.0"?><Invoice/>').toString('base64')}):JSON.stringify({estadoEntrega:1})};
  }});
  assert.deepEqual(await fiscal.issuedPdf({serie:'BBV1',numero:3},'boleta'),pdf);
+ assert.equal((await fiscal.issuedXml({serie:'BBV1',numero:3},'boleta')).toString(), '<?xml version="1.0"?><Invoice/>');
  assert.equal(await fiscal.deliveryStatus({serie:'BBV1',numero:3},'boleta'),'1');
- assert.ok(seen.every(url=>/\/token$|\/consultarPdf\/|\/consultarEstado\//.test(url)));
+ assert.ok(seen.every(url=>/\/token$|\/consultarPdf\/|\/consultarXml\/|\/consultarEstado\//.test(url)));
+ assert.ok(seen.some(url=>url.startsWith('https://jarvis.tefacturo.pe/')&&url.includes('/consultarXml/')));
 });

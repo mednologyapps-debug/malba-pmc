@@ -188,12 +188,13 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
    if(!nodemailer||!host||!user||!pass)throw Error('El correo de MALBA no está configurado.');
    const type=session.billing.type,label=type==='factura'?'Factura':'Boleta';
    const pdf=await fiscal.issuedPdf(receipt,type);
+   const xml=await fiscal.issuedXml(receipt,type);
    const to=session.email,account=c2u.ACCOUNTING_EMAIL,cc=to.toLowerCase()===account?undefined:account;
    const number=receipt.serie+'-'+receipt.numero;
    const port=Number(env.SMTP_PORT||465);
    transport=nodemailer.createTransport({host,port,secure:env.SMTP_SECURE?env.SMTP_SECURE==='true':port===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:20000});
    smtpAttempted=true;
-   const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos el comprobante electrónico '+number+' de la compra en MALBA PMC.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
+   const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos en este correo el comprobante electrónico '+number+' de tu compra en MALBA PMC en formatos PDF y XML.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'},{filename:label+'-'+number+'.xml',content:xml,contentType:'application/xml'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
    const accepted=(result.accepted||[]).map(address=>String(address).toLowerCase());
    if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
    await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_copy_sent_at:new Date().toISOString()}).eq('id',job.id));
