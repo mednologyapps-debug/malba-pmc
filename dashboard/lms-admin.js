@@ -133,7 +133,7 @@ function lmsAssessmentPage(editor,{course,kind,label}){
  heading.tabIndex=-1;
  heading.focus({preventScroll:true});
  $('#page-description').textContent=course.title;
- const workspace=el('section',{class:'lms-review','aria-label':label});
+ const workspace=el('section',{class:'lms-review-page','aria-label':label});
  const back=lmsButton('Volver a cursos',()=>{if(canChange()&&confirmLmsLeave())renderLmsEditor();});
  const tabs=el('nav',{class:'lms-nav','aria-label':'Actividades del curso'});
  for(const [type,title] of [['quiz','Evaluaciones'],['assignment','Tareas']]){
@@ -145,23 +145,26 @@ function lmsAssessmentPage(editor,{course,kind,label}){
   tab.setAttribute('aria-current',type===kind?'page':'false');
   tabs.append(tab);
  }
- workspace.append(back,tabs);
+ workspace.append(el('div',{class:'lms-review-navigation'},[back,tabs]));
  editor.append(workspace);
  const activities=(course.modules||[]).flatMap(module=>(module.lessons||[])
-  .filter(lesson=>lesson.type===kind).map(lesson=>({id:lesson.id,label:module.title+' · '+lesson.title})));
+  .filter(lesson=>lesson.type===kind).map(lesson=>({id:lesson.id,title:lesson.title,module:module.title})));
  if(!activities.length){
   workspace.append(lmsEmpty(assignment?'Este curso aún no tiene tareas.':'Este curso aún no tiene evaluaciones.','Puedes añadir una desde el editor del curso.'));
   return;
  }
 
  const select=el('select');
- for(const activity of activities)select.append(el('option',{value:activity.id,text:activity.label}));
+ const activityTitle=el('h2',{class:'lms-review-activity-title'});
+ const activityModule=el('p',{class:'lms-review-count'});
+ for(const activity of activities)select.append(el('option',{value:activity.id,text:activity.module+' · '+activity.title}));
  const search=el('input',{type:'search',placeholder:'Nombre o correo'});
  const filter=el('select');
  for(const [value,text] of [['all','Todos los estados'],['pending','Pendientes de calificar'],['graded','Calificadas'],['missing','Sin entrega'],['historical','Completadas sin detalle']]){
   filter.append(el('option',{value,text}));
  }
  const toolbar=el('div',{class:'lms-review-tools'},[
+  el('div',{class:'lms-review-activity'},[activityModule,activityTitle]),
   el('label',{class:'lms-field',text:noun},[select]),
   el('label',{class:'lms-field',text:'Buscar alumno'},[search]),
   el('label',{class:'lms-field',text:'Estado'},[filter])
@@ -235,6 +238,9 @@ function lmsAssessmentPage(editor,{course,kind,label}){
 
  async function loadRoster(){
   const id=++request;
+  const current=activities.find(item=>item.id===activity);
+  activityTitle.textContent=current.title;
+  activityModule.textContent=current.module;
   rows=[];page=0;selected=null;
   detail.hidden=true;list.replaceChildren();status.textContent='Cargando alumnos…';
   search.disabled=filter.disabled=true;
@@ -308,8 +314,12 @@ function lmsAssessmentPage(editor,{course,kind,label}){
    detail.append(answers);
   }
   if(submission.graded_at){
-   detail.append(el('h3',{text:'Nota final: '+submission.score+'%'}));
-   if(submission.feedback)detail.append(el('p',{class:'lms-review-feedback',text:submission.feedback}));
+   const grade=el('div',{class:'lms-review-result'},[
+    el('h3',{text:'Nota final'}),
+    el('strong',{text:submission.score+'%'})
+   ]);
+   if(submission.feedback)grade.append(el('p',{class:'lms-review-feedback',text:submission.feedback}));
+   detail.append(grade);
    return;
   }
 
