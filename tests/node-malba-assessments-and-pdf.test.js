@@ -48,15 +48,16 @@ test('an issued invoice is attached for buyer and accounting without a second is
   return query;
  } };
  const origin = 'https://malba-pmc.com';
- const pdf = Buffer.from('%PDF-1.7\nfixture');
+ const pdf = Buffer.from('%PDF-1.7\nfixture'),xml=Buffer.from('<?xml version="1.0"?><Invoice/>');
  const messages = [];
  const env = { PUBLIC_ORIGIN: origin, STAGING_ORIGIN: origin, C2U_RUC: '20123456789', C2U_USER: 'fixture@example.com', C2U_PASSWORD: 'fixture', SMTP_HOST: 'example.com', SMTP_USER: 'mailer@example.com', SMTP_PASSWORD: 'fixture' };
  const api = createPayments({ db, env, requireAdmin: () => ({}), csrfOk: () => true,
   json: (res, status, body) => Object.assign(res, { status, body }),
   fetcher: async url => {
    if (url.endsWith('/token')) return { ok: true, json: async () => ({ c2uToken: 'fixture' }) };
-   assert.match(url, /\/consultarPdf\//);
-   return { ok: true, text: async () => JSON.stringify(pdf.toString('base64')) };
+   if(url.includes('/consultarPdf/'))return { ok: true, text: async () => JSON.stringify(pdf.toString('base64')) };
+   if(url.includes('/consultarXml/'))return { ok: true, text: async () => JSON.stringify({xmlFirma:xml.toString('base64')}) };
+   throw Error('Unexpected CLOSE2U endpoint: '+url);
   },
   nodemailer: { createTransport: () => ({
    async sendMail(message) {
@@ -77,7 +78,10 @@ test('an issued invoice is attached for buyer and accounting without a second is
  assert.equal(messages.length, 1);
  assert.equal(messages[0].to, session.email);
  assert.equal(messages[0].cc, 'contabilidad@malba-pmc.com');
- assert.deepEqual(messages[0].attachments, [{ filename: 'Boleta-BBV1-3.pdf', content: pdf, contentType: 'application/pdf' }]);
+ assert.deepEqual(messages[0].attachments, [
+  { filename: 'Boleta-BBV1-3.pdf', content: pdf, contentType: 'application/pdf' },
+  { filename: 'Boleta-BBV1-3.xml', content: xml, contentType: 'application/xml' }
+ ]);
  assert.equal(job.delivery_copy_status, 'sent');
 });
 

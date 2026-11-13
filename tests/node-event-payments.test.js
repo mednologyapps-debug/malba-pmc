@@ -151,3 +151,35 @@ test('CLOSE2U downloads the issued PDF from the document API host',async()=>{
  assert.equal(pdf.subarray(0,5).toString('ascii'),'%PDF-');
  assert(urls.includes('https://jarvis.tefacturo.pe/pdfapi/pdfapi/consultarPdf/'+env.C2U_RUC));
 });
+
+test('admin can resend an already issued retail receipt PDF and XML without charging or issuing again',async()=>{
+ const job={id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',session_id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',status:'issued',receipt:{serie:'BBV1',numero:9},delivery_copy_status:'review',delivery_copy_attempts:5,delivery_copy_error:'Fallo previo'};
+ const sale={id:job.session_id,order_id:null,email:'buyer@example.com',customer_name:'Comprador',billing:{type:'boleta'},status:'paid',mode:'PRODUCTION',amount_minor:1500,created_at:'2026-11-13T17:17:29Z'};
+ const data={book_invoice_jobs:[job],book_payment_sessions:[sale]};
+ const db={from(table){
+  let filters=[],patch=null,single=false,limitValue=null;
+  const q={
+   select(){return this;},update(value){patch=value;return this;},eq(key,value){filters.push(row=>row[key]===value);return this;},
+   is(key,value){filters.push(row=>row[key]===null||row[key]===undefined);return this;},
+   in(key,values){filters.push(row=>values.includes(row[key]));return this;},
+   order(){return this;},limit(n){limitValue=n;return this;},maybeSingle(){single=true;return this;},
+   then(resolve){let rows=(data[table]||[]).filter(row=>filters.every(test=>test(row)));
+    if(patch)for(const row of rows)Object.assign(row,patch);
+    if(limitValue)rows=rows.slice(0,limitValue);
+    return resolve({data:single?(rows[0]||null):rows});
+   }
+  };return q;
+ }};
+ const pdf=Buffer.from('%PDF-1.7\\nissued'),xml=Buffer.from('<?xml version="1.0"?><Invoice/>'),messages=[],providerUrls=[];
+ const api=create({...out,db,env:{...env,C2U_LIVE_ENABLED:'true',SMTP_HOST:'smtp.example.com',SMTP_USER:'mailer@example.com',SMTP_PASSWORD:'fixture'},requireAdmin:()=>({}),csrfOk:()=>true,
+  fetcher:async(url)=>{providerUrls.push(url);if(url.endsWith('/token'))return{ok:true,json:async()=>({c2uToken:'fixture-token'})};if(url.includes('/consultarPdf/'))return{ok:true,text:async()=>JSON.stringify(pdf.toString('base64'))};if(url.includes('/consultarXml/'))return{ok:true,text:async()=>JSON.stringify({xmlFirma:xml.toString('base64')})};throw Error('Unexpected Close2U endpoint: '+url);},
+  nodemailer:{createTransport:()=>({sendMail:async message=>{messages.push(message);return{accepted:[message.to,message.cc]};},close(){}})}
+ });
+ const listed=await call(api.handler,'/api/events/admin/payments/invoices');
+ assert.equal(listed.status,200);assert.equal(listed.value.rows[0].id,job.id);assert.equal(listed.value.rows[0].session.email,'buyer@example.com');
+ const sent=await call(api.handler,'/api/events/admin/payments/resend-invoice-email',{body:{jobId:job.id}});
+ assert.equal(sent.status,200);assert.equal(job.delivery_copy_status,'sent');assert.equal(job.delivery_copy_attempts,6);
+ assert.equal(messages.length,1);assert.equal(messages[0].to,'buyer@example.com');assert.equal(messages[0].cc,'contabilidad@malba-pmc.com');
+ assert.deepEqual(messages[0].attachments.map(file=>file.contentType),['application/pdf','application/xml']);
+ assert(!providerUrls.some(url=>url.includes('/integracion/boleta/')));assert(!providerUrls.some(url=>url.includes('micuentaweb.pe')));
+});

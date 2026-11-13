@@ -120,6 +120,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
    if(path==='/api/events/payments/return'&&req.method==='POST')return json(res,200,await notify(await readBody(req),true));
    if(path==='/api/events/payments/preview'&&req.method==='POST')return json(res,200,await preview(await sessionByToken(bearer)));
    if(path==='/api/events/admin/payments/health'&&req.method==='GET')return json(res,200,{izipayTest:ready(),izipayProduction:ready('PRODUCTION'),close2uConfigured:!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD),realInvoices:env.C2U_LIVE_ENABLED==='true'});
+   if(path==='/api/events/admin/payments/invoices'&&req.method==='GET')return json(res,200,{rows:await listIssuedInvoices()});
    if(path==='/api/events/admin/payments/close2u-check'&&req.method==='POST'){await fiscal.token();return json(res,200,{connected:true});}
    if(path==='/api/events/admin/payments/invoice-preview'&&req.method==='POST'){
     const b=await readBody(req);return json(res,200,await preview(await sessionByToken(b.token)));
@@ -128,6 +129,11 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
     const {orderId}=await readBody(req);
     if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(orderId||''))return json(res,400,{error:'Pedido inválido.'});
     return json(res,200,await sendIssuedInvoice(orderId));
+   }
+   if(path==='/api/events/admin/payments/resend-invoice-email'&&req.method==='POST'){
+    const {jobId}=await readBody(req);
+    if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(jobId||''))return json(res,400,{error:'Comprobante inválido.'});
+    return json(res,200,await resendIssuedInvoice(jobId));
    }
    if(path==='/api/events/admin/payments/issue'&&req.method==='POST'){
     if(env.C2U_LIVE_ENABLED!=='true')return json(res,409,{error:'La emisión fiscal real está deshabilitada.'});
@@ -166,16 +172,31 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
  }
  if(env.C2U_LIVE_ENABLED==='true'&&db){const timer=setInterval(dispatch,60000);timer.unref();}
  // Explicit admin action for an existing receipt.
+ async function listIssuedInvoices(){
+  const jobs=await query(db.from('book_invoice_jobs').select('id,session_id,receipt,delivery_copy_status,delivery_copy_error,delivery_copy_attempts,delivery_copy_sent_at,updated_at').eq('status','issued').order('updated_at',{ascending:false}).limit(100));
+  if(!jobs.length)return [];
+  const sessions=await query(db.from('book_payment_sessions').select('id,order_id,email,customer_name,billing,status,mode,amount_minor,created_at').in('id',jobs.map(job=>job.session_id)));
+  const byId=new Map(sessions.map(session=>[session.id,session]));
+  return jobs.map(job=>({ ...job, session:byId.get(job.session_id) })).filter(job=>job.session?.status==='paid'&&job.session.mode==='PRODUCTION');
+ }
+ async function resendIssuedInvoice(jobId){
+  const job=await query(db.from('book_invoice_jobs').select('id,session_id,receipt,delivery_copy_status,delivery_copy_attempts').eq('id',jobId).eq('status','issued').maybeSingle());
+  if(!job)throw Error('No encontramos un comprobante emitido para reenviar.');
+  const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('id',job.session_id).maybeSingle());
+  if(!session||session.status!=='paid'||session.mode!=='PRODUCTION')throw Error('Solo se pueden reenviar comprobantes de compras pagadas en producción.');
+  if(![null,'pending','review','sent'].includes(job.delivery_copy_status))throw Error('El correo ya se está procesando. Espera a que termine antes de intentar otra vez.');
+  return deliverPdf(session,job,job.delivery_copy_status);
+ }
  async function sendIssuedInvoice(orderId){
   const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('order_id',orderId).eq('status','paid').eq('mode','PRODUCTION').maybeSingle());
   if(!session)throw Error('El pedido todavía no tiene un pago confirmado.');
   const job=await query(db.from('book_invoice_jobs').select('id,delivery_copy_attempts,delivery_copy_status').eq('session_id',session.id).eq('status','issued').maybeSingle());
-  if(!job||![null,'pending'].includes(job.delivery_copy_status))throw Error('El comprobante aún no fue emitido, ya se envió o requiere revisión.');
+  if(!job||![null,'pending','review'].includes(job.delivery_copy_status))throw Error('El comprobante aún no fue emitido, ya se envió o el correo está en proceso.');
   return deliverPdf(session,job,job.delivery_copy_status);
  }
  async function deliverPdf(session,job,expectedStatus){
   if(session?.status!=='paid'||session.mode!=='PRODUCTION')throw Error('El pedido todavía no tiene un pago confirmado.');
-  const attempts=job.delivery_copy_attempts+1;
+  const attempts=Number(job.delivery_copy_attempts||0)+1;
   const claim=db.from('book_invoice_jobs').update({delivery_copy_status:'sending',delivery_copy_error:null,delivery_copy_attempts:attempts,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','issued');
   const jobs=await query((expectedStatus===null?claim.is('delivery_copy_status',null):claim.eq('delivery_copy_status',expectedStatus)).select('receipt'));
   if(!jobs.length)throw Error('Ya se está procesando el envío del comprobante.');

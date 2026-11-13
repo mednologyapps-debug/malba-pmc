@@ -1,1 +1,1 @@
-Restart Hostinger Passenger after fixing Close2U PDF retrieval.
+Restart Hostinger Passenger after adding admin invoice email resend.
