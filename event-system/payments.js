@@ -55,9 +55,6 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
  }
  async function settle(s,transactionId){
   await query(db.rpc('book_finish_izipay',{session_id:s.id,tx_id:transactionId,paid_amount:s.amount_minor,paid_currency:s.currency,paid_mode:s.mode,paid_shop:s.shop_id,paid_reference:s.provider_order_id}));
-  if(s.mode==='PRODUCTION'&&s.order_id&&onEventPaid){
-   void onEventPaid(s.order_id).catch(()=>console.error('Event purchase email remains queued.'));
-  }
   if(s.mode==='PRODUCTION'&&!s.order_id&&s.billing?.retailPhone){
    await query(db.from('book_invoice_jobs').upsert({session_id:s.id},{onConflict:'session_id',ignoreDuplicates:true}));
   }
@@ -161,7 +158,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
    await query(db.from('book_invoice_jobs').update({delivery_copy_status:'review',delivery_copy_error:'El envío quedó interrumpido. Revisar el correo antes de reenviar.'}).eq('delivery_copy_status','sending').lt('updated_at',new Date(now-15*60000).toISOString()));
    const deliveries=await query(db.from('book_invoice_jobs').select('id,session_id,delivery_copy_attempts').eq('status','issued').eq('delivery_copy_status','pending').lt('updated_at',new Date(now-45000).toISOString()).order('updated_at').limit(5));
    for(const job of deliveries){
-    const session=await query(db.from('book_payment_sessions').select('id,email,billing,status,mode').eq('id',job.session_id).single());
+    const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('id',job.session_id).single());
     await deliverPdf(session,job,'pending').catch(()=>console.error('Invoice PDF delivery needs attention.'));
    }
   }catch{console.error('Invoice worker unavailable.');}finally{dispatching=false;}
@@ -169,7 +166,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
  if(env.C2U_LIVE_ENABLED==='true'&&db){const timer=setInterval(dispatch,60000);timer.unref();}
  // Explicit admin action for an existing receipt.
  async function sendIssuedInvoice(orderId){
-  const session=await query(db.from('book_payment_sessions').select('id,email,billing,status,mode').eq('order_id',orderId).eq('status','paid').eq('mode','PRODUCTION').maybeSingle());
+  const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('order_id',orderId).eq('status','paid').eq('mode','PRODUCTION').maybeSingle());
   if(!session)throw Error('El pedido todavía no tiene un pago confirmado.');
   const job=await query(db.from('book_invoice_jobs').select('id,delivery_copy_attempts,delivery_copy_status').eq('session_id',session.id).eq('status','issued').maybeSingle());
   if(!job||![null,'pending'].includes(job.delivery_copy_status))throw Error('El comprobante aún no fue emitido, ya se envió o requiere revisión.');
@@ -189,14 +186,21 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
    const type=session.billing.type,label=type==='factura'?'Factura':'Boleta';
    const pdf=await fiscal.issuedPdf(receipt,type);
    const xml=await fiscal.issuedXml(receipt,type);
-   const to=session.email,account=c2u.ACCOUNTING_EMAIL,cc=to.toLowerCase()===account?undefined:account;
    const number=receipt.serie+'-'+receipt.numero;
-   const port=Number(env.SMTP_PORT||465);
-   transport=nodemailer.createTransport({host,port,secure:env.SMTP_SECURE?env.SMTP_SECURE==='true':port===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:20000});
-   smtpAttempted=true;
-   const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos en este correo el comprobante electrónico '+number+' de tu compra en MALBA PMC en formatos PDF y XML.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'},{filename:label+'-'+number+'.xml',content:xml,contentType:'application/xml'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
-   const accepted=(result.accepted||[]).map(address=>String(address).toLowerCase());
-   if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
+   if(session.order_id){
+    if(typeof onEventPaid!=='function')throw Error('No está configurado el correo de confirmación de la compra.');
+    smtpAttempted=true;
+    const sent=await onEventPaid(session.order_id,{pdf,xml,label,number});
+    if(sent?.recipientSent!==true)throw Error('No se pudo confirmar el envío conjunto de la compra.');
+   }else{
+    const to=session.email,account=c2u.ACCOUNTING_EMAIL,cc=to.toLowerCase()===account?undefined:account;
+    const port=Number(env.SMTP_PORT||465);
+    transport=nodemailer.createTransport({host,port,secure:env.SMTP_SECURE?env.SMTP_SECURE==='true':port===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:20000});
+    smtpAttempted=true;
+    const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos en este correo el comprobante electrónico '+number+' de tu compra en MALBA PMC en formatos PDF y XML.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'},{filename:label+'-'+number+'.xml',content:xml,contentType:'application/xml'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
+    const accepted=(result.accepted||[]).map(address=>String(address).toLowerCase());
+    if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
+   }
    await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_copy_sent_at:new Date().toISOString()}).eq('id',job.id));
    return {sent:true};
   }catch(error){
