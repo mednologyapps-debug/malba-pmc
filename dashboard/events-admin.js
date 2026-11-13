@@ -14,7 +14,9 @@ async function renderEventsEditor(){
   try{const result=await request('/api/events/admin/mail',{retry:true});emailStatus.textContent='Correos enviados: '+Number(result.sent||0)+'. '+(result.failed?'Algunos envíos siguen fallando; revisa SMTP.':'');}
   catch(e){emailStatus.textContent=e.message;}finally{retry.disabled=false;}
  });
- toolbar.append(search,el('label',{},[demoCheck,el('span',{text:'Ver pruebas'})]),retry,emailStatus);editor.append(toolbar,el('div',{id:'event-records','aria-live':'polite'}));
+ const cipLink=el('a',{class:'button secondary',text:'Abrir inscripción del CIP ↗'});cipLink.href='https://cipvirtual.cip.org.pe/siceeventosweb/externo/evento/inscripcionWeb/YMqywgANvYscRkIs0W9SxVae9ll4w2';cipLink.target='_blank';cipLink.rel='noopener noreferrer';
+  const cipNote=el('div',{class:'event-cip-notice'},[el('strong',{text:'Inscripción oficial gestionada por el CIP'}),el('p',{text:'Los datos del formulario externo no llegan automáticamente a esta lista. Aquí aparecen únicamente registros guardados en MALBA.'}),cipLink]);
+  toolbar.append(search,el('label',{},[demoCheck,el('span',{text:'Ver pruebas'})]),retry,emailStatus);editor.append(cipNote,toolbar,el('div',{id:'event-records','aria-live':'polite'}));
  await drawEventRows();
 }
 async function drawEventRows(){
