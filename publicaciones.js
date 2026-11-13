@@ -1,14 +1,7 @@
 'use strict';
 (()=>{
  const viewer=document.querySelector('.book-preview-dialog'),openPreview=document.querySelector('[data-book-preview-open]'),closePreview=document.querySelector('[data-book-preview-close]');
- if(viewer&&openPreview){
-  const image=viewer.querySelector('[data-book-preview-image]'),count=viewer.querySelector('[data-book-preview-count]'),previous=viewer.querySelector('[data-book-preview-prev]'),nextPage=viewer.querySelector('[data-book-preview-next]'),total=39;let page=1;
-  const showPage=()=>{image.src=`../assets/book/muestra-${String(page).padStart(2,'0')}.webp?v=39-page-preview-v4`;image.alt=`Página ${page} de ${total} de la muestra del libro`;count.textContent=`${page} / ${total}`;previous.disabled=page===1;nextPage.disabled=page===total;};
-  openPreview.addEventListener('click',()=>{page=1;showPage();viewer.showModal();});closePreview?.addEventListener('click',()=>viewer.close());
-  previous.addEventListener('click',()=>{if(page>1){page--;showPage();}});nextPage.addEventListener('click',()=>{if(page<total){page++;showPage();}});
-  viewer.addEventListener('click',event=>{if(event.target===viewer)viewer.close();});viewer.addEventListener('contextmenu',event=>event.preventDefault());image.addEventListener('dragstart',event=>event.preventDefault());
-  viewer.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'&&page>1){page--;showPage();}else if(event.key==='ArrowRight'&&page<total){page++;showPage();}});
- }
+ if(viewer&&openPreview){const images=[...viewer.querySelectorAll('.book-preview-pages img')];openPreview.addEventListener('click',()=>viewer.showModal());closePreview?.addEventListener('click',()=>viewer.close());viewer.addEventListener('click',event=>{if(event.target===viewer)viewer.close();});viewer.addEventListener('contextmenu',event=>event.preventDefault());images.forEach(image=>image.addEventListener('dragstart',event=>event.preventDefault()));}
  const form=document.querySelector('#book-checkout-form');if(!form)return;
  const config=JSON.parse(form.dataset.config),byId=id=>document.getElementById(id),mobile=matchMedia('(max-width:760px)');
  const sticky=form.closest('.book-purchase'),fit=()=>sticky.style.setProperty('--book-sticky-top',Math.min(108,innerHeight-sticky.offsetHeight-18)+'px');
