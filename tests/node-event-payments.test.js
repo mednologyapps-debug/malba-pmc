@@ -138,3 +138,16 @@ test('CLOSE2U retrieves the existing PDF using its issued number without calling
  assert.ok(seen.every(url=>/\/token$|\/consultarPdf\/|\/consultarXml\/|\/consultarEstado\//.test(url)));
  assert.ok(seen.some(url=>url.startsWith('https://jarvis.tefacturo.pe/')&&url.includes('/consultarXml/')));
 });
+
+test('CLOSE2U downloads the issued PDF from the document API host',async()=>{
+ const urls=[],client=c2u.createClient({env,fetcher:async(url,options)=>{
+  urls.push(url);
+  if(url.endsWith('/token'))return{ok:true,json:async()=>({c2uToken:'fixture-token',fechaExpiracion:new Date(Date.now()+3600000).toISOString()})};
+  assert.equal(options.method,'PUT');
+  assert.deepEqual(JSON.parse(options.body),{emisor:Number(env.C2U_RUC),numero:7,serie:'BBV1',tipoComprobante:'03'});
+  return{ok:true,text:async()=>JSON.stringify(Buffer.from('%PDF-1.4\\nfixture').toString('base64'))};
+ }});
+ const pdf=await client.issuedPdf({serie:'BBV1',numero:7},'boleta');
+ assert.equal(pdf.subarray(0,5).toString('ascii'),'%PDF-');
+ assert(urls.includes('https://jarvis.tefacturo.pe/pdfapi/pdfapi/consultarPdf/'+env.C2U_RUC));
+});

@@ -41,7 +41,7 @@ function createClient({env=process.env,fetcher=fetch}={}){
   try{return JSON.parse(raw);}catch{return raw;}
  }
  async function issuedPdf(receipt,type){
-  const value=await documentQuery('/pdfapi/pdfapi/consultarPdf',receipt,type);
+  const value=await documentQuery('/pdfapi/pdfapi/consultarPdf',receipt,type,'https://jarvis.tefacturo.pe');
   const encoded=typeof value==='string'?value:value?.pdf||value?.base64||value?.archivo;
   if(typeof encoded!=='string'||encoded.length>7000000)throw Error('Respuesta PDF inválida.');
   const pdf=Buffer.from(encoded.trim().replace(/^data:application\/pdf;base64,/,''),'base64');
