@@ -1,1 +1,1 @@
-Restart Hostinger Passenger for Close2U email routing.
+Restart Hostinger Passenger after fixing Close2U PDF retrieval.
