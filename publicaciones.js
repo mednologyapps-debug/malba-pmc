@@ -3,7 +3,7 @@
  const viewer=document.querySelector('.book-preview-dialog'),openPreview=document.querySelector('[data-book-preview-open]'),closePreview=document.querySelector('[data-book-preview-close]');
  if(viewer&&openPreview){
   const image=viewer.querySelector('[data-book-preview-image]'),count=viewer.querySelector('[data-book-preview-count]'),previous=viewer.querySelector('[data-book-preview-prev]'),nextPage=viewer.querySelector('[data-book-preview-next]'),total=39;let page=1;
-  const showPage=()=>{image.src=`../assets/book/muestra-${String(page).padStart(2,'0')}.webp?v=39-page-preview-v3`;image.alt=`Página ${page} de ${total} de la muestra del libro`;count.textContent=`${page} / ${total}`;previous.disabled=page===1;nextPage.disabled=page===total;};
+  const showPage=()=>{image.src=`../assets/book/muestra-${String(page).padStart(2,'0')}.webp?v=39-page-preview-v4`;image.alt=`Página ${page} de ${total} de la muestra del libro`;count.textContent=`${page} / ${total}`;previous.disabled=page===1;nextPage.disabled=page===total;};
   openPreview.addEventListener('click',()=>{page=1;showPage();viewer.showModal();});closePreview?.addEventListener('click',()=>viewer.close());
   previous.addEventListener('click',()=>{if(page>1){page--;showPage();}});nextPage.addEventListener('click',()=>{if(page<total){page++;showPage();}});
   viewer.addEventListener('click',event=>{if(event.target===viewer)viewer.close();});viewer.addEventListener('contextmenu',event=>event.preventDefault());image.addEventListener('dragstart',event=>event.preventDefault());
