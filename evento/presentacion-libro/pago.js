@@ -4,7 +4,7 @@
  const preview=$('#preview-receipt'),download=$('#receipt-download');
  const confirmation=$('#purchase-confirmation');let confirmed=false;
  const status=$('#checkout-status'),container=$('#payment-container');let pollTimer=null,processing=false;
- async function api(path,body){const r=await fetch('/api/events/payments/'+path,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined,cache:'no-store',referrerPolicy:'no-referrer'});const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo verificar el pago.');return data;}
+ async function api(path,body){const r=await fetch('/api/events/payments/'+path,{method:body?'POST':'GET',headers:{'Accept':'application/json','Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined,cache:'no-store',referrerPolicy:'no-referrer'});const type=r.headers.get('content-type')||'';if(!type.includes('json'))throw Error('No pudimos verificar la respuesta del servicio de pago. No vuelvas a enviar el pago; consulta nuevamente su estado o contáctanos.');let data;try{data=await r.json();}catch{throw Error('No pudimos verificar la respuesta del servicio de pago. No vuelvas a enviar el pago; consulta nuevamente su estado o contáctanos.');}if(!r.ok)throw Error(data.error||'No se pudo verificar el pago.');return data;}
  function showPaid(s){
   if(confirmed)return;
   confirmed=true;
