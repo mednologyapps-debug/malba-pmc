@@ -41,7 +41,7 @@
     timeZone: 'America/Lima', day: 'numeric', month: 'long', year: 'numeric'
   }).format(date);
 
-  fetch('/api/events/config', { cache: 'no-store', headers: { Accept: 'application/json' } })
+  fetch('https://olivedrab-mouse-758184.hostingersite.com/api/events/config', { cache: 'no-store', headers: { Accept: 'application/json' } })
     .then(response => response.ok ? response.json() : Promise.reject())
     .then(config => {
       if (config.date) {

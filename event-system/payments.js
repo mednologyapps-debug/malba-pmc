@@ -15,6 +15,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
  async function query(q){const r=await q;if(r.error)throw Error('No se pudo guardar el estado del pago.');return r.data;}
  function ready(mode='TEST'){const gateway=!!db&&izipay.ready(env,mode);return mode!=='PRODUCTION'?gateway:gateway&&env.C2U_LIVE_ENABLED==='true'&&!!(env.C2U_RUC&&env.C2U_USER&&env.C2U_PASSWORD&&env.C2U_SERIE_FACTURA&&env.C2U_SERIE_BOLETA);}
  function origin(){return require('./public-origin').publicOrigin(env);}
+ function notificationOrigin(){return env.PAYMENT_NOTIFICATION_ORIGIN||require('./public-origin').STAGING;}
  async function sessionByToken(token){
   const [id,expires,mac]=String(token||'').split('.');
   if(!/^[a-f0-9-]{36}$/i.test(id||'')||!/^\d+$/.test(expires||''))throw Error('Sesión de pago inválida.');
@@ -113,7 +114,7 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
     const s=await sessionByToken(bearer);
     const resumed=s.status==='pending'&&Date.now()-Date.parse(s.created_at)>30000;
     if(s.status==='paid'||resumed&&await reconcile(s))return json(res,200,{paid:true,mode:s.mode,retail:!!s.billing?.retailPhone});
-    const form=await izipay.createPayment(s,{email:s.email,name:s.customer_name},origin(),{env,fetcher});return json(res,200,{...form,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone});
+    const form=await izipay.createPayment(s,{email:s.email,name:s.customer_name},notificationOrigin(),{env,fetcher});return json(res,200,{...form,amount:s.amount_minor/100,currency:s.currency,retail:!!s.billing?.retailPhone});
    }
    if(path==='/api/events/payments/status'&&req.method==='GET')return json(res,200,await status(bearer,url.searchParams.get('confirm')==='1'));
    if(path==='/api/events/payments/return'&&req.method==='POST')return json(res,200,await notify(await readBody(req),true));
