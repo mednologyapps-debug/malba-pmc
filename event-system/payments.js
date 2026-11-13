@@ -173,11 +173,11 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
  if(env.C2U_LIVE_ENABLED==='true'&&db){const timer=setInterval(dispatch,60000);timer.unref();}
  // Explicit admin action for an existing receipt.
  async function listIssuedInvoices(){
-  const jobs=await query(db.from('book_invoice_jobs').select('id,session_id,receipt,delivery_copy_status,delivery_copy_error,delivery_copy_attempts,delivery_copy_sent_at,updated_at').eq('status','issued').order('updated_at',{ascending:false}).limit(100));
-  if(!jobs.length)return [];
-  const sessions=await query(db.from('book_payment_sessions').select('id,order_id,email,customer_name,billing,status,mode,amount_minor,created_at').in('id',jobs.map(job=>job.session_id)));
-  const byId=new Map(sessions.map(session=>[session.id,session]));
-  return jobs.map(job=>({ ...job, session:byId.get(job.session_id) })).filter(job=>job.session?.status==='paid'&&job.session.mode==='PRODUCTION');
+  const sessions=await query(db.from('book_payment_sessions').select('id,order_id,email,customer_name,billing,status,mode,amount_minor,created_at').eq('status','paid').eq('mode','PRODUCTION').order('created_at',{ascending:false}).limit(100));
+  if(!sessions.length)return [];
+  const jobs=await query(db.from('book_invoice_jobs').select('id,session_id,status,last_error,receipt,delivery_copy_status,delivery_copy_error,delivery_copy_attempts,delivery_copy_sent_at,delivery_provider_status,updated_at').in('session_id',sessions.map(session=>session.id)));
+  const bySession=new Map(jobs.map(job=>[job.session_id,job]));
+  return sessions.map(session=>({...bySession.get(session.id),invoice_status:bySession.get(session.id)?.status||'pending',session}));
  }
  async function resendIssuedInvoice(jobId){
   const job=await query(db.from('book_invoice_jobs').select('id,session_id,receipt,delivery_copy_status,delivery_copy_attempts').eq('id',jobId).eq('status','issued').maybeSingle());
@@ -185,23 +185,23 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
   const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('id',job.session_id).maybeSingle());
   if(!session||session.status!=='paid'||session.mode!=='PRODUCTION')throw Error('Solo se pueden reenviar comprobantes de compras pagadas en producción.');
   if(![null,'pending','review','sent'].includes(job.delivery_copy_status))throw Error('El correo ya se está procesando. Espera a que termine antes de intentar otra vez.');
-  return deliverPdf(session,job,job.delivery_copy_status);
+  return deliverPdf(session,job,job.delivery_copy_status,{direct:true});
  }
  async function sendIssuedInvoice(orderId){
   const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('order_id',orderId).eq('status','paid').eq('mode','PRODUCTION').maybeSingle());
   if(!session)throw Error('El pedido todavía no tiene un pago confirmado.');
   const job=await query(db.from('book_invoice_jobs').select('id,delivery_copy_attempts,delivery_copy_status').eq('session_id',session.id).eq('status','issued').maybeSingle());
   if(!job||![null,'pending','review'].includes(job.delivery_copy_status))throw Error('El comprobante aún no fue emitido, ya se envió o el correo está en proceso.');
-  return deliverPdf(session,job,job.delivery_copy_status);
+  return deliverPdf(session,job,job.delivery_copy_status,{direct:true});
  }
- async function deliverPdf(session,job,expectedStatus){
+ async function deliverPdf(session,job,expectedStatus,{direct=false}={}){
   if(session?.status!=='paid'||session.mode!=='PRODUCTION')throw Error('El pedido todavía no tiene un pago confirmado.');
   const attempts=Number(job.delivery_copy_attempts||0)+1;
   const claim=db.from('book_invoice_jobs').update({delivery_copy_status:'sending',delivery_copy_error:null,delivery_copy_attempts:attempts,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','issued');
   const jobs=await query((expectedStatus===null?claim.is('delivery_copy_status',null):claim.eq('delivery_copy_status',expectedStatus)).select('receipt'));
   if(!jobs.length)throw Error('Ya se está procesando el envío del comprobante.');
   const {receipt}=jobs[0];
-  let transport,smtpAttempted=false;
+  let transport,smtpAttempted=false,delivery=null;
   try{
    const {SMTP_HOST:host,SMTP_USER:user}=env,pass=env.SMTP_PASSWORD||env.SMTP_PASS;
    if(!nodemailer||!host||!user||!pass)throw Error('El correo de MALBA no está configurado.');
@@ -209,22 +209,25 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
    const pdf=await fiscal.issuedPdf(receipt,type);
    const xml=await fiscal.issuedXml(receipt,type);
    const number=receipt.serie+'-'+receipt.numero;
-   if(session.order_id){
+   if(session.order_id&&!direct){
     if(typeof onEventPaid!=='function')throw Error('No está configurado el correo de confirmación de la compra.');
     smtpAttempted=true;
     const sent=await onEventPaid(session.order_id,{pdf,xml,label,number});
     if(sent?.recipientSent!==true)throw Error('No se pudo confirmar el envío conjunto de la compra.');
+    delivery=sent.delivery||{buyerAccepted:true,accountingAccepted:true,attachments:['PDF','XML']};
    }else{
     const to=session.email,account=c2u.ACCOUNTING_EMAIL,cc=to.toLowerCase()===account?undefined:account;
     const port=Number(env.SMTP_PORT||465);
     transport=nodemailer.createTransport({host,port,secure:env.SMTP_SECURE?env.SMTP_SECURE==='true':port===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:20000});
     smtpAttempted=true;
-    const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos en este correo el comprobante electrónico '+number+' de tu compra en MALBA PMC en formatos PDF y XML.',attachments:[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'},{filename:label+'-'+number+'.xml',content:xml,contentType:'application/xml'}],messageId:'<malba-invoice-copy-'+job.id+'@malba-pmc.com>'});
+    const files=[{filename:label+'-'+number+'.pdf',content:pdf,contentType:'application/pdf'},{filename:label+'-'+number+'.xml',content:xml,contentType:'application/xml'}];
+    const result=await transport.sendMail({from:require('../mail-sender').sender(env),to,cc,subject:label+' electrónica '+number+' | MALBA PMC',text:'Adjuntamos en este correo el comprobante electrónico '+number+' de tu compra en MALBA PMC en formatos PDF y XML.',attachments:files,messageId:'<malba-invoice-copy-'+job.id+'-'+attempts+'@malba-pmc.com>'});
     const accepted=(result.accepted||[]).map(address=>String(address).toLowerCase());
     if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
+    delivery={buyerAccepted:accepted.includes(to.toLowerCase()),accountingAccepted:!cc||accepted.includes(cc.toLowerCase()),attachments:files.map(file=>file.contentType==='application/pdf'?'PDF':'XML'),messageId:result.messageId||null,smtpResponse:String(result.response||'').slice(0,300),acceptedAt:new Date().toISOString()};
    }
-   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_copy_sent_at:new Date().toISOString()}).eq('id',job.id));
-   return {sent:true};
+   await query(db.from('book_invoice_jobs').update({delivery_copy_status:'sent',delivery_copy_sent_at:new Date().toISOString(),delivery_provider_status:JSON.stringify(delivery||{buyerAccepted:true,attachments:['PDF','XML'],acceptedAt:new Date().toISOString()})}).eq('id',job.id));
+   return {sent:true,delivery};
   }catch(error){
    const reason=smtpAttempted?'SMTP requiere revisión.':String(error.message).slice(0,160);
    const retry=!smtpAttempted&&expectedStatus==='pending'&&attempts<5;

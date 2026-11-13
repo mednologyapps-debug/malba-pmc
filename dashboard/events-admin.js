@@ -1,15 +1,16 @@
 'use strict';
-let eventPage=0,eventQuery='',eventRequest=0,eventDemo=false,eventInvoiceView=false,invoiceRequest=0;
+let eventPage=0,eventQuery='',eventRequest=0,eventDemo=false,invoiceRequest=0;
 async function renderEventsEditor(){
+ const purchaseView=area==='book-sales';
  $('.actions').hidden=true;$('.status-row').hidden=true;
- $('#page-title').textContent=eventInvoiceView?'Comprobantes':'Participantes';
- $('#page-description').textContent=eventInvoiceView?'Compras pagadas y entrega de boleta o factura por correo.':'Presentación del libro · 27 de noviembre de 2026 · 7:00 p. m. · Aforo 50';
+ $('#page-title').textContent=purchaseView?'Compras del libro':'Participantes';
+ $('#page-description').textContent=purchaseView?'Pedidos pagados, estado del correo y archivos de boleta o factura.':'Presentación del libro · 27 de noviembre de 2026 · 7:00 p. m. · Aforo 50';
  const editor=$('#editor');editor.replaceChildren();
  const toolbar=el('div',{class:'event-toolbar event-filters'});
- const viewToggle=el('button',{type:'button',class:'button secondary',text:eventInvoiceView?'Volver a participantes':'Comprobantes y reenvíos'});
- viewToggle.addEventListener('click',()=>{eventInvoiceView=!eventInvoiceView;renderEventsEditor();});
+ const viewToggle=el('button',{type:'button',class:'button secondary',text:purchaseView?'← Volver a participantes':'Ver compras del libro'});
+ viewToggle.addEventListener('click',()=>{area=purchaseView?'events':'book-sales';selected='overview';renderNavigation();renderEventsEditor();});
  toolbar.append(viewToggle);
- if(eventInvoiceView){
+ if(purchaseView){
   const refresh=el('button',{type:'button',class:'button secondary',text:'Actualizar lista'});
   refresh.addEventListener('click',drawInvoiceRows);
   toolbar.append(refresh);
@@ -34,38 +35,50 @@ async function drawInvoiceRows(){
  root.replaceChildren(el('p',{class:'catalog-count',text:'Cargando comprobantes…'}));
  try{
   const r=await request('/api/events/admin/payments/invoices');
-  if(sequence!==invoiceRequest||area!=='events'||!eventInvoiceView)return;
-  root.replaceChildren(el('p',{class:'catalog-count',text:r.rows.length+' comprobantes emitidos'}));
-  if(!r.rows.length){root.append(el('div',{class:'cms-empty'},[el('h3',{text:'Aún no hay comprobantes emitidos'}),el('p',{text:'Las compras pagadas aparecerán aquí.'})]));return;}
+  if(sequence!==invoiceRequest||area!=='book-sales')return;
+  root.replaceChildren(el('p',{class:'catalog-count',text:r.rows.length+' compras pagadas'}));
+  if(!r.rows.length){root.append(el('div',{class:'cms-empty'},[el('h3',{text:'Aún no hay compras pagadas'}),el('p',{text:'Las compras confirmadas aparecerán aquí.'})]));return;}
   const scroll=el('div',{class:'event-table-wrap'}),table=el('table',{class:'event-table invoice-admin-table'}),head=el('tr');
-  for(const title of ['Comprador','Fecha','Comprobante','Importe','Correo','Acción'])head.append(el('th',{scope:'col',text:title}));
+  for(const title of ['Comprador','Fecha','Comprobante','Importe','Correo del cliente','Entrega y archivos','Acción'])head.append(el('th',{scope:'col',text:title}));
   table.append(el('thead',{},[head]));const tbody=el('tbody');
   for(const item of r.rows){
    const session=item.session||{},billing=session.billing||{},row=el('tr');
    const buyer=el('td',{},[el('strong',{text:session.customer_name||billing.name||'Comprador'})]);
    const date=el('td',{text:session.created_at?new Date(session.created_at).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'}):'—'});
-   const type=billing.type==='factura'?'Factura':'Boleta',receipt=item.receipt||{};
-   const voucher=el('td',{},[el('strong',{text:type+' '+(receipt.serie||'')+'-'+(receipt.numero||'')}),el('small',{text:{sent:'Correo aceptado',pending:'Pendiente de entrega',review:'Requiere reenvío',sending:'Enviando'}[item.delivery_copy_status||'pending']||'Pendiente de entrega'})]);
+   const type=billing.type==='factura'?'Factura':'Boleta',receipt=item.receipt||{},invoiceStatus=item.invoice_status||item.status||'pending';
+   const voucher=el('td',{},[el('strong',{text:receipt.serie?type+' '+receipt.serie+'-'+receipt.numero:type}),el('small',{text:invoiceStatus==='issued'?'Comprobante emitido':invoiceStatus==='review'?'Emisión requiere revisión':'Comprobante pendiente de emisión'})]);
    const amount=el('td',{text:'S/ '+(Number(session.amount_minor||0)/100).toFixed(2)});
    const email=el('td',{text:session.email||'—'});
-   const action=el('td'),button=el('button',{type:'button',class:'button secondary',text:item.delivery_copy_status==='sent'?'Reenviar correo':'Enviar correo'});
+   const delivery=el('td'),meta=(()=>{try{return JSON.parse(item.delivery_provider_status||'{}')}catch{return {}}})();
+   const deliveryState=item.delivery_copy_status==='sent'?(meta.buyerAccepted?'Aceptado por SMTP':'Envío anterior; aceptación no verificable'):item.delivery_copy_status==='sending'?'Envío en proceso':item.delivery_copy_status==='review'?'Requiere revisión':'Pendiente de envío';
+   delivery.append(el('strong',{text:deliveryState}));
+   if(item.delivery_copy_status==='sent'&&Array.isArray(meta.attachments)&&meta.attachments.includes('PDF')&&meta.attachments.includes('XML'))delivery.append(el('small',{text:'Adjuntos confirmados: PDF y XML'}));
+   else if(item.delivery_copy_status==='sent')delivery.append(el('small',{text:'PDF/XML de este envío no verificables. Reenvía para confirmar los adjuntos.'}));
+   if(item.delivery_copy_status==='sent'&&meta.accountingAccepted===true)delivery.append(el('small',{text:'Copia a contabilidad aceptada por SMTP'}));
+   if(item.delivery_copy_status==='sent'&&meta.accountingAccepted===false)delivery.append(el('small',{text:'Copia a contabilidad no confirmada'}));
+   if(item.delivery_copy_sent_at)delivery.append(el('small',{text:'Enviado: '+new Date(item.delivery_copy_sent_at).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'})}));
+   const action=el('td'),button=el('button',{type:'button',class:'button secondary',text:item.delivery_copy_status==='sent'?'Reenviar PDF + XML':'Enviar PDF + XML'});
+   button.disabled=invoiceStatus!=='issued'||item.delivery_copy_status==='sending';
    const feedback=el('small',{class:'invoice-mail-feedback',role:'status'});
+   if(invoiceStatus==='review')feedback.textContent=item.last_error||'La emisión requiere revisión en Close2U antes de enviar el correo.';
+   else if(invoiceStatus!=='issued')feedback.textContent='El correo estará disponible cuando Close2U emita el comprobante.';
    if(item.delivery_copy_status==='sending'){button.disabled=true;feedback.textContent='Envío en proceso.';}
    if(item.delivery_copy_error)feedback.textContent=item.delivery_copy_error;
    button.addEventListener('click',async()=>{
+    if(invoiceStatus!=='issued')return;
     const prompt='Enviar el comprobante '+type+' '+(receipt.serie||'')+'-'+(receipt.numero||'')+' en PDF y XML a '+(session.email||'el comprador')+' con copia a contabilidad@malba-pmc.com. No se realizará otro cobro ni se emitirá otro comprobante.';
     if(!window.confirm(prompt))return;
     button.disabled=true;feedback.textContent='Preparando PDF y XML…';
     try{
      await request('/api/events/admin/payments/resend-invoice-email',{jobId:item.id});
-     feedback.textContent='SMTP aceptó el correo para el comprador y Contabilidad.';
+     feedback.textContent='SMTP aceptó el correo y los adjuntos PDF y XML. La recepción en la bandeja no se puede confirmar desde el servidor.';
      await drawInvoiceRows();
     }catch(error){feedback.textContent=error.message;button.disabled=false;await drawInvoiceRows();}
    });
-   action.append(button,feedback);row.append(buyer,date,voucher,amount,email,action);tbody.append(row);
+   action.append(button,feedback);row.append(buyer,date,voucher,amount,email,delivery,action);tbody.append(row);
   }
   table.append(tbody);scroll.append(table);root.append(scroll);
- }catch(e){if(sequence===invoiceRequest&&area==='events')root.replaceChildren(el('p',{class:'notice',role:'alert',text:e.message}));}
+ }catch(e){if(sequence===invoiceRequest&&area==='book-sales')root.replaceChildren(el('p',{class:'notice',role:'alert',text:e.message}));}
 }
 async function drawEventRows(){
  const sequence=++eventRequest,root=$('#event-records');if(!root)return;
@@ -86,20 +99,6 @@ async function drawEventRows(){
    const book=el('td'),label=o?.status==='paid'?'Compró el libro':o?.status==='simulated_paid'?'Compra simulada':o?.status==='pending'?'Pago pendiente':o?.status==='failed'?'Pago fallido':o?.status==='cancelled'?'Pedido cancelado':'Sin compra';
    book.append(el('span',{class:'event-book-badge '+(o?.status==='paid'?'purchased':o?'pending':'none'),text:label}));
    if(o)book.append(el('small',{text:'S/ '+Number(o.amount).toFixed(2)}));
-   if(o?.status==='paid'&&!reg.is_test){
-    const send=el('button',{type:'button',class:'button secondary',text:'Enviar comprobante'});
-    const feedback=el('small',{role:'status'});
-    send.addEventListener('click',async()=>{
-     if(!window.confirm('Enviar el PDF del comprobante a '+p.email+' y a contabilidad@malba-pmc.com.'))return;
-     send.disabled=true;
-     feedback.textContent='Enviando…';
-     try{
-      await request('/api/events/admin/payments/send-issued-invoice',{orderId:o.id});
-      feedback.textContent='Correo con PDF aceptado para el cliente y contabilidad.';
-     }catch(error){feedback.textContent=error.message;send.disabled=false;}
-    });
-    book.append(send,feedback);
-   }
    row.append(person,contact,status,book);tbody.append(row);
   }
   table.append(tbody);scroll.append(table);root.append(scroll);

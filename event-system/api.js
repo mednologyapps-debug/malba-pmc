@@ -58,7 +58,7 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
   const c=(await config()).config;const host=process.env.SMTP_HOST,user=process.env.SMTP_USER,pass=process.env.SMTP_PASSWORD||process.env.SMTP_PASS;
   if(!host||!user||!pass)return {sent:0,pending:true};
   let q=db.from('book_mail_outbox').select('*').eq('status','pending').order('updated_at').limit(20);if(registrationId)q=q.eq('registration_id',registrationId);if(kind)q=q.eq('kind',kind);
-  const jobs=await query(q);let sent=0,recipientSent=false,failed=0;
+  const jobs=await query(q);let sent=0,recipientSent=false,failed=0,delivery=null;
   const transport=nodemailer.createTransport({host,port:Number(process.env.SMTP_PORT||465),secure:process.env.SMTP_SECURE?process.env.SMTP_SECURE==='true':Number(process.env.SMTP_PORT||465)===465,auth:{user,pass},connectionTimeout:10000,socketTimeout:15000});
   for(const job of jobs){
    if(job.kind==='purchase'&&(!documents?.pdf||!documents?.xml))continue;
@@ -75,13 +75,11 @@ module.exports=function createEventApi({db,json,text,requireAdmin,csrfOk,nodemai
     const to=job.kind==='admin'?(c.adminEmail||process.env.MALBA_CONTACT_RECIPIENT||process.env.SMTP_USER):p.email,accounting='contabilidad@malba-pmc.com',cc=job.kind==='purchase'&&to.toLowerCase()!==accounting?accounting:undefined;
     const attachments=job.kind==='purchase'?[{filename:documents.label+'-'+documents.number+'.pdf',content:documents.pdf,contentType:'application/pdf'},{filename:documents.label+'-'+documents.number+'.xml',content:documents.xml,contentType:'application/xml'}]:undefined;
     const receipt=await transport.sendMail({from:require('../mail-sender').sender(process.env),to,cc,subject,html,text:title+'\nHola, '+p.full_name+'\n'+description+'\n'+eventDate+'\n'+c.location+'\n'+CAPACITY,attachments,messageId:'<malba-event-'+job.id+'@malba-pmc.com>'});
-    if(Array.isArray(receipt?.accepted)){
-     const accepted=receipt.accepted.map(address=>String(address).toLowerCase());
-     if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
-    }else if(receipt?.accepted&&!receipt.accepted.length)throw Error('SMTP no aceptó el destinatario.');
-    await query(db.from('book_mail_outbox').update({status:'sent',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id));sent++;if(job.kind==='registration'||job.kind==='purchase')recipientSent=true;
+    const accepted=(receipt?.accepted||[]).map(address=>String(address).toLowerCase());
+    if(![to,cc].filter(Boolean).every(address=>accepted.includes(address.toLowerCase())))throw Error('SMTP no aceptó todos los destinatarios.');
+    await query(db.from('book_mail_outbox').update({status:'sent',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id));sent++;if(job.kind==='registration'||job.kind==='purchase')recipientSent=true;if(job.kind==='purchase')delivery={buyerAccepted:accepted.includes(to.toLowerCase()),accountingAccepted:!cc||accepted.includes(cc.toLowerCase()),attachments:(attachments||[]).map(file=>file.contentType==='application/pdf'?'PDF':'XML'),messageId:receipt.messageId||null,smtpResponse:String(receipt.response||'').slice(0,300),acceptedAt:new Date().toISOString()};
    }catch(e){failed++;console.error('MALBA event SMTP failed:',String(e.code||e.message||'Error').slice(0,200));await query(db.from('book_mail_outbox').update({status:'failed',last_error:clean(e.message,250),updated_at:new Date().toISOString()}).eq('id',job.id));}
-  }transport.close();return{sent,recipientSent,failed};
+  }transport.close();return{sent,recipientSent,failed,delivery};
  }
  // Retry only known failures that occurred before SMTP accepted the message.
  async function retryKnownMailFailuresOnce(){

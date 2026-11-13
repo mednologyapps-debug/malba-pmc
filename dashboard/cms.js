@@ -36,7 +36,7 @@ async function request(path,body){
 function showLogin(){csrf=null;sessionStorage.removeItem(SESSION_KEY);$('#app').hidden=true;$('#login').hidden=false;$('#loading').hidden=true;}
 async function loadContent(){const r=await request('/api/content');data=r.data;revision=r.revision;publishedIds=r.publishedIds;draftDirty=r.dirty;lastSaved=r.updated;unsaved=false;renderNavigation();renderEditor();updateStatus();}
 function closeMobileNavigation(){const sidebar=document.querySelector('.sidebar'),toggle=$('#mobile-navigation-toggle');if(!sidebar||!toggle)return;sidebar.classList.remove('menu-open');toggle.setAttribute('aria-expanded','false');}
-function renderNavigation(){const nav=$('#navigation');nav.replaceChildren();for(const [id,title] of [['home','Inicio'],['academy','Academia'],['lms','Aula virtual'],['events','Eventos'],['digital','Soluciones digitales'],['publications','Publicaciones'],['consulting','Consultoría'],['consultation-agenda','Agenda de consultorías'],['about','Nosotros'],['contact','Contacto']]){const enabled=['academy','publications','digital','consulting','about','lms','contact','events','consultation-agenda'].includes(id),active=id===area;const button=el('button',{type:'button',class:'nav-button'+(active?' active':''),'aria-current':active?'page':'false'});const span=el('span',{text:title});if(!enabled){button.disabled=true;span.append(el('small',{text:'Próximamente'}));}button.append(span);if(enabled)button.addEventListener('click',()=>{if(area==='lms'&&!confirmLmsLeave())return;area=id;selected='overview';renderNavigation();renderEditor();message('');closeMobileNavigation();});nav.append(button);}}
+function renderNavigation(){const nav=$('#navigation');nav.replaceChildren();for(const [id,title] of [['home','Inicio'],['academy','Academia'],['lms','Aula virtual'],['events','Eventos'],['book-sales','Compras del libro'],['digital','Soluciones digitales'],['publications','Publicaciones'],['consulting','Consultoría'],['consultation-agenda','Agenda de consultorías'],['about','Nosotros'],['contact','Contacto']]){const enabled=['academy','publications','digital','consulting','about','lms','contact','events','book-sales','consultation-agenda'].includes(id),active=id===area;const button=el('button',{type:'button',class:'nav-button'+(active?' active':''),'aria-current':active?'page':'false'});const span=el('span',{text:title});if(!enabled){button.disabled=true;span.append(el('small',{text:'Próximamente'}));}button.append(span);if(enabled)button.addEventListener('click',()=>{if(area==='lms'&&!confirmLmsLeave())return;area=id;selected='overview';renderNavigation();renderEditor();message('');closeMobileNavigation();});nav.append(button);}}
 const visibility=p=>p.visibility||'public';
 const visibilityLabels={public:'Visible',hidden:'Deshabilitado',deleted:'En papelera'};
 const editorTabs=[['presentation','General'],['media','Imágenes'],['enrollment','Inscripciones'],['content','Contenido'],['teaching','Docentes y método'],['closing','Cierre']];
@@ -110,7 +110,7 @@ function renderContactSettings(){
 }
 function renderEditor(){
  if(area==='consultation-agenda'){void renderConsultationAgenda();return;}
- if(area==='events'){renderEventsEditor();return;}
+ if(area==='events'||area==='book-sales'){renderEventsEditor();return;}
  if(area==='lms'){renderLmsEditor();return;}
  if(area==='contact'){renderContactSettings();return;}
  $('.actions').hidden=false;$('.status-row').hidden=false;

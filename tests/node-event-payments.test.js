@@ -181,5 +181,7 @@ test('admin can resend an already issued retail receipt PDF and XML without char
  assert.equal(sent.status,200);assert.equal(job.delivery_copy_status,'sent');assert.equal(job.delivery_copy_attempts,6);
  assert.equal(messages.length,1);assert.equal(messages[0].to,'buyer@example.com');assert.equal(messages[0].cc,'contabilidad@malba-pmc.com');
  assert.deepEqual(messages[0].attachments.map(file=>file.contentType),['application/pdf','application/xml']);
+ assert.equal(sent.value.delivery.buyerAccepted,true);assert.equal(sent.value.delivery.accountingAccepted,true);
+ assert.deepEqual(JSON.parse(job.delivery_provider_status).attachments,['PDF','XML']);
  assert(!providerUrls.some(url=>url.includes('/integracion/boleta/')));assert(!providerUrls.some(url=>url.includes('micuentaweb.pe')));
 });
