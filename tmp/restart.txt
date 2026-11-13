@@ -1,1 +1,1 @@
-Restart Hostinger Passenger after proxy API/CORS update.
+Restart Hostinger Passenger for Close2U email routing.

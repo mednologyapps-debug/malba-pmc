@@ -117,7 +117,7 @@ test('a recovery hint cannot settle a debit unless Izipay binds it to the expect
 test('CLOSE2U routes its automatic email internally so MALBA can send one email with both files',()=>{
  for(const billing of [{type:'boleta'},{type:'factura',document:'20123456789',name:'Fixture SAC',address:'Av. Fixture 123'}]){
   const payload=c2u.buildPayload({...session,billing},env);
-  assert.equal(payload.receptor.correo,env.C2U_ISSUER_EMAIL);
+  assert.equal(payload.receptor.correo,c2u.ACCOUNTING_EMAIL);
   assert.equal(payload.receptor.correoCopia,undefined);
   assert.equal(c2u.buildPayload({...session,billing},env,{preview:true}).receptor.correo,session.email);
  }
