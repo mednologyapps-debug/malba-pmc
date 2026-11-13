@@ -45,27 +45,28 @@ async function drawInvoiceRows(){
    const session=item.session||{},billing=session.billing||{},row=el('tr');
    const buyer=el('td',{},[el('strong',{text:session.customer_name||billing.name||'Comprador'})]);
    const date=el('td',{text:session.created_at?new Date(session.created_at).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'}):'—'});
-   const type=billing.type==='factura'?'Factura':'Boleta',receipt=item.receipt||{},invoiceStatus=item.invoice_status||item.status||'pending';
-   const voucher=el('td',{},[el('strong',{text:receipt.serie?type+' '+receipt.serie+'-'+receipt.numero:type}),el('small',{text:invoiceStatus==='issued'?'Comprobante emitido':invoiceStatus==='review'?'Emisión requiere revisión':'Comprobante pendiente de emisión'})]);
+   const type=billing.type==='factura'?'Factura':'Boleta',receipt=item.receipt||{},invoiceStatus=item.invoice_status||item.status||'pending',hasReceipt=!!receipt.serie&&Number.isSafeInteger(Number(receipt.numero))&&Number(receipt.numero)>0;
+   const voucher=el('td',{},[el('strong',{text:hasReceipt?type+' '+receipt.serie+'-'+receipt.numero:type}),el('small',{text:hasReceipt?(invoiceStatus==='issued'?'Comprobante emitido':invoiceStatus==='review'?'Folio existente · estado por revisar':'Folio existente · validar estado'):invoiceStatus==='review'?'Emisión requiere revisión':'Comprobante pendiente de emisión'})]);
    const amount=el('td',{text:'S/ '+(Number(session.amount_minor||0)/100).toFixed(2)});
    const email=el('td',{text:session.email||'—'});
    const delivery=el('td'),meta=(()=>{try{return JSON.parse(item.delivery_provider_status||'{}')}catch{return {}}})();
-   const deliveryState=item.delivery_copy_status==='sent'?(meta.buyerAccepted?'Aceptado por SMTP':'Envío anterior; aceptación no verificable'):item.delivery_copy_status==='sending'?'Envío en proceso':item.delivery_copy_status==='review'?'Requiere revisión':'Pendiente de envío';
+   const deliveryState=item.delivery_copy_status==='sent'?(meta.buyerAccepted?'Aceptado por SMTP':'Envío anterior; aceptación no verificable'):item.delivery_copy_status==='sending'?'Envío en proceso':item.delivery_copy_status==='review'?(String(item.delivery_copy_error||'').includes('CLOSE2U')?'No se pudieron obtener PDF/XML de Close2U':'Correo requiere reintento'):hasReceipt?'Pendiente de envío':'A la espera del comprobante';
    delivery.append(el('strong',{text:deliveryState}));
    if(item.delivery_copy_status==='sent'&&Array.isArray(meta.attachments)&&meta.attachments.includes('PDF')&&meta.attachments.includes('XML'))delivery.append(el('small',{text:'Adjuntos confirmados: PDF y XML'}));
    else if(item.delivery_copy_status==='sent')delivery.append(el('small',{text:'PDF/XML de este envío no verificables. Reenvía para confirmar los adjuntos.'}));
    if(item.delivery_copy_status==='sent'&&meta.accountingAccepted===true)delivery.append(el('small',{text:'Copia a contabilidad aceptada por SMTP'}));
    if(item.delivery_copy_status==='sent'&&meta.accountingAccepted===false)delivery.append(el('small',{text:'Copia a contabilidad no confirmada'}));
    if(item.delivery_copy_sent_at)delivery.append(el('small',{text:'Enviado: '+new Date(item.delivery_copy_sent_at).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'})}));
-   const action=el('td'),button=el('button',{type:'button',class:'button secondary',text:item.delivery_copy_status==='sent'?'Reenviar PDF + XML':'Enviar PDF + XML'});
-   button.disabled=invoiceStatus!=='issued'||item.delivery_copy_status==='sending';
+   const action=el('td'),button=el('button',{type:'button',class:'button secondary',text:item.delivery_copy_status==='sent'?'Reenviar PDF + XML':item.delivery_copy_status==='review'?'Reintentar PDF + XML':'Enviar PDF + XML'});
+   button.disabled=!hasReceipt||item.delivery_copy_status==='sending';
    const feedback=el('small',{class:'invoice-mail-feedback',role:'status'});
-   if(invoiceStatus==='review')feedback.textContent=item.last_error||'La emisión requiere revisión en Close2U antes de enviar el correo.';
-   else if(invoiceStatus!=='issued')feedback.textContent='El correo estará disponible cuando Close2U emita el comprobante.';
+   if(hasReceipt&&invoiceStatus!=='issued')feedback.textContent='Se usará el folio ya asignado; no se volverá a emitir ni cobrar.';
+   else if(!hasReceipt&&invoiceStatus==='review')feedback.textContent=item.last_error||'La emisión requiere revisión en Close2U antes de enviar el correo.';
+   else if(!hasReceipt)feedback.textContent='El envío se habilitará cuando Close2U emita el comprobante.';
    if(item.delivery_copy_status==='sending'){button.disabled=true;feedback.textContent='Envío en proceso.';}
    if(item.delivery_copy_error)feedback.textContent=item.delivery_copy_error;
    button.addEventListener('click',async()=>{
-    if(invoiceStatus!=='issued')return;
+    if(!hasReceipt)return;
     const prompt='Enviar el comprobante '+type+' '+(receipt.serie||'')+'-'+(receipt.numero||'')+' en PDF y XML a '+(session.email||'el comprador')+' con copia a contabilidad@malba-pmc.com. No se realizará otro cobro ni se emitirá otro comprobante.';
     if(!window.confirm(prompt))return;
     button.disabled=true;feedback.textContent='Preparando PDF y XML…';

@@ -35,10 +35,26 @@ function createClient({env=process.env,fetcher=fetch}={}){
  async function documentQuery(path,receipt,type,base=BASE){
   const ruc=env.C2U_RUC,numero=Number(receipt?.numero),serie=receipt?.serie;
   if(!/^\d{11}$/.test(ruc||'')||!Number.isSafeInteger(numero)||numero<1||!/^\w{1,8}$/.test(serie||'')||!['boleta','factura'].includes(type))throw Error('Comprobante emitido inválido.');
-  const response=await fetcher(base+path+'/'+ruc,{method:'PUT',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body:JSON.stringify({emisor:Number(ruc),numero,serie,tipoComprobante:type==='factura'?'01':'03'}),signal:AbortSignal.timeout(20000)});
-  if(!response.ok)throw Error('CLOSE2U no devolvió el comprobante solicitado.');
-  const raw=await response.text();
-  try{return JSON.parse(raw);}catch{return raw;}
+  const url=base+path+'/'+ruc,body=JSON.stringify({emisor:Number(ruc),numero,serie,tipoComprobante:type==='factura'?'01':'03'});
+  let lastError;
+  for(let attempt=1;attempt<=4;attempt++){
+   try{
+    const response=await fetcher(url,{method:'PUT',headers:{Authorization:'Bearer '+await token(),'Content-Type':'application/json'},body,signal:AbortSignal.timeout(20000)});
+    const raw=await response.text();
+    if(response.ok){try{return JSON.parse(raw);}catch{return raw;}}
+    let detail='';try{const value=JSON.parse(raw);detail=String(value?.message||value?.mensaje||value?.error||value?.detail||'');}catch{detail=raw;}
+    detail=detail.replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,180);
+    lastError=Error(`CLOSE2U respondió HTTP ${response.status} al consultar ${path.includes('consultarPdf')?'el PDF':'el XML'} de ${serie}-${numero}.${detail?' '+detail:''}`);
+    if(response.status===401&&attempt<4){cached=null;until=0;}
+    else if(![404,408,429,500,502,503,504].includes(response.status)||attempt===4)throw lastError;
+   }catch(error){
+    if(error===lastError)throw error;
+    lastError=error;
+    if(attempt===4)throw Error(`No se pudo consultar el comprobante ${serie}-${numero} en CLOSE2U: ${String(error.message||error).slice(0,180)}`);
+   }
+   await new Promise(resolve=>setTimeout(resolve,attempt*1500));
+  }
+  throw lastError||Error('CLOSE2U no devolvió el comprobante solicitado.');
  }
  async function issuedPdf(receipt,type){
   const value=await documentQuery('/pdfapi/pdfapi/consultarPdf',receipt,type,'https://jarvis.tefacturo.pe');

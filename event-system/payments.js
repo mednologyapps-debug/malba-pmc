@@ -180,19 +180,31 @@ module.exports=function createPayments({db,json,text,requireAdmin,csrfOk,sign,no
   return sessions.map(session=>({...bySession.get(session.id),invoice_status:bySession.get(session.id)?.status||'pending',session}));
  }
  async function resendIssuedInvoice(jobId){
-  const job=await query(db.from('book_invoice_jobs').select('id,session_id,receipt,delivery_copy_status,delivery_copy_attempts').eq('id',jobId).eq('status','issued').maybeSingle());
-  if(!job)throw Error('No encontramos un comprobante emitido para reenviar.');
+  const job=await query(db.from('book_invoice_jobs').select('id,session_id,status,receipt,delivery_copy_status,delivery_copy_attempts').eq('id',jobId).maybeSingle());
+  if(!job||!validIssuedReceipt(job.receipt))throw Error('No hay un comprobante emitido verificable para esta compra. No se enviará un archivo incompleto.');
   const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('id',job.session_id).maybeSingle());
   if(!session||session.status!=='paid'||session.mode!=='PRODUCTION')throw Error('Solo se pueden reenviar comprobantes de compras pagadas en producción.');
-  if(![null,'pending','review','sent'].includes(job.delivery_copy_status))throw Error('El correo ya se está procesando. Espera a que termine antes de intentar otra vez.');
-  return deliverPdf(session,job,job.delivery_copy_status,{direct:true});
+  if(job.delivery_copy_status==='sending')throw Error('El correo ya se está procesando. Espera a que termine antes de intentar otra vez.');
+  await markReceiptIssued(job);
+  return deliverPdf(session,job,job.delivery_copy_status??null,{direct:true});
+ }
+ function validIssuedReceipt(receipt){return !!receipt&&/^\w{1,8}$/.test(String(receipt.serie||''))&&Number.isSafeInteger(Number(receipt.numero))&&Number(receipt.numero)>0;}
+ async function markReceiptIssued(job){
+  if(job.status==='issued')return;
+  // A stored folio means Close2U already allocated the document. Repair inconsistent
+  // local status without calling the issuance endpoint again.
+  const updated=await query(db.from('book_invoice_jobs').update({status:'issued',last_error:null,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status',job.status).select('id'));
+  if(!updated.length)throw Error('El comprobante cambió mientras se preparaba el reenvío. Actualiza la lista y vuelve a revisar.');
+  job.status='issued';
  }
  async function sendIssuedInvoice(orderId){
   const session=await query(db.from('book_payment_sessions').select('id,order_id,email,billing,status,mode').eq('order_id',orderId).eq('status','paid').eq('mode','PRODUCTION').maybeSingle());
   if(!session)throw Error('El pedido todavía no tiene un pago confirmado.');
-  const job=await query(db.from('book_invoice_jobs').select('id,delivery_copy_attempts,delivery_copy_status').eq('session_id',session.id).eq('status','issued').maybeSingle());
-  if(!job||![null,'pending','review'].includes(job.delivery_copy_status))throw Error('El comprobante aún no fue emitido, ya se envió o el correo está en proceso.');
-  return deliverPdf(session,job,job.delivery_copy_status,{direct:true});
+  const job=await query(db.from('book_invoice_jobs').select('id,session_id,status,receipt,delivery_copy_attempts,delivery_copy_status').eq('session_id',session.id).maybeSingle());
+  if(!job||!validIssuedReceipt(job.receipt))throw Error('No hay un comprobante emitido verificable para este pedido.');
+  if(job.delivery_copy_status==='sending')throw Error('El correo ya se está procesando. Espera a que termine antes de intentar otra vez.');
+  await markReceiptIssued(job);
+  return deliverPdf(session,job,job.delivery_copy_status??null,{direct:true});
  }
  async function deliverPdf(session,job,expectedStatus,{direct=false}={}){
   if(session?.status!=='paid'||session.mode!=='PRODUCTION')throw Error('El pedido todavía no tiene un pago confirmado.');
