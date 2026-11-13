@@ -50,14 +50,15 @@ async function drawInvoiceRows(){
    const amount=el('td',{text:'S/ '+(Number(session.amount_minor||0)/100).toFixed(2)});
    const email=el('td',{text:session.email||'—'});
    const delivery=el('td'),meta=(()=>{try{return JSON.parse(item.delivery_provider_status||'{}')}catch{return {}}})();
-   const deliveryState=item.delivery_copy_status==='sent'?(meta.buyerAccepted?'Aceptado por SMTP':'Envío anterior; aceptación no verificable'):item.delivery_copy_status==='sending'?'Envío en proceso':item.delivery_copy_status==='review'?(String(item.delivery_copy_error||'').includes('CLOSE2U')?'No se pudieron obtener PDF/XML de Close2U':'Correo requiere reintento'):hasReceipt?'Pendiente de envío':'A la espera del comprobante';
+   const deliveryState=item.delivery_copy_status==='sent'?(meta.provider==='CLOSE2U'?'Close2U confirma entrega al cliente':meta.buyerAccepted?'Aceptado por SMTP':'Envío anterior; aceptación no verificable'):item.delivery_copy_status==='sending'?'Envío en proceso':item.delivery_copy_status==='review'?'Correo requiere reintento':hasReceipt?'Esperando confirmación de Close2U':'A la espera del comprobante';
    delivery.append(el('strong',{text:deliveryState}));
-   if(item.delivery_copy_status==='sent'&&Array.isArray(meta.attachments)&&meta.attachments.includes('PDF')&&meta.attachments.includes('XML'))delivery.append(el('small',{text:'Adjuntos confirmados: PDF y XML'}));
-   else if(item.delivery_copy_status==='sent')delivery.append(el('small',{text:'PDF/XML de este envío no verificables. Reenvía para confirmar los adjuntos.'}));
-   if(item.delivery_copy_status==='sent'&&meta.accountingAccepted===true)delivery.append(el('small',{text:'Copia a contabilidad aceptada por SMTP'}));
+   if(item.delivery_copy_status==='sent'&&meta.provider==='CLOSE2U')delivery.append(el('small',{text:'Boleta en el cuerpo del correo · XML adjunto'}));
+   else if(item.delivery_copy_status==='sent'&&Array.isArray(meta.attachments)&&meta.attachments.includes('XML'))delivery.append(el('small',{text:'XML adjunto; detalle de boleta en el cuerpo'}));
+   if(item.delivery_copy_status==='sent'&&meta.provider==='CLOSE2U'&&meta.accountingCopyRequested)delivery.append(el('small',{text:'Copia a contabilidad solicitada en Close2U'}));
+   if(item.delivery_copy_status==='sent'&&meta.provider!=='CLOSE2U'&&meta.accountingAccepted===true)delivery.append(el('small',{text:'Copia a contabilidad aceptada por SMTP'}));
    if(item.delivery_copy_status==='sent'&&meta.accountingAccepted===false)delivery.append(el('small',{text:'Copia a contabilidad no confirmada'}));
    if(item.delivery_copy_sent_at)delivery.append(el('small',{text:'Enviado: '+new Date(item.delivery_copy_sent_at).toLocaleString('es-PE',{dateStyle:'short',timeStyle:'short'})}));
-   const action=el('td'),button=el('button',{type:'button',class:'button secondary',text:item.delivery_copy_status==='sent'?'Reenviar PDF + XML':item.delivery_copy_status==='review'?'Reintentar PDF + XML':'Enviar PDF + XML'});
+   const action=el('td'),button=el('button',{type:'button',class:'button secondary',text:item.delivery_copy_status==='sent'?'Reenviar XML + detalle':item.delivery_copy_status==='review'?'Reintentar XML + detalle':'Enviar XML + detalle'});
    button.disabled=!hasReceipt||item.delivery_copy_status==='sending';
    const feedback=el('small',{class:'invoice-mail-feedback',role:'status'});
    if(hasReceipt&&invoiceStatus!=='issued')feedback.textContent='Se usará el folio ya asignado; no se volverá a emitir ni cobrar.';
@@ -67,12 +68,12 @@ async function drawInvoiceRows(){
    if(item.delivery_copy_error)feedback.textContent=item.delivery_copy_error;
    button.addEventListener('click',async()=>{
     if(!hasReceipt)return;
-    const prompt='Enviar el comprobante '+type+' '+(receipt.serie||'')+'-'+(receipt.numero||'')+' en PDF y XML a '+(session.email||'el comprador')+' con copia a contabilidad@malba-pmc.com. No se realizará otro cobro ni se emitirá otro comprobante.';
+    const prompt='Enviar el XML y el detalle de '+type+' '+(receipt.serie||'')+'-'+(receipt.numero||'')+' a '+(session.email||'el comprador')+' con copia a contabilidad@malba-pmc.com. No se realizará otro cobro ni se emitirá otro comprobante.';
     if(!window.confirm(prompt))return;
     button.disabled=true;feedback.textContent='Preparando PDF y XML…';
     try{
      await request('/api/events/admin/payments/resend-invoice-email',{jobId:item.id});
-     feedback.textContent='SMTP aceptó el correo y los adjuntos PDF y XML. La recepción en la bandeja no se puede confirmar desde el servidor.';
+     feedback.textContent='SMTP aceptó el correo con el XML y el detalle de la boleta para ambos destinatarios.';
      await drawInvoiceRows();
     }catch(error){feedback.textContent=error.message;button.disabled=false;await drawInvoiceRows();}
    });

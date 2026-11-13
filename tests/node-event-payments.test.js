@@ -114,11 +114,11 @@ test('a recovery hint cannot settle a debit unless Izipay binds it to the expect
  assert.equal(calls.length,4);
 });
 
-test('CLOSE2U routes its automatic email internally so MALBA can send one email with both files',()=>{
+test('CLOSE2U sends the invoice email to the buyer with an accounting copy',()=>{
  for(const billing of [{type:'boleta'},{type:'factura',document:'20123456789',name:'Fixture SAC',address:'Av. Fixture 123'}]){
   const payload=c2u.buildPayload({...session,billing},env);
-  assert.equal(payload.receptor.correo,c2u.ACCOUNTING_EMAIL);
-  assert.equal(payload.receptor.correoCopia,undefined);
+  assert.equal(payload.receptor.correo,session.email);
+  assert.equal(payload.receptor.correoCopia,c2u.ACCOUNTING_EMAIL);
   assert.equal(c2u.buildPayload({...session,billing},env,{preview:true}).receptor.correo,session.email);
  }
 });
@@ -152,7 +152,7 @@ test('CLOSE2U downloads the issued PDF from the document API host',async()=>{
  assert(urls.includes('https://jarvis.tefacturo.pe/pdfapi/pdfapi/consultarPdf/'+env.C2U_RUC));
 });
 
-test('admin can resend an already issued retail receipt PDF and XML without charging or issuing again',async()=>{
+test('admin can resend an already issued retail receipt XML and detail without charging or issuing again',async()=>{
  const job={id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',session_id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',status:'issued',receipt:{serie:'BBV1',numero:9},delivery_copy_status:'review',delivery_copy_attempts:5,delivery_copy_error:'Fallo previo'};
  const sale={id:job.session_id,order_id:null,email:'buyer@example.com',customer_name:'Comprador',billing:{type:'boleta'},status:'paid',mode:'PRODUCTION',amount_minor:1500,created_at:'2026-11-13T17:17:29Z'};
  const data={book_invoice_jobs:[job],book_payment_sessions:[sale]};
@@ -180,8 +180,8 @@ test('admin can resend an already issued retail receipt PDF and XML without char
  const sent=await call(api.handler,'/api/events/admin/payments/resend-invoice-email',{body:{jobId:job.id}});
  assert.equal(sent.status,200);assert.equal(job.delivery_copy_status,'sent');assert.equal(job.delivery_copy_attempts,6);
  assert.equal(messages.length,1);assert.equal(messages[0].to,'buyer@example.com');assert.equal(messages[0].cc,'contabilidad@malba-pmc.com');
- assert.deepEqual(messages[0].attachments.map(file=>file.contentType),['application/pdf','application/xml']);
+ assert.deepEqual(messages[0].attachments.map(file=>file.contentType),['application/xml']);
  assert.equal(sent.value.delivery.buyerAccepted,true);assert.equal(sent.value.delivery.accountingAccepted,true);
- assert.deepEqual(JSON.parse(job.delivery_provider_status).attachments,['PDF','XML']);
+ assert.deepEqual(JSON.parse(job.delivery_provider_status).attachments,['XML']);
  assert(!providerUrls.some(url=>url.includes('/integracion/boleta/')));assert(!providerUrls.some(url=>url.includes('micuentaweb.pe')));
 });
