@@ -9,6 +9,7 @@
  const invoice = document.querySelector('#book-invoice-fields');
  const boleta = document.querySelector('#book-boleta-fields');
  const fields = form.elements;
+ const readPaymentJson=async response=>{const type=response.headers.get('content-type')||'';if(!type.toLowerCase().includes('application/json'))throw Error('No pudimos conectar con el servicio de pagos. Inténtalo nuevamente más tarde.');try{return await response.json();}catch{throw Error('El servicio de pagos devolvió una respuesta inválida. Inténtalo nuevamente más tarde.');}};
  // The classic checkout is a single continuous form on all screen sizes.
  form.removeAttribute('data-wizard');
  form.removeAttribute('data-active-step');
@@ -32,7 +33,7 @@
  async function refreshPrice(){
   try{
    const response=await fetch('/api/events/config',{cache:'no-store',headers:{Accept:'application/json'}});
-   const cfg=await response.json();
+   const cfg=await readPaymentJson(response);
    if(!response.ok||cfg.paymentMode!=='production'||!cfg.bookAvailable||!(Number(cfg.price)>0))throw Error('La compra no está disponible en este momento.');
    form.dataset.price=String(cfg.price);
    const amount=new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'});
@@ -63,7 +64,7 @@
      billing:type === 'factura' ? {type, document:fields.billing_ruc.value, name:fields.billing_company.value, address:fields.billing_address_1.value} : {type, document:fields.billing_dni.value}
     })
    });
-   const data = await response.json();
+   const data = await readPaymentJson(response);
    if (!response.ok) throw Error(data.error || 'No se pudo iniciar el pago.');
    location.assign(data.checkoutUrl);
   } catch (err) {
