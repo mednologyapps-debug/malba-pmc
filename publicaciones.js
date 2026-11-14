@@ -32,7 +32,7 @@
  submit.disabled = true;
  async function refreshPrice(){
   try{
-   const response=await fetch('/api/events/config',{cache:'no-store',headers:{Accept:'application/json'}});
+   const response=await fetch('https://olivedrab-mouse-758184.hostingersite.com/api/events/config',{cache:'no-store',headers:{Accept:'application/json'}});
    const cfg=await readPaymentJson(response);
    if(!response.ok||cfg.paymentMode!=='production'||!cfg.bookAvailable||!(Number(cfg.price)>0))throw Error('La compra no está disponible en este momento.');
    form.dataset.price=String(cfg.price);
@@ -55,7 +55,7 @@
   submit.textContent = 'Preparando el pago…';
   const type = fields.receipt_type.value;
   try {
-   const response = await fetch('/api/events/payments/book', {
+   const response = await fetch('https://olivedrab-mouse-758184.hostingersite.com/api/events/payments/book', {
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
     body:JSON.stringify({
